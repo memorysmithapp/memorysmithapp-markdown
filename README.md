@@ -9,9 +9,13 @@ Neither package exists in this repository yet: today it holds the documents it i
 With Node 24 and Corepack (`corepack enable`), from the root:
 
 ```sh
-pnpm run quality   # the checks the workflow Quality runs on every pull request
-pnpm test          # their tests
+pnpm install       # the workspace: packages/markdown-spec and packages/markdown-renderer
+pnpm -r build      # each package into its dist/
+pnpm run quality   # the checks of the documents and the version
+pnpm test          # the tests of the checks and of every package
 ```
+
+The workflow *Quality* runs the same commands on every pull request.
 
 ## Repository settings
 

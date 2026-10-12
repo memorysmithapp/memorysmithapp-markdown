@@ -11,9 +11,10 @@ Claims carry their status when it is not obvious: *observed*, *declared*, *infer
 The repository is made of:
 
 - **Documents**, the core of what it delivers: `CLAUDE.md` imports `AGENTS.md`; `AGENTS.md` maps the reading and the writing onto `PRD.md`, `ARCHITECTURE.md`, `SDLC.md` and `README.md`, and states the limits and invariants in one line each; `CHANGELOG.md` records what each version changed.
-- **Repository files:** `package.json`, the one home of the version; `.gitignore`, `.editorconfig` and `LICENSE`.
+- **Two packages**, in a pnpm workspace under `packages/`: `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`, each built with TypeScript into its own `dist/` and tested with Vitest.
+- **Repository files:** `package.json`, the one home of the version and the root of the workspace; `.gitignore`, `.editorconfig` and `LICENSE`.
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
-- **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs` on every pull request and push to `main`; the ruleset requires it.
+- **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
 - **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged.
 - **GitHub configuration**: the ruleset `main` and the settings the script applies.
 
@@ -32,7 +33,12 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `SDLC.md` | How a change travels from an issue to a release |
 | `README.md` | What this is and how to start |
 | `CHANGELOG.md` | What changed in each version, in Keep a Changelog 1.1.0 |
-| `package.json` | The one home of the version (`version`), the package manager pinned (`packageManager`), and the scripts `quality` and `test`; private, named `@memorysmithapp/markdown`, with no dependency |
+| `package.json` | The one home of the version (`version`), the package manager pinned (`packageManager`), the toolchain shared by the workspace (`devDependencies`), and the scripts `quality`, `build`, `typecheck` and `test`; private, named `@memorysmithapp/markdown`, never published |
+| `pnpm-workspace.yaml` | The workspace: every directory under `packages/`; and the one dependency allowed to run an install script, `esbuild`, which Vitest needs |
+| `tsconfig.base.json` | The TypeScript options every package extends: strict, ES2022, ESM, `react-jsx`, declarations |
+| `vitest.config.ts` | The one Vitest configuration: a project per package, the renderer's in `jsdom` |
+| `packages/markdown-spec/` | `@memorysmithapp/markdown-spec`: `package.json`, `tsconfig.json` (type-checks sources and tests), `tsconfig.build.json` (emits `dist/` from `src/`, tests excluded), `src/` |
+| `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |
 | `scripts/quality.test.mjs` | The tests of the checks, one deliberate violation each, on `node:test` |
@@ -41,10 +47,17 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `scripts/lib/changelog.mjs` | Reads `CHANGELOG.md`: its sections, categories, link definitions and the notes of a version |
 | `.github/workflows/quality.yml` | The workflow *Quality*, job `Quality` |
 | `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version |
-| `pnpm-lock.yaml` | Written by pnpm; with no dependency, it records only the pinned pnpm |
+| `pnpm-lock.yaml` | Written by pnpm; installed with `--frozen-lockfile` in CI |
 | `.gitignore` | Dependencies, build output, coverage, environment files, logs, operating-system and editor files |
 | `.editorconfig` | UTF-8, LF, two spaces, final newline |
 | `LICENSE` | The MIT licence |
+
+### 2.1 Toolchain
+
+- **pnpm**, pinned in `packageManager` and enabled through Corepack; the workspace links the packages to each other, so the renderer's tests read the specification's data from the package, not from a copy.
+- **TypeScript 5.9**, strict, configured once in `tsconfig.base.json`. Each package type-checks its sources and tests with `tsconfig.json` and emits ESM and declarations into `dist/` with `tsconfig.build.json`; `dist/` is what `exports` names and what a consumer receives.
+- **Vitest 3**, configured once in `vitest.config.ts`. Each package's `test` script runs its project from the root (`cd ../.. && vitest run --project <name>`), so the configuration is never repeated; the renderer's project runs in `jsdom`.
+- The versions of the toolchain and of the renderer's libraries are those the main repository's frontend locks at the commit the renderer is extracted from, so that "draws the same" is not disturbed by an upgrade (*declared* in #1, decision 2; the versions *observed* in that repository's `pnpm-lock.yaml`).
 
 ## 3. Invariants and their mechanisms
 
@@ -54,7 +67,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 
 The version lives in the `version` field of the root `package.json` and nowhere else; `CHANGELOG.md` records the versions that were cut.
 
-**Mechanism:** check 1 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*: the root `package.json` has a SemVer `version`, and it is the latest released section of `CHANGELOG.md`; on the branch `release/vX.Y.Z` it may be ahead of it, bumping to it; before the first cut it may be `0.1.0` with no released section. That the version is written in no other file is held by the writing map and the owner's review.
+**Mechanism:** check 1 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*: the root `package.json` has a SemVer `version`, and it is the latest released section of `CHANGELOG.md`; on the branch `release/vX.Y.Z` it may be ahead of it, bumping to it; before the first cut it may be `0.1.0` with no released section. Check 7 holds the packages to it: every package of the workspace has the root's `version`, and a package that is not `"private": true` declares public access ([§4, npm](#4-integrations)). That the version is written in no other file is held by the writing map and the owner's review.
 
 ### INV-02 CLAUDE.md is only the import
 

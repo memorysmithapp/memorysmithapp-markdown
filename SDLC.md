@@ -177,8 +177,9 @@ The format of the main repository, with its scope indicators and its examples of
 4. every relative link and anchor of every Markdown file resolves;
 5. no document carries a version footer ("Last revised", "Internal development document" and the like);
 6. every GitHub link at the foot of `CHANGELOG.md` names the repository the check runs in;
+7. every package of the workspace has the root's `version`, and every package not marked `"private": true` declares public access;
 
-and `pnpm test`, the tests that make each check fail on a deliberate violation. Both run locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
+then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
 
 **The owner reviews and merges** the pull request of a cycle; nobody merges their own cycle without that review.
 

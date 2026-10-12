@@ -1,0 +1,27 @@
+{
+  "name": "@memorysmithapp/markdown-spec",
+  "version": "0.1.0",
+  "description": "The MemorySmith Markdown Specification: the notation MemorySmith notebooks are written in, as a document, as data and as a conformance suite.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git",
+    "directory": "packages/markdown-spec"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "cd ../.. && vitest run --project markdown-spec"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

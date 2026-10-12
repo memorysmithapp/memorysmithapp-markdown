@@ -246,6 +246,65 @@ export function checkChangelogRepository(root, repository) {
   return [`CHANGELOG.md: the links at the foot name ${linked}, not ${repository}; rewrite them for this repository; a repository created from memorysmithapp-template rewrites them when it is adopted`];
 }
 
+// The directories pnpm-workspace.yaml names, read from its `packages:` list. Only the two forms this
+// repository uses are understood: a directory, and a directory followed by `/*`.
+export function workspacePackages(root) {
+  if (!existsSync(join(root, 'pnpm-workspace.yaml'))) return [];
+  const directories = [];
+  let inPackages = false;
+  for (const line of readText(root, 'pnpm-workspace.yaml').split('\n')) {
+    if (/^\S/.test(line)) inPackages = /^packages:\s*$/.test(line);
+    const entry = inPackages && line.match(/^\s+-\s+['"]?([^'"#\s]+)['"]?/);
+    if (!entry) continue;
+    const pattern = entry[1].replace(/\/$/, '');
+    if (pattern.endsWith('/*')) {
+      const parent = join(root, pattern.slice(0, -2));
+      if (!existsSync(parent)) continue;
+      for (const child of readdirSync(parent, { withFileTypes: true })) {
+        if (child.isDirectory()) directories.push(`${pattern.slice(0, -2)}/${child.name}`);
+      }
+    } else {
+      directories.push(pattern);
+    }
+  }
+  return directories.filter((directory) => existsSync(join(root, directory, 'package.json'))).sort();
+}
+
+// 7. Every package of the workspace carries the one version, and a published one is public: the
+// root package.json is the home of the version, and the npm organisation publishes public packages only.
+export function checkWorkspaceVersions(root) {
+  const problems = [];
+  let version;
+  try {
+    version = JSON.parse(readText(root, 'package.json')).version;
+  } catch {
+    return ['package.json: missing or not valid JSON at the root'];
+  }
+  for (const directory of workspacePackages(root)) {
+    const path = `${directory}/package.json`;
+    let manifest;
+    try {
+      manifest = JSON.parse(readText(root, path));
+    } catch (error) {
+      problems.push(`${path}: not valid JSON (${error.message})`);
+      continue;
+    }
+    if (manifest.private === true) {
+      if (manifest.version !== undefined && manifest.version !== version) {
+        problems.push(`${path}: version ${manifest.version} differs from the root's ${version}; a private package declares the root's version or none`);
+      }
+      continue;
+    }
+    if (manifest.version !== version) {
+      problems.push(`${path}: version ${JSON.stringify(manifest.version)} differs from the root's ${version}`);
+    }
+    if (manifest.publishConfig?.access !== 'public') {
+      problems.push(`${path}: a published package declares "publishConfig": { "access": "public" }, or "private": true when it is never published`);
+    }
+  }
+  return problems;
+}
+
 export function runChecks(root, branch = currentBranch(root), repository = currentRepository(root)) {
   return [
     { name: 'The version has one home and agrees with CHANGELOG.md', problems: checkVersion(root, branch) },
@@ -254,6 +313,7 @@ export function runChecks(root, branch = currentBranch(root), repository = curre
     { name: 'Relative links and anchors resolve', problems: checkLinks(root) },
     { name: 'No document carries a version footer', problems: checkFooters(root) },
     { name: 'CHANGELOG.md links to this repository', problems: checkChangelogRepository(root, repository) },
+    { name: 'Every package of the workspace carries the one version', problems: checkWorkspaceVersions(root) },
   ];
 }
 

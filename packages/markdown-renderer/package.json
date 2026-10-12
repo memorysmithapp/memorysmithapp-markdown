@@ -1,0 +1,37 @@
+{
+  "name": "@memorysmithapp/markdown-renderer",
+  "version": "0.1.0",
+  "description": "A React component that draws a MemorySmith note exactly as MemorySmith's reading page does.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git",
+    "directory": "packages/markdown-renderer"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "cd ../.. && vitest run --project markdown-renderer"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

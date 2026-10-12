@@ -14,6 +14,7 @@ import {
   checkFooters,
   checkLinks,
   checkVersion,
+  checkWorkspaceVersions,
   headingAnchors,
   runChecks,
 } from './quality.mjs';
@@ -208,6 +209,41 @@ describe('6. CHANGELOG.md links to this repository', () => {
 
   test('fails when it cannot tell which repository it runs in', () => {
     assert.match(checkChangelogRepository(repository(), null)[0], /cannot tell which repository/);
+  });
+});
+
+describe('7. every package of the workspace carries the one version', () => {
+  const workspace = {
+    'pnpm-workspace.yaml': "packages:\n  - 'packages/*'\n  - playground\n\nallowBuilds:\n  - not-a-package\n",
+    'packages/a/package.json': JSON.stringify({ name: '@memorysmithapp/a', version: '0.2.0', publishConfig: { access: 'public' } }),
+    'packages/b/package.json': JSON.stringify({ name: '@memorysmithapp/b', version: '0.2.0', publishConfig: { access: 'public' } }),
+    'playground/package.json': JSON.stringify({ name: 'playground', private: true }),
+  };
+
+  test('passes when every package has the root version', () => {
+    assert.deepEqual(checkWorkspaceVersions(repository(workspace)), []);
+  });
+
+  test('passes in a repository with no workspace', () => {
+    assert.deepEqual(checkWorkspaceVersions(repository()), []);
+  });
+
+  test('fails when a package version differs from the root', () => {
+    const problems = checkWorkspaceVersions(
+      repository({ ...workspace, 'packages/b/package.json': JSON.stringify({ name: '@memorysmithapp/b', version: '0.1.9', publishConfig: { access: 'public' } }) }),
+    );
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /packages\/b\/package.json: version "0.1.9" differs from the root's 0.2.0/);
+  });
+
+  test('fails when a published package is not declared public', () => {
+    const problems = checkWorkspaceVersions(repository({ ...workspace, 'packages/a/package.json': JSON.stringify({ name: '@memorysmithapp/a', version: '0.2.0' }) }));
+    assert.match(problems[0], /publishConfig/);
+  });
+
+  test('fails when a private package declares another version', () => {
+    const problems = checkWorkspaceVersions(repository({ ...workspace, 'playground/package.json': JSON.stringify({ private: true, version: '9.9.9' }) }));
+    assert.match(problems[0], /playground\/package.json: version 9.9.9 differs/);
   });
 });
 

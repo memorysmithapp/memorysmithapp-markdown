@@ -1,0 +1,6 @@
+packages:
+  - 'packages/*'
+
+allowBuilds:
+  # Vite and Vitest bundle with esbuild, whose install script fetches its binary.
+  esbuild: true
