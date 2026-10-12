@@ -31,6 +31,8 @@ The repository is made of:
   5. `remarkMathDollarRule`, **after** `remark-math`: it gives back to the text an inline formula that breaks the dollar rule of `SPEC.md` §7.8, reading the source the parser read, so `R$100 e o frete R$200` stays a sentence;
   6. `rehype-katex` with `throwOnError: false`, so a formula KaTeX cannot typeset shows its source.
 
+  A task item is drawn by `TaskItem`, which reads its state from the `input` GFM produced — react-markdown hands a component the hast element, which has no `checked` of its own — and reports the ordinal of its box: its position in the run, mapped by `ordinalAt` (`src/tasklist.ts`) to the n-th box of the run's text, plus the boxes of the runs and the frontmatter above it. The boxes are enabled only when the host made the note `writable`, and only when the boxes of the source and of the resolved runs agree in number, because `- [[x]]` resolves to `- [x](…)`, which GFM reads as a box the source does not have. Boxes are counted after any block quote markers, so a box inside a callout has an ordinal of its own.
+
   Before the parser, `NoteBody` rewrites the text it hands it, never the note: `resolveWikilinks` (`src/markdown.ts`) turns each `[[name]]` outside code into a Markdown link to the host's address, to `pending:` when no note answers, to `choice:` when the host has `choose` and no single note answers, and each `![[file]]` the host `keeps` into `attachment:` with its dimension. Code — fences by the specification's rules, code spans by their runs — is found before anything is rewritten, so notation inside it stays characters. The anchor of the surface turns each of those schemes into what it is: `pending:` into a pending span, `attachment:` into the host's `renderAttachment`, `choice:` into `LinkChoice`, a modal dialog of the notes the host's `choose` answers. `followable` lets the three schemes through.
 
   Code is drawn by three branches, in this order: a `mermaid` fence reaches `MermaidDiagram` untouched; a fence whose language `refractor` carries (`src/highlight.ts`, MemorySmith's fifteen grammars) is tokenised into a hast tree that `hast-util-to-jsx-runtime` turns into React elements, never an HTML string; everything else is drawn as it was typed. A fence other than a diagram sits in a `.code-block` frame with a `CopyButton` that copies the `textContent` of the code less the newline before the closing fence.
@@ -43,6 +45,8 @@ The repository is made of:
 | `choose` | `(name) => Promise<LinkChoices>`: the notes a target no single note answers may lead to, asked on a click | Such a link is pending and asks nothing |
 | `targetAddress` | `(name) => string \| null`: the host's page about a target, for a new tab | None |
 | `navigate` | `(address) => void`: goes to an internal address | `location.assign` |
+| `writable` | `boolean`: whether the reader may tick the task boxes | `false`: every box shows its state and none answers |
+| `onToggleTask` | `(ordinal) => void`: a box was ticked; the ordinal counts the boxes of the note as the host gave it, which the host applies with `toggleTaskAt` | Nothing is reported |
 | `loadNote` | `(name) => Promise<{ markdown, name, address } \| null>`: the note an embed draws in place, asked only when exactly one note reaches the target | Every embed of a note is pending |
 | `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
 | `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
@@ -88,6 +92,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser: code, fence and table regions, wikilink resolution, the hosts of remote images, and the frontmatter as MemorySmith reads it |
 | `packages/markdown-renderer/src/transclusion.ts`, `Transclusion.tsx` | The split of a body into text and embeds, the cut of a section or a block, and the embed drawn in place |
 | `packages/markdown-renderer/src/wikilink-address.ts` | Where a wikilink goes under the host: its note, the choice, or pending |
+| `packages/markdown-renderer/src/tasklist.ts` | The task boxes of a text, the ordinal of one, and the one-character toggle a host applies |
 | `packages/markdown-renderer/src/LinkChoice.tsx` | The choice a link opens when no single note answers it |
 | `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
 | `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |

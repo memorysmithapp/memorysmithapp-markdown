@@ -24,7 +24,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 **Delivers:**
 
 - `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together, and the TypeScript types of its data ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-005).
-- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-008).
+- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-009).
 
 **Deliberately does not** (*declared* in #1):
 
@@ -64,6 +64,7 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-006 | A wikilink target is a name, literal, compared after NFC and never slugified; nothing inside code is touched. One note answering it is a link to the host's address; none is a pending link, drawn as such and never as a link; several — or none, when the host can ask about aliases — open a choice in place. Only an embed reaches a file the notebook keeps, and it carries the dimensions after its pipe | declared in #9 |
 | RN-RENDER-007 | A note whose images name another host says so under its body, naming each host once, unless the host discloses it elsewhere (`SPEC.md` §7.10) | declared in #9 |
 | RN-RENDER-008 | `![[note]]` draws the body of the one note it reaches in place, `![[note#Heading]]` its section and `![[note#^id]]` its block, with the note it came from named under it. An embed inside embedded content, past ten embeds in one note, in a table cell or in code is a link and is never dropped, so the page expands one level only and a pair of notes that embed each other cannot hang it. The body comes from the host; the package never fetches | declared in #10 |
+| RN-RENDER-009 | A task box shows the state written in the source, and is one box per item. Where the host makes the note writable, a click reports the ordinal of the box among the boxes of the note as the host gave it; the host applies it as a one-character change with `toggleTaskAt`, and the package writes nothing. The boxes are disabled when the note is not writable, when the source and the drawn text disagree on how many boxes there are, and inside an embedded note, whose boxes belong to another note. A box inside a callout is counted in its place: on MemorySmith's reading page it reports the next box outside the callout, a defect this renderer does not carry | declared in #11 |
 
 ## 8. Quality requirements
 
@@ -88,3 +89,4 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-006 | `test/links.test.tsx`, `link-target.test.ts`, `code-is-text.test.ts`, `image-and-attachment.test.ts` and `attachment-address.test.tsx` pass |
 | RN-RENDER-007 | The remote-notice cases of `test/links.test.tsx` and of the conformance test pass |
 | RN-RENDER-008 | `test/embeds.test.tsx`, `transclusion.test.ts`, `transcluded-links.test.ts` and `block-anchors.test.ts` pass, and an embed nested three levels deep draws one level and a link |
+| RN-RENDER-009 | `test/task-toggle.test.tsx` ticks every enabled box of a note with boxes in nested lists, in callouts and around embeds, and each tick changes exactly the character between that box's brackets; `task-box.test.tsx` and `tasklist.test.ts` pass |

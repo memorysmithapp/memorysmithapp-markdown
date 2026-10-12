@@ -12,10 +12,28 @@ import { spec } from '@memorysmithapp/markdown-spec';
 import { describe, expect, it } from 'vitest';
 import { html } from './render.js';
 
-const render = (markdown: string): string => html(markdown);
+/** A writable note, as MemorySmith's reading page draws one for a reader who may write. */
+const render = (markdown: string): string => html(markdown, { writable: true, onToggleTask: () => undefined });
 
 /** What each declared entry has to be true of, once rendered. */
 const EXPECTED: Record<string, (html: string) => void> = {
+  'task-list': (html) => {
+    // A box per item, carrying the state written in the source, both ways
+    // round. One box per item and not two, which is what dropping GFM's own
+    // is for.
+    expect((html.match(/type="checkbox"/g) ?? []).length).toBe(3);
+    expect((html.match(/checked=""/g) ?? []).length).toBe(1);
+    expect(html).toContain('Price research');
+    expect(html).toContain('Three quotes gathered');
+    expect(html).not.toContain('[ ]');
+    expect(html).not.toContain('[x]');
+    // A nested item is a task like any other, and `[X]`, the capital form
+    // GFM accepts, leaves the page too.
+    expect(html).not.toContain('[X]');
+    // The box is ours, and it answers to a click where the host allows it.
+    expect((html.match(/class="[^"]*task-item[^"]*"/g) ?? []).length).toBe(3);
+    expect(html).not.toContain('disabled=""');
+  },
   transclusion: (html) => {
     // The embed left the prose and became a region of its own. Which region
     // depends on the host's answer, which has not arrived in a static render;

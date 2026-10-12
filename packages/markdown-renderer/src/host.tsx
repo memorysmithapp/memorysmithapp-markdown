@@ -41,6 +41,17 @@ export interface NoteHost {
    * pending. Without it, every embed of a note is pending. The package never fetches.
    */
   readonly loadNote?: (name: string) => Promise<EmbeddedNote | null>;
+  /**
+   * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
+   * its state and none answers a click.
+   */
+  readonly writable?: boolean;
+  /**
+   * A task box was ticked. The ordinal counts the boxes of the note as the host gave it, frontmatter
+   * included; the host applies it with `toggleTaskAt`, a one-character change of its bytes. The
+   * package never writes the note.
+   */
+  readonly onToggleTask?: (ordinal: number) => void;
   /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
   readonly keeps?: (name: string) => boolean;
   /**
@@ -116,6 +127,8 @@ export const HOST_KEYS = Object.keys({
   targetAddress: 1,
   navigate: 1,
   loadNote: 1,
+  writable: 1,
+  onToggleTask: 1,
   keeps: 1,
   renderAttachment: 1,
   renderLink: 1,

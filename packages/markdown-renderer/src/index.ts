@@ -15,3 +15,4 @@ export {
   toUnixNewlines,
   type SplitDocument,
 } from './markdown.js';
+export { ordinalAt, taskBoxes, taskCheckedAt, toggleTaskAt } from './tasklist.js';

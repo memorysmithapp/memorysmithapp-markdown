@@ -1,5 +1,13 @@
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
-import { useRef, type AnchorHTMLAttributes, type HTMLAttributes, type ImgHTMLAttributes, type MouseEvent } from 'react';
+import {
+  isValidElement,
+  useRef,
+  type AnchorHTMLAttributes,
+  type HTMLAttributes,
+  type ImgHTMLAttributes,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -15,6 +23,7 @@ import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { remarkCallouts } from './remark-callouts.js';
 import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
+import { ordinalAt } from './tasklist.js';
 
 /**
  * One run of a note, parsed and drawn: the pipeline of MemorySmith's reading page.
@@ -24,7 +33,19 @@ import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule }
  */
 export interface MarkdownProps {
   readonly children: string;
+  /**
+   * The text the ordinal of a task box is counted over. It has to be the text
+   * the PARSER saw, because the offsets come from it — not the bytes a write
+   * sends back, which are the original ones. Keeping the two aligned is the
+   * caller's job, and `NoteBody` does it by refusing to enable the boxes when
+   * the two disagree on how many there are.
+   */
+  readonly source?: string;
+  readonly onToggleTask?: (ordinal: number) => void;
+  readonly writable?: boolean;
 }
+
+type LiProps = HTMLAttributes<HTMLLIElement> & { node?: unknown };
 
 /**
  * What react-markdown hands a component beside the attributes: the hast
@@ -244,7 +265,79 @@ interface HastElement {
   readonly position?: { readonly start?: { readonly offset?: number } };
 }
 
-export function Markdown({ children }: MarkdownProps) {
+/**
+ * Whether this list item is a task box, and how it is ticked.
+ *
+ * The state is read from the child `input` that GFM produces, and NOT from a
+ * `checked` on the item itself: react-markdown 9 hands a component the **hast**
+ * element, which carries no such property. Reading it there returned
+ * `undefined` for every item, which once sent every task box of MemorySmith
+ * down the plain branch and onto the screen as GFM's own disabled checkbox —
+ * no handler, no click, on any note.
+ */
+function taskState(node: HastElement | undefined): boolean | null {
+  const box = node?.children?.find((child) => child.tagName === 'input');
+  const checked = box?.properties?.['checked'];
+  return typeof checked === 'boolean' ? checked : null;
+}
+
+/**
+ * A list item that carries a task box. The ordinal comes from the position the
+ * parser reports, mapped back to the n-th task of the source, which is what
+ * lets a click become a one-character change in the original text — made by
+ * the host, never by the package.
+ */
+function TaskItem({
+  node,
+  children,
+  className,
+  source,
+  toggleTask,
+  writable,
+  ...rest
+}: LiProps & {
+  source: string;
+  toggleTask: ((ordinal: number) => void) | undefined;
+  writable: boolean;
+}) {
+  const element = node as HastElement | undefined;
+  const checked = taskState(element);
+  if (checked === null) {
+    return (
+      <li className={className} {...rest}>
+        {children}
+      </li>
+    );
+  }
+
+  const offset = element?.position?.start?.offset;
+  const ordinal = offset === undefined ? -1 : ordinalAt(source, offset);
+  const enabled = writable && toggleTask !== undefined && ordinal >= 0;
+
+  return (
+    // Our class comes LAST, because the one react-markdown passes in is on
+    // `className` and spreading it after would silently take the item back.
+    <li {...rest} className={`${className ?? ''} task-item`.trim()}>
+      <input type="checkbox" checked={checked} disabled={!enabled} onChange={() => enabled && toggleTask(ordinal)} />
+      {/* The box GFM already rendered is dropped: it is `disabled`, it answers
+          to nothing, and two boxes in one item is worse than none. */}
+      {dropBox(children)}
+    </li>
+  );
+}
+
+/**
+ * The children of the item without the checkbox GFM put in front of them.
+ *
+ * It is matched by element type rather than by position, because a leading
+ * space follows it and neither the space nor the order is part of any contract.
+ */
+function dropBox(children: ReactNode): ReactNode {
+  if (!Array.isArray(children)) return children;
+  return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
+}
+
+export function Markdown({ children, source, onToggleTask, writable = false }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
@@ -297,6 +390,9 @@ export function Markdown({ children }: MarkdownProps) {
           code: MarkdownCode,
           pre: MarkdownPre,
           img: MarkdownImage,
+          li: (props: LiProps) => (
+            <TaskItem {...props} source={source ?? text} toggleTask={onToggleTask} writable={writable} />
+          ),
         }}
       >
         {text}
