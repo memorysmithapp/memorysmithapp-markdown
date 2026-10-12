@@ -84,7 +84,9 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
 
   return (
     <HostProvider value={resolved}>
-      <div className="markdown">
+      {/* The root of the note carries the theme, which is where the stylesheet
+          sets its values from the host's custom properties. */}
+      <div className="markdown" data-theme={resolved.theme}>
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
             return <Transclusion key={index} target={segment.target} anchor={segment.anchor} />;

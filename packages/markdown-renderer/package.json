@@ -10,13 +10,15 @@
     "directory": "packages/markdown-renderer"
   },
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./styles.css": "./styles.css"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -48,5 +50,8 @@
     "rehype-katex": "7.0.1",
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0"
-  }
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

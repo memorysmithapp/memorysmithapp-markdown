@@ -55,6 +55,33 @@ The repository is made of:
 | `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
 | `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, the words of the choice a link opens, and what an embed says when its section is missing | MemorySmith's English (`ENGLISH`) |
 
+### 1.2 The stylesheet of the reading surface
+
+`@memorysmithapp/markdown-renderer/styles.css` carries every rule of MemorySmith's stylesheet that draws the body of a note — the reading surface's headings, lists, task items, blockquotes, footnotes, code and its frame, tables, callouts, embeds, wikilinks, pending and refused links, highlight tokens, Mermaid, the choice dialog and the embed skeleton — and none of the page around it. Every selector starts with `.markdown`, and a test parses the file to prove it. What MemorySmith's page gave the note from the document (the text face, the colour, `box-sizing`, the colour of a link) is set on the root of the note instead.
+
+`NoteBody` draws its root as `<div class="markdown" data-theme="light|dark">`, from the `theme` prop. The stylesheet sets its values there, as private `--ms-*` properties read from public `--markdown-*` ones with MemorySmith's value as the fallback, once for the light theme and once for the dark. A host themes a note by setting a `--markdown-*` property on the root or on any ancestor; it overrides no selector. The colours, faces and radii are public; the metrics — the modular heading scale, the paragraph and list spacing, the line heights — are not, because they are what drawing a note the same means.
+
+| Property | What it sets | Light | Dark |
+|---|---|---|---|
+| `--markdown-bg` | The paper the note is drawn on | `#edefec` | `#0b1220` |
+| `--markdown-surface` | What sits on the paper: the Copy button, the choice dialog | `#ffffff` | `#111a2c` |
+| `--markdown-border` | Hairlines, frames, table rules | `#dce0da` | `#24304a` |
+| `--markdown-text` | The text | `#0e1526` | `#edefec` |
+| `--markdown-text-soft` | Footnotes, captions, notices, the sixth heading | `#545d73` | `#93a0ba` |
+| `--markdown-accent` | Links, the rule of an embed, task boxes | `#0f56d7` | `#4c8dff` |
+| `--markdown-pending` | A pending link | `#a6ab9f` | `#5d6880` |
+| `--markdown-code-bg` | A block of code, a table row under the pointer | `#f4f5f2` | `#0e1728` |
+| `--markdown-code-color` | Inline code, and the tokens no colour picks out | the soft text | the soft text |
+| `--markdown-token-keyword`, `--markdown-token-string`, `--markdown-token-number`, `--markdown-token-comment`, `--markdown-token-punctuation` | Highlighted tokens | `#0f56d7`, `#b4541a`, `#157a3a`, `#646c7f`, `#4e566b` | `#4c8dff`, `#f0a05a`, `#4fc07f`, `#7c89a3`, `#93a0ba` |
+| `--markdown-callout-info`, `--markdown-callout-idea`, `--markdown-callout-done`, `--markdown-callout-warn`, `--markdown-callout-stop`, `--markdown-callout-aside`, `--markdown-callout-quote` | The hue of each family of callouts, as an RGB triplet | `15, 86, 215` · `14, 109, 102` · `15, 111, 51` · `158, 71, 0` · `180, 35, 24` · `109, 40, 217` · `84, 93, 115` | `76, 141, 255` · `45, 212, 191` · `74, 222, 128` · `251, 191, 36` · `248, 113, 113` · `167, 139, 250` · `147, 160, 186` |
+| `--markdown-font-sans` | The text face, headings included | `'Inter', 'Segoe UI', system-ui, sans-serif` | the same |
+| `--markdown-font-display` | The face of the dialog's heading and of buttons | `'Space Grotesk', 'Segoe UI', system-ui, sans-serif` | the same |
+| `--markdown-font-mono` | Code | `ui-monospace, 'Cascadia Code', Consolas, monospace` | the same |
+| `--markdown-radius` | Code frames, callouts, buttons, options | `8px` | the same |
+| `--markdown-radius-large` | The choice dialog | `12px` | the same |
+
+A host loads the faces (Inter 400 and 600, Space Grotesk 500 and 700, as MemorySmith does from Google Fonts) and imports `katex/dist/katex.min.css` beside this stylesheet ([ADR-002](#adr-002-how-the-renderer-carries-its-heavy-libraries)). The width of the column is the host's: MemorySmith draws a note 700px wide, in a pane of `48.75rem` with `2rem 2.5rem` of padding.
+
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
 ## 2. Layout
@@ -85,6 +112,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-spec/test/` | The tests of the checker and of the types |
 | `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
+| `packages/markdown-renderer/styles.css` | The stylesheet of the reading surface ([§1.2](#12-the-stylesheet-of-the-reading-surface)) |
 | `packages/markdown-renderer/src/NoteBody.tsx`, `Markdown.tsx` | The component and the pipeline of one parsed run ([§1.1](#11-the-renderer)) |
 | `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
