@@ -125,7 +125,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
 | `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |
 | `packages/markdown-renderer/src/remark-callouts.ts`, `remark-ring.ts` | The remark plugins of callouts, marked text, comments, block identifiers and the dollar rule |
-| `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has |
+| `packages/markdown-renderer/src/delegated.ts` | `DELEGATED_TO_THE_BASE_PARSER`, the `reading-surface` entries whose rendering is the base parser's and is not asserted, and `unclassified`, which finds an entry neither asserted nor delegated |
+| `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has; `reading-surface-conformance.test.tsx` asserts every `reading-surface` entry of `@memorysmithapp/markdown-spec`, and `conformance-coverage.test.ts` runs it against a specification with one unclassified entry, which must fail |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |
 | `scripts/quality.test.mjs` | The tests of the checks, one deliberate violation each, on `node:test` |
@@ -192,6 +193,12 @@ The link condition exists because a repository created from `memorysmithapp-temp
 Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-SPEC-001, RN-SPEC-002), enforced here because it is the property the specification package exists for.
 
 **Mechanism:** [`packages/markdown-spec/tools/check-spec.mjs`](packages/markdown-spec/tools/check-spec.mjs), the first half of the package's `test`, run by `pnpm test` and so by the workflow *Quality*. It validates `spec.json` against its schema with a validator that implements only the keywords the schema uses and fails on any other; refuses duplicated identifiers, a case naming an undeclared notation, a case that asserts nothing, a notebook without a resolution and the reverse, a `links` or `frontmatter` notation with no case, and a section reference — in the data or in the prose of `SPEC.md` — with no heading; fails when `SPEC.md` is missing instead of skipping it; and fails when the `url` of `spec.json` is not `SPEC.md` at the tag `v<version>` of the package's `package.json`. Its tests (`test/check-spec.test.ts`) run it against a copy of the package carrying one deliberate defect each.
+
+### The renderer proves every reading-surface entry
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-RENDER-011), enforced here because it is what makes the renderer an implementation of the specification rather than a component that happens to draw most of it.
+
+**Mechanism:** `packages/markdown-renderer/test/reading-surface-conformance.test.tsx`, run by `pnpm test` and so by the workflow *Quality*, reads the entries from `@memorysmithapp/markdown-spec` — the workspace package, never a copy — and holds an expectation for every `reading-surface` entry that is not in `DELEGATED_TO_THE_BASE_PARSER`; it fails on an entry with no expectation, on an expectation with no entry, and when the asserted and the delegated sets do not together make exactly the entries. `conformance-coverage.test.ts` runs that file in its own process against a copy of the data with one fake entry, through `MARKDOWN_SPEC_FIXTURE`, and requires it to fail.
 
 ## 4. Integrations
 

@@ -2,21 +2,89 @@
  * The reading surface, run against the specification.
  *
  * The specification declares a set of notations under the `reading-surface`
- * reader. A rendering assertion cannot live in a JSON file — what a callout
+ * reader, and an indexer decides none of them: they are behaviour of a
+ * renderer. A rendering assertion cannot live in a JSON file — what a callout
  * looks like is not something the suite can state — so the entries come from
  * `@memorysmithapp/markdown-spec`, never from a copy, and the expectation is
  * written here, once per entry, against the real component.
+ *
+ * **The entries asserted are those the specification ADDS to what a base
+ * parser already does, and that is a decision, not a filter.** Which entries
+ * are exempt is `DELEGATED_TO_THE_BASE_PARSER`, with its reason; what the
+ * restated base forms did bring is the **crossings**, the places where the
+ * specification changes what CommonMark means, and those are proved at the
+ * bottom of this file, one case each and named.
+ *
+ * What this test guarantees is coverage as much as behaviour. A notation
+ * declared under `reading-surface` that is neither expected here nor delegated
+ * fails it, so the specification cannot grow an entry this renderer silently
+ * does not implement. `conformance-coverage.test.ts` proves that by running
+ * this file against a specification with one entry added.
+ *
+ * Rendered to static markup, which runs no effects: the mermaid block renders
+ * its container before the library is imported, and an embed its frame before
+ * the host answers. Both are the assertion: the notation left the text and
+ * became an element.
  */
 
-import { spec } from '@memorysmithapp/markdown-spec';
+import { readFileSync } from 'node:fs';
+import { spec as packaged, type Spec } from '@memorysmithapp/markdown-spec';
 import { describe, expect, it } from 'vitest';
+import { DELEGATED_TO_THE_BASE_PARSER, unclassified } from '../src/delegated.js';
 import { html } from './render.js';
+
+/**
+ * The specification under test: the package's, or a fixture named by
+ * `MARKDOWN_SPEC_FIXTURE`, which is how the coverage test runs this file
+ * against a specification that declares one entry more.
+ */
+const spec: Spec = process.env['MARKDOWN_SPEC_FIXTURE']
+  ? (JSON.parse(readFileSync(process.env['MARKDOWN_SPEC_FIXTURE'], 'utf8')) as Spec)
+  : packaged;
 
 /** A writable note, as MemorySmith's reading page draws one for a reader who may write. */
 const render = (markdown: string): string => html(markdown, { writable: true, onToggleTask: () => undefined });
 
 /** What each declared entry has to be true of, once rendered. */
 const EXPECTED: Record<string, (html: string) => void> = {
+  'raw-html': (html) => {
+    // Not rendered: the tag is text. This is the security boundary, and the
+    // `<script>` case below is the one that matters.
+    expect(html).toContain('&lt;b&gt;read the act&lt;/b&gt;');
+    expect(html).not.toContain('<b>read the act</b>');
+  },
+  table: (html) => {
+    expect(html).toContain('<table>');
+    expect(html).toContain('<th>');
+    expect(html).toContain('<td>');
+    // The delimiter row is structure and never a row of its own.
+    expect(html).not.toContain('---');
+  },
+  strikethrough: (html) => {
+    // Two tildes and only two: `~~revoked~~` is struck and `H~2~O` is not. A
+    // renderer accepting the single tilde would strike the middle of the
+    // second one — a wrong answer where the specification promises none at
+    // all, and the reason `singleTilde` is off.
+    expect(html).toContain('<del>');
+    expect(html).toContain('revoked');
+    expect(html).toContain('H~2~O');
+    expect(html).not.toContain('~~');
+  },
+  footnote: (html) => {
+    // A link to a note at the end of the note, and a way back — and neither
+    // leaves the page.
+    expect(html).toMatch(/<a href="#user-content-fn-rup"[^>]*data-footnote-ref/);
+    expect(html).toContain('<section data-footnotes="true" class="footnotes">');
+    expect(html).toContain('id="user-content-fn-rup"');
+    expect(html).toMatch(/<a href="#user-content-fnref-rup"[^>]*data-footnote-backref/);
+    expect(html).not.toMatch(/href="#[^"]*"[^>]*target="_blank"/);
+    expect(html).not.toContain('[^rup]');
+    // The label is a heading a reader sees, in the reader's words.
+    expect(html).toContain('class="footnotes-label"');
+    expect(html).not.toContain('>Footnotes<');
+    // What react-markdown hands a component is not an attribute of the page.
+    expect(html).not.toContain('node="[object Object]"');
+  },
   'task-list': (html) => {
     // A box per item, carrying the state written in the source, both ways
     // round. One box per item and not two, which is what dropping GFM's own
@@ -124,15 +192,34 @@ const EXPECTED: Record<string, (html: string) => void> = {
   },
 };
 
-const entries = spec.notations.filter((entry) => entry.reader === 'reading-surface' && entry.id in EXPECTED);
+const surface = spec.notations.filter(
+  (entry) => entry.reader === 'reading-surface' && !DELEGATED_TO_THE_BASE_PARSER.has(entry.id),
+);
 
 describe('the reading surface implements the specification', () => {
-  it.each(entries)('renders $id as the specification declares', ({ id, example }) => {
-    EXPECTED[id]?.(render(example));
+  it.each(surface)('renders $id as the specification declares', ({ id, example }) => {
+    const expected = EXPECTED[id];
+    // A declared notation with no expectation here is a failure of this test,
+    // not a gap to discover later in a browser.
+    expect(expected, `no reading-surface expectation written for "${id}"`).toBeDefined();
+    expected?.(render(example));
   });
 
-  it('finds every entry it asserts in the specification', () => {
-    expect(entries.map((entry) => entry.id).sort()).toEqual(Object.keys(EXPECTED).sort());
+  it('has an expectation for every declared entry, and none for anything else', () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual(surface.map((entry) => entry.id).sort());
+  });
+
+  it('asserts or delegates every reading-surface entry, and the two sets cover all of them', () => {
+    const all = spec.notations.filter((entry) => entry.reader === 'reading-surface').map((entry) => entry.id);
+    expect(unclassified(spec.notations, new Set(Object.keys(EXPECTED)))).toEqual([]);
+    // The two sets are disjoint, and together they are exactly the entries.
+    const asserted = Object.keys(EXPECTED);
+    expect(asserted.filter((id) => DELEGATED_TO_THE_BASE_PARSER.has(id))).toEqual([]);
+    expect([...asserted, ...DELEGATED_TO_THE_BASE_PARSER].sort()).toEqual([...all].sort());
+  });
+
+  it('runs against a surface that exists, so an empty import cannot pass', () => {
+    expect(surface.length).toBeGreaterThan(0);
   });
 });
 
@@ -436,5 +523,131 @@ describe('an embed where no block fits', () => {
 
     expect(html).toContain('![[Lei 14.133]]');
     expect(html).not.toContain('<table>');
+  });
+});
+
+/**
+ * A form the specification does not describe is read as nothing (§8), and the
+ * reading surface is where a rejection is most easily undone by accident:
+ * drawing a chip around `#subject` would promise a grouping that does not
+ * exist, and an affordance without the function it promises is worse than the
+ * raw text.
+ */
+describe('a notation the specification does not declare is rendered as what it is: text', () => {
+  it('renders an inline #tag as plain text, with no chip and nothing to click', () => {
+    const html = render('The decision touches #procurement and #contracts.');
+
+    expect(html).toContain('#procurement');
+    expect(html).toContain('#contracts');
+    expect(html).not.toMatch(/<a[^>]*>#/);
+    expect(html).not.toMatch(/class="[^"]*tag[^"]*"/);
+  });
+
+  it('does not read a heading as a tag either', () => {
+    const html = render('# Direct contracting\n\nThe rule.\n');
+
+    expect(html).toContain('<h1>Direct contracting</h1>');
+    expect(html).not.toContain('#');
+  });
+
+  it('renders an external link as a link and never as a wikilink of ours', () => {
+    const html = render('See [the official text](https://example.org/lei-14133).');
+
+    expect(html).toContain('href="https://example.org/lei-14133"');
+    expect(html).not.toContain('class="wikilink"');
+    expect(html).not.toContain('wikilink-pending');
+  });
+
+  it('renders a subscript and a superscript as the characters they are', () => {
+    const html = render('The formula is H~2~O, and the area is 3 m^2^.');
+
+    expect(html).toContain('H~2~O');
+    expect(html).toContain('m^2^');
+    expect(html).not.toContain('<sub>');
+    expect(html).not.toContain('<sup>');
+    expect(html).not.toContain('<del>');
+  });
+});
+
+/**
+ * The raw HTML policy is a **security boundary** and not a rendering
+ * preference, which is why it is asserted with the payload that would matter
+ * rather than with a `<b>`.
+ */
+describe('raw HTML in a note is text, and stays text', () => {
+  it('does not render a script tag', () => {
+    const html = render('Before. <script>window.stolen = document.cookie</script> After.');
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('Before.');
+    expect(html).toContain('After.');
+  });
+
+  it('does not render an event handler smuggled onto an element', () => {
+    const html = render('<img src="x" onerror="window.stolen = 1">');
+
+    // The whole tag is text, so the handler is characters on a page and not
+    // an attribute of anything: there is no element for it to be on.
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img');
+    expect(html).toContain('onerror=&quot;');
+  });
+
+  it('does not render an iframe', () => {
+    const html = render('<iframe src="https://example.org"></iframe>');
+
+    expect(html).not.toContain('<iframe');
+  });
+});
+
+/**
+ * The crossings: where the specification changes what an inherited form means.
+ * Each one is a place where knowing CommonMark is not enough to predict what
+ * happens here.
+ */
+describe('a base notation that means something different here', () => {
+  it('renders an image as an image, and an embed as neither', () => {
+    const html = render('![The curve](https://example.org/curve.png)\n\n![[A note]]\n');
+
+    expect(html).toContain('alt="The curve"');
+    expect(html).not.toContain('![[');
+    expect(html).not.toContain('alt="[[A note]]"');
+  });
+
+  it('keeps the alt text of an image, which is the description and not decoration', () => {
+    const html = render('![Fourteen minutes against thirty](https://example.org/x.png)');
+
+    expect(html).toContain('alt="Fourteen minutes against thirty"');
+  });
+
+  it('leaves a wikilink inside a code span as characters', () => {
+    const html = render('Write `[[Target]]` to link to it.');
+
+    expect(html).toContain('[[Target]]');
+    expect(html).not.toContain('class="wikilink"');
+  });
+
+  it('leaves every notation inside a fenced block alone', () => {
+    const html = render('```\n[[Target]] and ==marked== and > [!warning] x\n```\n');
+
+    expect(html).toContain('[[Target]]');
+    expect(html).toContain('==marked==');
+    expect(html).not.toContain('<mark>');
+    expect(html).not.toContain('class="callout"');
+  });
+
+  it('reads three dashes under a paragraph as a heading and not as frontmatter', () => {
+    const html = render('Serra Gaucha\n---\n\nThe rest.\n');
+
+    expect(html).toContain('<h2>Serra Gaucha</h2>');
+    expect(html).not.toContain('<hr');
+  });
+
+  it('does not strike a single tilde, which is where this surface leaves GFM', () => {
+    const html = render('Water is H~2~O, and the rule is ~~revoked~~.');
+
+    expect(html).toContain('H~2~O');
+    expect(html).toContain('<del>revoked</del>');
   });
 });

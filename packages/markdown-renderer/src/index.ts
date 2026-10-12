@@ -16,3 +16,4 @@ export {
   type SplitDocument,
 } from './markdown.js';
 export { ordinalAt, taskBoxes, taskCheckedAt, toggleTaskAt } from './tasklist.js';
+export { DELEGATED_TO_THE_BASE_PARSER, unclassified } from './delegated.js';
