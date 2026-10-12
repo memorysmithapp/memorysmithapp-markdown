@@ -172,6 +172,11 @@ describe('4. relative links and anchors resolve', () => {
     assert.deepEqual(checkLinks(repository({ 'AGENTS.md': 'Write `[x](missing.md)` like this.\n' })), []);
   });
 
+  test('reads a footnote definition as prose, not as a link definition', () => {
+    const root = repository({ 'docs/notes.md': 'A claim.[^1]\n\n[^1]: 43,200 minutes, by the contract.\n' });
+    assert.deepEqual(checkLinks(root), []);
+  });
+
   test('builds anchors the way GitHub does', () => {
     const anchors = headingAnchors('## 4.1 When a commit touches `PRD.md`\n### INV-02 CLAUDE.md is only the import\n## ADR-005 GitHub\'s defaults, for issues\n## Repeat\n## Repeat\n');
     for (const anchor of ['41-when-a-commit-touches-prdmd', 'inv-02-claudemd-is-only-the-import', 'adr-005-githubs-defaults-for-issues', 'repeat', 'repeat-1']) {

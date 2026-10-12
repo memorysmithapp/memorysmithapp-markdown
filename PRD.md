@@ -47,7 +47,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 
 *Instruction: what the product provides, as business rules with codes `RN-{AREA}-{NNN}`.*
 
-Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package), `RENDER` (the renderer).
+Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package), `RENDER` (the renderer), `DEMO` (the demonstration notebooks and the playground).
 
 | Code | Rule | Status |
 |---|---|---|
@@ -56,6 +56,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | The package exports the document and the data at stable paths: `./SPEC.md`, `./spec.json`, `./conformance.json` and `./schema.json` | declared in #4 |
 | RN-SPEC-004 | The text of the specification (`SPEC.md` and the prose of `tests/README.md`) is CC BY 4.0; the data, the suite and the checker are MIT, so an implementation may embed them without an attribution obligation on its output | *observed* in `SPEC.md`, carried over from the main repository |
 | RN-SPEC-005 | The package ships the TypeScript types of its own data — the specification, its sources, each notation and its reader, a conformance case — and typed entry points `spec`, `conformance` and `cases`, so a consumer never retypes the JSON. The types admit every notation and case of the data, and nothing the schema refuses | declared in #5 |
+| RN-DEMO-001 | The two demonstration notebooks, `continuity-engineering` in en-US and `enologia` in pt-BR, are not translations of each other; each demonstrates in context every notation of the specification but those delegated to the base parser, demonstrates none the specification does not declare, and shows the forms it does not describe being ignored, beside what to write instead | declared in #1 and #14 |
+| RN-DEMO-002 | The playground draws any note of the two notebooks with the renderer, under an in-memory host, in the light and the dark theme; it is never published | declared in #14 |
 | RN-RENDER-001 | The renderer draws what MemorySmith's reading page draws today: it is that page extracted, not a new design, and what the page decided — no raw HTML, strikethrough with two tildes only, the address filter, highlight tokens as elements — is kept with its reason | declared in #1, decision 2 |
 | RN-RENDER-002 | The renderer knows no API, no router, no i18n library and no query cache: what it needs from the notebook reaches it through the host contract, as functions and words, and every default is the safe one — with no `resolve` every link is pending, with no `keeps` no embed reaches a file, with no `strings` the words are MemorySmith's English | declared in #1, decision 3 |
 | RN-RENDER-003 | The renderer never rewrites the source: a note is drawn from its bytes as the host keeps them, its frontmatter is not drawn, and nothing it does changes what the host stores | declared in #1, decision 4 |
@@ -83,6 +85,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | A consumer resolves each of the four paths from the installed package |
 | RN-SPEC-004 | `SPEC.md` ends with its licence section, and the package declares `MIT AND CC-BY-4.0` |
 | RN-SPEC-005 | `test/types.test.ts` compiles every notation and case against the types with no error, compiles a value the schema refuses with one, and type-checks a consumer project against the emitted declarations |
+| RN-DEMO-001 | `playground/test/notebooks.test.ts` passes, and fails when a declared notation is removed from either notebook |
+| RN-DEMO-002 | `pnpm --filter playground dev` opens the notebooks, and `playground/test/every-note.test.tsx` draws every note in both themes with no error |
 | RN-RENDER-001 | The renderer and MemorySmith's reading page draw the same image of every note of the demonstration notebooks |
 | RN-RENDER-002 | `test/note-body.test.tsx` draws a note with only the package and React installed, and with no host prop at all |
 | RN-RENDER-003 | No export of the package returns a note other than the one it was given, but for `toggleTaskAt`, which the host calls itself |

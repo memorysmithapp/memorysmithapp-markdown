@@ -17,6 +17,17 @@ pnpm test          # the tests of the checks and of every package
 
 The workflow *Quality* runs the same commands on every pull request.
 
+## Look at it
+
+The two demonstration notebooks, `notebooks/continuity-engineering` (en-US) and `notebooks/enologia` (pt-BR), show every notation of the specification in context. The playground draws any of their notes with the renderer:
+
+```sh
+pnpm -r build
+pnpm --filter playground dev   # http://localhost:5173/
+```
+
+`?theme=dark` draws the dark theme, `?lang=pt` the words of the page in Brazilian Portuguese.
+
 ## Repository settings
 
 The settings a copy of the files does not carry — description, topics, merge options, wiki and discussions off, and the ruleset `main` that protects the default branch — are applied by a script, with `gh` authenticated as an administrator and [`jq`](https://jqlang.org/) installed. It was run with:

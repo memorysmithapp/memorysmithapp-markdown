@@ -12,6 +12,8 @@ The repository is made of:
 
 - **Documents**, the core of what it delivers: `CLAUDE.md` imports `AGENTS.md`; `AGENTS.md` maps the reading and the writing onto `PRD.md`, `ARCHITECTURE.md`, `SDLC.md` and `README.md`, and states the limits and invariants in one line each; `CHANGELOG.md` records what each version changed.
 - **Two packages**, in a pnpm workspace under `packages/`: `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`, each built with TypeScript into its own `dist/` and tested with Vitest.
+- **Two demonstration notebooks**, `notebooks/continuity-engineering` (en-US) and `notebooks/enologia` (pt-BR), written in MemorySmith's repository so that every declared notation appears in context; they are fixtures of the tests and documentation for a person.
+- **A playground**, `playground/`, a private Vite page of the workspace that draws any note of the two notebooks with the renderer, under an in-memory host, in light and dark; it is how a person looks at the renderer.
 - **Repository files:** `package.json`, the one home of the version and the root of the workspace; `.gitignore`, `.editorconfig` and `LICENSE`.
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
 - **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
@@ -98,9 +100,9 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `README.md` | What this is and how to start |
 | `CHANGELOG.md` | What changed in each version, in Keep a Changelog 1.1.0 |
 | `package.json` | The one home of the version (`version`), the package manager pinned (`packageManager`), the toolchain shared by the workspace (`devDependencies`), and the scripts `quality`, `build`, `typecheck` and `test`; private, named `@memorysmithapp/markdown`, never published |
-| `pnpm-workspace.yaml` | The workspace: every directory under `packages/`; and the one dependency allowed to run an install script, `esbuild`, which Vitest needs |
+| `pnpm-workspace.yaml` | The workspace: every directory under `packages/`, and `playground`; and the one dependency allowed to run an install script, `esbuild`, which Vitest needs |
 | `tsconfig.base.json` | The TypeScript options every package extends: strict, ES2022, ESM, `react-jsx`, declarations |
-| `vitest.config.ts` | The one Vitest configuration: a project per package, the renderer's in `jsdom` |
+| `vitest.config.ts` | The one Vitest configuration: a project per package and one for the playground, the renderer's and the playground's in `jsdom` |
 | `packages/markdown-spec/` | `@memorysmithapp/markdown-spec`: `package.json`, `tsconfig.json` (type-checks sources and tests), `tsconfig.build.json` (emits `dist/` from `src/`, tests excluded), `src/`, `test/` |
 | `packages/markdown-spec/SPEC.md` | The specification as a document, CC BY 4.0 |
 | `packages/markdown-spec/spec.json` | Every notation as data: identifier, reader, syntax, example, effect, governing section; validated by `schema/spec.schema.json` |
@@ -136,6 +138,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `.github/workflows/quality.yml` | The workflow *Quality*, job `Quality` |
 | `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version |
 | `pnpm-lock.yaml` | Written by pnpm; installed with `--frozen-lockfile` in CI |
+| `notebooks/<slug>/` | A demonstration notebook as MemorySmith keeps one: `GUIDANCE.md`, `STRUCTURE.md`, a folder per kind of note with its `TEMPLATE.md`, the notes, and `assets/`, the files it keeps — three fixture images its notes draw as `../assets/<name>` |
+| `playground/` | The playground, never published (`"private": true`): `src/notebooks.tsx` builds the in-memory notebook and the host contract over it — names and aliases from the frontmatter, `reaches`, `choose`, `loadNote`, `keeps` and `renderAttachment` over `assets/`, `renderLink` and `navigate` through the History API — `src/App.tsx` draws a note at `/notes/<slug>/<path>`, with `?theme=dark`, `?lang=pt` (the pt-BR words of MemorySmith, through `strings`) and `?bare=1` (the note alone, for screenshots); `vite.config.ts` serves the kept files at `/notes/<slug>/assets/<name>`; `test/` holds the coverage test of the notebooks and a test that draws every note |
 | `.gitignore` | Dependencies, build output, coverage, environment files, logs, operating-system and editor files |
 | `.editorconfig` | UTF-8, LF, two spaces, final newline |
 | `LICENSE` | The MIT licence |
@@ -199,6 +203,12 @@ Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-SPEC-001, RN-SPEC-002), 
 Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-RENDER-011), enforced here because it is what makes the renderer an implementation of the specification rather than a component that happens to draw most of it.
 
 **Mechanism:** `packages/markdown-renderer/test/reading-surface-conformance.test.tsx`, run by `pnpm test` and so by the workflow *Quality*, reads the entries from `@memorysmithapp/markdown-spec` — the workspace package, never a copy — and holds an expectation for every `reading-surface` entry that is not in `DELEGATED_TO_THE_BASE_PARSER`; it fails on an entry with no expectation, on an expectation with no entry, and when the asserted and the delegated sets do not together make exactly the entries. `conformance-coverage.test.ts` runs that file in its own process against a copy of the data with one fake entry, through `MARKDOWN_SPEC_FIXTURE`, and requires it to fail.
+
+### The demonstration notebooks show the whole notation
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-DEMO-001), enforced here because the notebooks are the first thing to age when a notation changes, and they age while teaching the wrong version to the person learning it.
+
+**Mechanism:** `playground/test/notebooks.test.ts`, run by `pnpm test`, ported from MemorySmith's own guard: every entry of `spec.json` not in `DELEGATED_TO_THE_BASE_PARSER` has a detector and appears in **each** notebook; neither notebook demonstrates a notation the specification does not declare (a query block, a templater expression, a handlebars placeholder, an inline field); the forms the specification does not describe that somebody reaches for first — `#subject`, `H~2~O` — are shown being ignored; every link lands but the ones each notebook declares pending on purpose; and the reserved keys are in en-US in both. `playground/test/every-note.test.tsx` draws every note in both themes and requires every embed to find its note and no error to be logged.
 
 ## 4. Integrations
 

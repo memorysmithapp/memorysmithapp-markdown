@@ -88,7 +88,8 @@ function linkTargets(text) {
     for (const match of content.matchAll(/\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+"[^"]*")?\s*\)/g)) {
       targets.push({ line, target: match[1].replace(/^<|>$/g, '') });
     }
-    const definition = content.match(/^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/);
+    // A footnote definition, `[^label]: text`, has the shape of a link definition and is prose.
+    const definition = content.match(/^\s{0,3}\[(?!\^)[^\]]+\]:\s*(<[^>]*>|\S+)/);
     if (definition) targets.push({ line, target: definition[1].replace(/^<|>$/g, '') });
   }
   return targets;

@@ -1,5 +1,5 @@
-// One Vitest configuration for the workspace: each package is a project, and the renderer's
-// tests run in jsdom. `pnpm test` at the root runs every project.
+// One Vitest configuration for the workspace: each package is a project, and the renderer's and
+// the playground's tests run in jsdom. `pnpm test` at the root runs every project.
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -20,6 +20,15 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
           environment: 'jsdom',
           setupFiles: ['test/setup.ts'],
+        },
+      },
+      {
+        test: {
+          name: 'playground',
+          root: 'playground',
+          include: ['test/**/*.test.{ts,tsx}'],
+          environment: 'jsdom',
+          setupFiles: ['../packages/markdown-renderer/test/setup.ts'],
         },
       },
     ],
