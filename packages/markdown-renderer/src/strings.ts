@@ -18,6 +18,10 @@ export interface NoteStrings {
   readonly refusedLink: string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
+  /** The verb of the button that copies a block of code. */
+  readonly copy: string;
+  /** What that button says once the block is copied. */
+  readonly copied: string;
 }
 
 /** The callout titles of MemorySmith, in English. */
@@ -59,6 +63,8 @@ export const ENGLISH: NoteStrings = {
   pendingLink: 'Pending link: the target note does not exist yet.',
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
   attachmentMissing: 'This notebook keeps no file under that name.',
+  copy: 'Copy',
+  copied: 'Copied',
 };
 
 /** The host's words over the English ones, key by key. */

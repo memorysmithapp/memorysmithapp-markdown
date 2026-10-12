@@ -16,6 +16,13 @@ const render = (markdown: string): string => html(markdown);
 
 /** What each declared entry has to be true of, once rendered. */
 const EXPECTED: Record<string, (html: string) => void> = {
+  mermaid: (html) => {
+    // The container is rendered before the library is imported, which is the
+    // whole point: the fence became a diagram and not a code block.
+    expect(html).toContain('mermaid-diagram');
+    expect(html).not.toContain('language-mermaid');
+    expect(html).not.toContain('flowchart LR');
+  },
   callout: (html) => {
     // A callout is an element with its type on it, not a blockquote with a
     // marker left in front of the text.
@@ -137,5 +144,99 @@ describe('a dollar sign that is not opening a formula stays a dollar sign', () =
     expect(html).toContain('$HOME');
     expect(html).toContain('$PATH');
     expect(html).not.toContain('katex');
+  });
+});
+
+/**
+ * Syntax highlighting, which is a product decision and not a conformance
+ * obligation: the specification attaches a rendering rule to exactly one info
+ * string and §8 leaves every other form to the implementation to draw as it
+ * likes. What the specification DOES constrain is everything around it.
+ */
+describe('a fenced block that names its language', () => {
+  it('is highlighted, in tokens and not in one flat run of text', () => {
+    const html = render('```sql\nselect 1 from notes;\n```\n');
+
+    expect(html).toContain('language-sql');
+    expect(html).toContain('token');
+    expect(html).toContain('select');
+  });
+
+  it('renders an unknown language as plain code, never as nothing', () => {
+    const html = render('```brainfuck\n+++[->+++<]\n```\n');
+
+    expect(html).toContain('+++[-&gt;+++&lt;]');
+    expect(html).not.toContain('class="token');
+  });
+
+  it('renders a fence with no info string exactly as before', () => {
+    const html = render('```\nplain text\n```\n');
+
+    expect(html).toContain('plain text');
+    expect(html).not.toContain('class="token');
+  });
+
+  it('leaves mermaid to the diagram, which is the one info string with a rule', () => {
+    const html = render('```mermaid\ngraph TD\n  A --> B\n```\n');
+
+    expect(html).toContain('mermaid-diagram');
+    expect(html).not.toContain('language-mermaid');
+    expect(html).not.toContain('class="token');
+  });
+
+  it('does not change the bytes, only how they are drawn', () => {
+    // Strip the spans the highlighter added, and what is left has to be the
+    // source, character for character.
+    const code = '{\n    "a":   1,\n\t"b": [ 2 ]\n}';
+    const html = render('```json\n' + code + '\n```\n');
+
+    const inside = /<code[^>]*language-json[^>]*>([\s\S]*?)<\/code>/.exec(html)?.[1] ?? '';
+    const text = inside
+      .replace(/<[^>]+>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+
+    expect(text).toBe(code);
+  });
+
+  it('never injects note-derived markup as HTML', () => {
+    const html = render('```javascript\nconst x = "<script>window.stolen = 1</script>";\n```\n');
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('highlights a code span never, because a span has no info string', () => {
+    const html = render('Write `select 1` in the console.');
+
+    expect(html).toContain('select 1');
+    expect(html).not.toContain('class="token');
+  });
+});
+
+/** Code is told apart once for each case: inline code by its face, a block by a frame with the verb that copies it, and a diagram by neither. */
+describe('a block of code has a frame and a Copy button, and inline code has neither', () => {
+  it('frames a fenced block, highlighted or not, with the button inside the frame', () => {
+    for (const fence of ['```ts\nconst a = 1;\n```\n', '```\nplain\n```\n']) {
+      const html = render(fence);
+      expect(html).toMatch(/<div class="code-block"><pre>[\s\S]*<\/pre><button[^>]*code-copy/);
+      expect(html).toMatch(/aria-label="Copy"/);
+    }
+  });
+
+  it('leaves inline code in the sentence, with no frame and nothing to copy', () => {
+    const html = render('Run `pnpm test` first.\n');
+    expect(html).toContain('<code>pnpm test</code>');
+    expect(html).not.toContain('code-block');
+    expect(html).not.toContain('code-copy');
+  });
+
+  it('leaves a diagram unframed, with nothing to copy', () => {
+    const html = render('```mermaid\ngraph TD\n  A --> B\n```\n');
+    expect(html).toContain('mermaid-diagram');
+    expect(html).not.toContain('code-block');
+    expect(html).not.toContain('code-copy');
   });
 });

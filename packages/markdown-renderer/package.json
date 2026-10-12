@@ -24,6 +24,7 @@
     "test": "cd ../.. && vitest run --project markdown-renderer"
   },
   "peerDependencies": {
+    "katex": "^0.18.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -40,7 +41,10 @@
     "access": "public"
   },
   "dependencies": {
+    "hast-util-to-jsx-runtime": "2.3.6",
+    "mermaid": "11.17.0",
     "react-markdown": "9.1.0",
+    "refractor": "5.0.0",
     "rehype-katex": "7.0.1",
     "remark-gfm": "4.0.1",
     "remark-math": "6.0.0"

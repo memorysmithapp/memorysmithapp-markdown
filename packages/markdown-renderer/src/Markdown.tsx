@@ -1,12 +1,17 @@
-import type { AnchorHTMLAttributes, ImgHTMLAttributes, MouseEvent } from 'react';
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
+import { useRef, type AnchorHTMLAttributes, type HTMLAttributes, type ImgHTMLAttributes, type MouseEvent } from 'react';
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { followable } from './address.js';
+import { CopyButton } from './CopyButton.js';
+import { highlightLanguage, highlightTree } from './highlight.js';
 import { useHost } from './host.js';
 import { readImageAlt } from './image-dimensions.js';
 import { toUnixNewlines } from './markdown.js';
+import { MermaidDiagram } from './MermaidDiagram.js';
 import { remarkCallouts } from './remark-callouts.js';
 import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
 
@@ -102,6 +107,95 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
   );
 }
 
+/**
+ * A code span, a fenced block, and the one info string with a rendering rule.
+ *
+ * The order of the three branches is the contract. `mermaid` is checked first
+ * and reaches `MermaidDiagram` with its source untouched, because it is the
+ * only info string the specification attaches a rendering rule to (§7.2) and a
+ * highlighter in front of that check would swallow a diagram. A language the
+ * highlighter carries is tokenised. Everything else — a code span, a fence
+ * with no info string, a language nobody registered — renders exactly as it
+ * did before highlighting existed, which is the pattern the specification sets
+ * for the diagram it cannot draw and the formula it cannot typeset: show the
+ * source, never hide it.
+ *
+ * The tokens arrive as ELEMENTS. `refractor` produces a hast tree and
+ * `toJsxRuntime` builds React out of it, so no note-derived markup is ever
+ * parsed as HTML — the boundary §7.9 draws, held at the one place a
+ * highlighter would otherwise breach it.
+ */
+function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HTMLAttributes<HTMLElement>>) {
+  const { theme } = useHost();
+  if (className?.includes('language-mermaid')) {
+    return <MermaidDiagram code={String(children).trim()} theme={theme} />;
+  }
+
+  const language = highlightLanguage(className);
+  if (language !== null) {
+    // The source is read and never rewritten: what is on the page is the
+    // bytes, split into spans. React-markdown hands the children of a fence as
+    // a single string ending in the newline before the closing fence.
+    const code = String(children).replace(/\n$/, '');
+    return (
+      <code className={className} {...rest}>
+        {toJsxRuntime(highlightTree(code, language), { Fragment, jsx, jsxs })}
+      </code>
+    );
+  }
+
+  return (
+    <code className={className} {...rest}>
+      {children}
+    </code>
+  );
+}
+
+/**
+ * A fenced block in a frame of its own, with the verb that carries it
+ * somewhere else. The frame is not the `pre`: the `pre` scrolls and never
+ * wraps, since a wrapped line breaks indentation that carries meaning, and the
+ * button has to stay in its corner while the content scrolls under it.
+ *
+ * What is copied is the `textContent` of the code, which is the bytes as
+ * typed because the highlighter's tokens arrive as elements, less the newline
+ * before the closing fence.
+ *
+ * A diagram is not code on the page: its fence is left bare, with no frame and
+ * nothing to copy.
+ */
+function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPreElement>>) {
+  const { strings } = useHost();
+  const ref = useRef<HTMLPreElement>(null);
+  const code = (node as HastElement | undefined)?.children?.find((child) => child.tagName === 'code');
+  const classes = code?.properties?.['className'];
+  if (Array.isArray(classes) && classes.includes('language-mermaid')) {
+    return <pre {...rest}>{children}</pre>;
+  }
+
+  return (
+    <div className="code-block">
+      <pre ref={ref} {...rest}>
+        {children}
+      </pre>
+      <CopyButton
+        className="code-copy"
+        label={strings.copy}
+        done={strings.copied}
+        text={() => (ref.current?.querySelector('code')?.textContent ?? '').replace(/\n$/, '')}
+      />
+    </div>
+  );
+}
+
+/** The hast element react-markdown hands a component, as much as is used. */
+interface HastElement {
+  readonly tagName?: string;
+  readonly properties?: Record<string, unknown>;
+  readonly children?: readonly HastElement[];
+  readonly position?: { readonly start?: { readonly offset?: number } };
+}
+
 export function Markdown({ children }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
@@ -152,6 +246,8 @@ export function Markdown({ children }: MarkdownProps) {
         urlTransform={followable}
         components={{
           a: MarkdownAnchor,
+          code: MarkdownCode,
+          pre: MarkdownPre,
           img: MarkdownImage,
         }}
       >

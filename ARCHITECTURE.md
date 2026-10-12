@@ -30,6 +30,8 @@ The repository is made of:
   4. `remark-math`;
   5. `remarkMathDollarRule`, **after** `remark-math`: it gives back to the text an inline formula that breaks the dollar rule of `SPEC.md` §7.8, reading the source the parser read, so `R$100 e o frete R$200` stays a sentence;
   6. `rehype-katex` with `throwOnError: false`, so a formula KaTeX cannot typeset shows its source.
+
+  Code is drawn by three branches, in this order: a `mermaid` fence reaches `MermaidDiagram` untouched; a fence whose language `refractor` carries (`src/highlight.ts`, MemorySmith's fifteen grammars) is tokenised into a hast tree that `hast-util-to-jsx-runtime` turns into React elements, never an HTML string; everything else is drawn as it was typed. A fence other than a diagram sits in a `.code-block` frame with a `CopyButton` that copies the `textContent` of the code less the newline before the closing fence.
 - **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:
 
 | Prop | Shape | Default |
@@ -38,7 +40,8 @@ The repository is made of:
 | `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
 | `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
 | `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
-| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment | MemorySmith's English (`ENGLISH`) |
+| `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
+| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied | MemorySmith's English (`ENGLISH`) |
 
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
@@ -75,6 +78,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
 | `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
 | `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser |
+| `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
+| `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |
 | `packages/markdown-renderer/src/remark-callouts.ts`, `remark-ring.ts` | The remark plugins of callouts, marked text, comments, block identifiers and the dollar rule |
 | `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
@@ -183,3 +188,11 @@ Each record has an identifier, never reused; its context, decision, rationale an
 - **Rationale:** the types change in the same commit as the data (RN-SPEC-001 already makes the data move with the document), and the compiler, not a reader, checks that they agree. Generating them from the schema was not chosen: the schema says nothing about a conformance case, whose semantics live in `tests/README.md`, and a generator would be one more tool for a few dozen lines.
 - **Consequences:** what an implementation decides on top of the specification is not typed here. The two lists the main repository calls "ours and not the profile's" — the entries delegated to the base parser and the forms deliberately left silent — stay with their implementations: the first with the renderer, the second with the main repository.
 - **Date:** 2026-10-12. **Status:** Accepted. **Origin:** declared by the owner in #5.
+
+### ADR-002 How the renderer carries its heavy libraries
+
+- **Context:** `mermaid`, `katex` and `refractor` are heavy, and a host may already carry some of them. MemorySmith's reading page imports Mermaid lazily, typesets with the KaTeX that `rehype-katex` brings, and takes the stylesheet from its own `katex` dependency (*observed* at `4b67c7e`).
+- **Decision:** `refractor` and `hast-util-to-jsx-runtime` are dependencies; so is `mermaid`, imported only through `import('mermaid')` inside `MermaidDiagram`, so a bundler puts it in a chunk of its own that loads when a note holds a diagram. `rehype-katex` is a dependency and brings the KaTeX that typesets; `katex` is a **peer dependency**, because what the host needs from it is the stylesheet and its fonts (`katex/dist/katex.min.css`), which only the host can import into its page. The versions are the ones MemorySmith's frontend locks.
+- **Rationale:** a dependency the renderer cannot draw without belongs to the renderer, and installing it is not the host's problem; Mermaid's weight is paid at load time, not at install time, and the dynamic import is what keeps it out of the initial bundle. KaTeX's stylesheet carries fonts a bundler has to resolve, which is the host's work.
+- **Consequences:** a host imports `katex/dist/katex.min.css` beside the package's stylesheet. A test reads the built `dist/` and fails if any module imports `mermaid` statically.
+- **Date:** 2026-10-12. **Status:** Accepted. **Origin:** decided in #8, as the issue asked.

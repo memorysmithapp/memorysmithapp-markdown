@@ -18,7 +18,7 @@ export interface NoteBodyProps extends NoteHost {
  * every piece of notebook data through the props of `NoteHost`.
  */
 export function NoteBody({ markdown, ...host }: NoteBodyProps) {
-  const resolved = useMemo(() => resolveHost(host), [host.resolve, host.keeps, host.renderAttachment, host.renderLink, host.strings]);
+  const resolved = useMemo(() => resolveHost(host), [host.resolve, host.keeps, host.renderAttachment, host.renderLink, host.strings, host.theme]);
   // Frontmatter is shown as properties, not as prose, so the reading surface
   // starts after it.
   const body = markdown.slice(bodyStart(markdown));

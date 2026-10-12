@@ -30,6 +30,8 @@ export interface NoteHost {
   readonly renderLink?: (link: LinkRequest) => ReactNode;
   /** The words the page shows, in the reader's language; each one left out is MemorySmith's English. */
   readonly strings?: Partial<NoteStrings>;
+  /** The theme the host draws in, which picks the theme of a Mermaid diagram. Defaults to `light`. */
+  readonly theme?: 'light' | 'dark';
 }
 
 /** A file to draw: its name, and the dimensions the embed declared. */
@@ -53,6 +55,7 @@ export interface ResolvedHost {
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
+  readonly theme: 'light' | 'dark';
 }
 
 const nothing = (): null => null;
@@ -70,6 +73,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),
+    theme: host.theme ?? 'light',
   };
 }
 
