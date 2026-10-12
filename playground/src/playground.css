@@ -1,0 +1,113 @@
+/* The page around the note: the playground's own, never the package's. The
+   note column has MemorySmith's measure — 700px of text in a pane of 48.75rem
+   with 2rem 2.5rem of padding — so a note wraps where it wraps there. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --page: #edefec;
+  --page-text: #0e1526;
+  --page-soft: #545d73;
+  --page-line: #dce0da;
+  --page-accent: #0f56d7;
+}
+:root[data-theme='dark'] {
+  --page: #0b1220;
+  --page-text: #edefec;
+  --page-soft: #93a0ba;
+  --page-line: #24304a;
+  --page-accent: #4c8dff;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--page-text);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 18rem 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  padding: 1.25rem 1rem;
+  border-right: 1px solid var(--page-line);
+  font-size: 0.85rem;
+}
+.sidebar .brand {
+  margin: 0 0 0.75rem;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+}
+.sidebar .controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sidebar h2 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--page-soft);
+}
+.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sidebar li {
+  margin: 0.2rem 0;
+}
+.sidebar a {
+  color: var(--page-accent);
+  text-decoration: none;
+}
+.sidebar a.current {
+  color: var(--page-text);
+  font-weight: 600;
+}
+
+.pane {
+  max-width: 48.75rem;
+  margin: 0 auto;
+  padding: 2rem 2.5rem 4rem;
+}
+.note-title {
+  margin: 0 0 1.5rem;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.802em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* MemorySmith's content pane narrows its padding with the window. */
+@media (max-width: 1180px) {
+  .pane {
+    padding: 1.75rem 1.75rem 3rem;
+  }
+}
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--page-line);
+  }
+  .pane {
+    padding: 1.25rem 1rem 3rem;
+  }
+}
+@media (max-width: 380px) {
+  .pane {
+    padding: 1rem 0.75rem 2.5rem;
+  }
+}

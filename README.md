@@ -9,9 +9,35 @@ Neither package exists in this repository yet: today it holds the documents it i
 With Node 24 and Corepack (`corepack enable`), from the root:
 
 ```sh
-pnpm run quality   # the checks the workflow Quality runs on every pull request
-pnpm test          # their tests
+pnpm install       # the workspace: packages/markdown-spec and packages/markdown-renderer
+pnpm -r build      # each package into its dist/
+pnpm run quality   # the checks of the documents and the version
+pnpm test          # the tests of the checks and of every package
 ```
+
+The workflow *Quality* runs the same commands on every pull request.
+
+## Look at it
+
+The two demonstration notebooks, `notebooks/continuity-engineering` (en-US) and `notebooks/enologia` (pt-BR), show every notation of the specification in context. The playground draws any of their notes with the renderer:
+
+```sh
+pnpm -r build
+pnpm --filter playground dev   # http://localhost:5173/
+```
+
+`?theme=dark` draws the dark theme, `?lang=pt` the words of the page in Brazilian Portuguese.
+
+## Compare it with MemorySmith
+
+The renderer is MemorySmith's reading page, extracted. This draws every note of the two notebooks with MemorySmith's own component and with the renderer, in light and dark, at a desktop and a phone width, and compares the images:
+
+```sh
+npx playwright install --with-deps chromium   # once
+pnpm --filter playground compare
+```
+
+The first run clones MemorySmith at the commit the renderer was extracted from and installs its frontend; the images land in `playground/compare/out/`.
 
 ## Repository settings
 

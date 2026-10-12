@@ -1,0 +1,8 @@
+packages:
+  - 'packages/*'
+  # The page a person looks at the renderer through, never published.
+  - playground
+
+allowBuilds:
+  # Vite and Vitest bundle with esbuild, whose install script fetches its binary.
+  esbuild: true

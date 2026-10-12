@@ -1,5 +1,6 @@
 # The checks of what the documents promise about themselves and the version (scripts/quality.mjs),
-# and their tests. The job is named Quality, the status check the ruleset `main` requires.
+# the build of the packages, and every test: the checks' and the packages'. The job is named
+# Quality, the status check the ruleset `main` requires, so it covers the code as well as the documents.
 name: Quality
 
 on:
@@ -21,11 +22,19 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          # No dependency to cache, and pnpm is not on the PATH until Corepack is enabled.
+          # pnpm is not on the PATH until Corepack is enabled, so setup-node cannot cache its store.
           package-manager-cache: false
       - name: Enable the pnpm pinned in package.json
         run: corepack enable
+      - name: Install
+        run: pnpm install --frozen-lockfile
       - name: Check the documents and the version
         run: pnpm run quality
-      - name: Test the checks
+      - name: Build the packages
+        run: pnpm -r build
+      - name: Check what each package ships
+        run: node scripts/pack-check.mjs
+      - name: Type-check the packages and their tests
+        run: pnpm -r typecheck
+      - name: Test the checks and the packages
         run: pnpm test

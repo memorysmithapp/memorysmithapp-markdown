@@ -11,11 +11,78 @@ Claims carry their status when it is not obvious: *observed*, *declared*, *infer
 The repository is made of:
 
 - **Documents**, the core of what it delivers: `CLAUDE.md` imports `AGENTS.md`; `AGENTS.md` maps the reading and the writing onto `PRD.md`, `ARCHITECTURE.md`, `SDLC.md` and `README.md`, and states the limits and invariants in one line each; `CHANGELOG.md` records what each version changed.
-- **Repository files:** `package.json`, the one home of the version; `.gitignore`, `.editorconfig` and `LICENSE`.
+- **Two packages**, in a pnpm workspace under `packages/`: `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`, each built with TypeScript into its own `dist/` and tested with Vitest.
+- **Two demonstration notebooks**, `notebooks/continuity-engineering` (en-US) and `notebooks/enologia` (pt-BR), written in MemorySmith's repository so that every declared notation appears in context; they are fixtures of the tests and documentation for a person.
+- **A playground**, `playground/`, a private Vite page of the workspace that draws any note of the two notebooks with the renderer, under an in-memory host, in light and dark; it is how a person looks at the renderer.
+- **Repository files:** `package.json`, the one home of the version and the root of the workspace; `.gitignore`, `.editorconfig` and `LICENSE`.
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
-- **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs` on every pull request and push to `main`; the ruleset requires it.
+- **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
 - **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged.
 - **GitHub configuration**: the ruleset `main` and the settings the script applies.
+
+### 1.1 The renderer
+
+`@memorysmithapp/markdown-renderer` exports one component, **`NoteBody`**, which draws the body of a note. The name says what it draws — the body, never the frontmatter, which a host shows as properties — and leaves `Markdown` to the component that draws one parsed run, as MemorySmith's reading page names it.
+
+- **`NoteBody`** (`src/NoteBody.tsx`) takes the note as the host keeps it, frontmatter included, cuts the frontmatter off, and draws the rest inside `<div class="markdown">`. It is MemorySmith's `WritableContent`: it splits the body into runs of text and embeds (`splitEmbeds`, `src/transclusion.ts`), resolves the wikilinks of each run, and draws each run with `Markdown` and each embed with `Transclusion` — the body of the one note a target reaches, asked of the host's `loadNote`, cut to the section or block its anchor names, its own embeds demoted to links so the page expands one level only, and the note it came from named in a caption. Past `EMBED_LIMIT` (10) embeds, and inside a table cell or code, an embed is a link, never dropped.
+- **`Markdown`** (`src/Markdown.tsx`) is MemorySmith's `Markdown` component: `react-markdown` over the text with newlines normalised, no raw HTML (no `rehype-raw`), `followable` as `urlTransform`, the footnote labels of the host, and the components that draw an anchor and an image. Its plugins run in this order, and the order is part of the contract:
+  1. `remark-gfm`, at `singleTilde: false`, so `H~2~O` is not struck;
+  2. `remarkCallouts` (`src/remark-callouts.ts`), titled by `strings.callouts`, or by the kind capitalised;
+  3. `remarkHighlight`, `remarkComments` and `remarkBlockIds` (`src/remark-ring.ts`), on text nodes only, so nothing inside code is touched;
+  4. `remark-math`;
+  5. `remarkMathDollarRule`, **after** `remark-math`: it gives back to the text an inline formula that breaks the dollar rule of `SPEC.md` §7.8, reading the source the parser read, so `R$100 e o frete R$200` stays a sentence;
+  6. `rehype-katex` with `throwOnError: false`, so a formula KaTeX cannot typeset shows its source.
+
+  A task item is drawn by `TaskItem`, which reads its state from the `input` GFM produced — react-markdown hands a component the hast element, which has no `checked` of its own — and reports the ordinal of its box: its position in the run, mapped by `ordinalAt` (`src/tasklist.ts`) to the n-th box of the run's text, plus the boxes of the runs and the frontmatter above it. The boxes are enabled only when the host made the note `writable`, and only when the boxes of the source and of the resolved runs agree in number, because `- [[x]]` resolves to `- [x](…)`, which GFM reads as a box the source does not have. Boxes are counted after any block quote markers, so a box inside a callout has an ordinal of its own.
+
+  Before the parser, `NoteBody` rewrites the text it hands it, never the note: `resolveWikilinks` (`src/markdown.ts`) turns each `[[name]]` outside code into a Markdown link to the host's address, to `pending:` when no note answers, to `choice:` when the host has `choose` and no single note answers, and each `![[file]]` the host `keeps` into `attachment:` with its dimension. Code — fences by the specification's rules, code spans by their runs — is found before anything is rewritten, so notation inside it stays characters. The anchor of the surface turns each of those schemes into what it is: `pending:` into a pending span, `attachment:` into the host's `renderAttachment`, `choice:` into `LinkChoice`, a modal dialog of the notes the host's `choose` answers. `followable` lets the three schemes through.
+
+  Code is drawn by three branches, in this order: a `mermaid` fence reaches `MermaidDiagram` untouched; a fence whose language `refractor` carries (`src/highlight.ts`, MemorySmith's fifteen grammars) is tokenised into a hast tree that `hast-util-to-jsx-runtime` turns into React elements, never an HTML string; everything else is drawn as it was typed. A fence other than a diagram sits in a `.code-block` frame with a `CopyButton` that copies the `textContent` of the code less the newline before the closing fence.
+- **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:
+
+| Prop | Shape | Default |
+|---|---|---|
+| `resolve` | `(name) => string \| null`: the address of the one note a target names, compared after NFC | Every link is pending |
+| `reaches` | `(name) => number`: how many notes a target reaches, by name or by alias | 1 when `resolve` answers, 0 otherwise |
+| `choose` | `(name) => Promise<LinkChoices>`: the notes a target no single note answers may lead to, asked on a click | Such a link is pending and asks nothing |
+| `targetAddress` | `(name) => string \| null`: the host's page about a target, for a new tab | None |
+| `navigate` | `(address) => void`: goes to an internal address | `location.assign` |
+| `writable` | `boolean`: whether the reader may tick the task boxes | `false`: every box shows its state and none answers |
+| `onToggleTask` | `(ordinal) => void`: a box was ticked; the ordinal counts the boxes of the note as the host gave it, which the host applies with `toggleTaskAt` | Nothing is reported |
+| `loadNote` | `(name) => Promise<{ markdown, name, address } \| null>`: the note an embed draws in place, asked only when exactly one note reaches the target | Every embed of a note is pending |
+| `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
+| `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
+| `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
+| `remoteNotice` | `boolean`: whether a note that fetched images from other sites says so under its body | `true` |
+| `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
+| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, the words of the choice a link opens, and what an embed says when its section is missing | MemorySmith's English (`ENGLISH`) |
+
+### 1.2 The stylesheet of the reading surface
+
+`@memorysmithapp/markdown-renderer/styles.css` carries every rule of MemorySmith's stylesheet that draws the body of a note — the reading surface's headings, lists, task items, blockquotes, footnotes, code and its frame, tables, callouts, embeds, wikilinks, pending and refused links, highlight tokens, Mermaid, the choice dialog and the embed skeleton — and none of the page around it. Every selector starts with `.markdown`, and a test parses the file to prove it. What MemorySmith's page gave the note from the document (the text face, the colour, `box-sizing`, the colour of a link) is set on the root of the note instead.
+
+`NoteBody` draws its root as `<div class="markdown" data-theme="light|dark">`, from the `theme` prop. The root stands where MemorySmith's page had the document: each run of text is a `.markdown` inside it, and an embed, a pending embed and the notice of remote images sit beside the runs, outside any `.markdown`. So the rules on `.markdown[data-theme]` give the root the body's line height (1.45) and a paragraph's own margins to the paragraphs that sit directly in it, and the rule that takes the top margin off a first child applies to the runs, not to the root. The stylesheet sets its values there, as private `--ms-*` properties read from public `--markdown-*` ones with MemorySmith's value as the fallback, once for the light theme and once for the dark. A host themes a note by setting a `--markdown-*` property on the root or on any ancestor; it overrides no selector. The colours, faces and radii are public; the metrics — the modular heading scale, the paragraph and list spacing, the line heights — are not, because they are what drawing a note the same means.
+
+| Property | What it sets | Light | Dark |
+|---|---|---|---|
+| `--markdown-bg` | The paper the note is drawn on | `#edefec` | `#0b1220` |
+| `--markdown-surface` | What sits on the paper: the Copy button, the choice dialog | `#ffffff` | `#111a2c` |
+| `--markdown-border` | Hairlines, frames, table rules | `#dce0da` | `#24304a` |
+| `--markdown-text` | The text | `#0e1526` | `#edefec` |
+| `--markdown-text-soft` | Footnotes, captions, notices, the sixth heading | `#545d73` | `#93a0ba` |
+| `--markdown-accent` | Links, the rule of an embed, task boxes | `#0f56d7` | `#4c8dff` |
+| `--markdown-pending` | A pending link | `#a6ab9f` | `#5d6880` |
+| `--markdown-code-bg` | A block of code, a table row under the pointer | `#f4f5f2` | `#0e1728` |
+| `--markdown-code-color` | Inline code, and the tokens no colour picks out | the soft text | the soft text |
+| `--markdown-token-keyword`, `--markdown-token-string`, `--markdown-token-number`, `--markdown-token-comment`, `--markdown-token-punctuation` | Highlighted tokens | `#0f56d7`, `#b4541a`, `#157a3a`, `#646c7f`, `#4e566b` | `#4c8dff`, `#f0a05a`, `#4fc07f`, `#7c89a3`, `#93a0ba` |
+| `--markdown-callout-info`, `--markdown-callout-idea`, `--markdown-callout-done`, `--markdown-callout-warn`, `--markdown-callout-stop`, `--markdown-callout-aside`, `--markdown-callout-quote` | The hue of each family of callouts, as an RGB triplet | `15, 86, 215` · `14, 109, 102` · `15, 111, 51` · `158, 71, 0` · `180, 35, 24` · `109, 40, 217` · `84, 93, 115` | `76, 141, 255` · `45, 212, 191` · `74, 222, 128` · `251, 191, 36` · `248, 113, 113` · `167, 139, 250` · `147, 160, 186` |
+| `--markdown-font-sans` | The text face, headings included | `'Inter', 'Segoe UI', system-ui, sans-serif` | the same |
+| `--markdown-font-display` | The face of the dialog's heading and of buttons | `'Space Grotesk', 'Segoe UI', system-ui, sans-serif` | the same |
+| `--markdown-font-mono` | Code | `ui-monospace, 'Cascadia Code', Consolas, monospace` | the same |
+| `--markdown-radius` | Code frames, callouts, buttons, options | `8px` | the same |
+| `--markdown-radius-large` | The choice dialog | `12px` | the same |
+
+A host loads the faces (Inter 400 and 600, Space Grotesk 500 and 700, as MemorySmith does from Google Fonts) and imports `katex/dist/katex.min.css` beside this stylesheet ([ADR-002](#adr-002-how-the-renderer-carries-its-heavy-libraries)). The width of the column is the host's: MemorySmith draws a note 700px wide, in a pane of `48.75rem` with `2rem 2.5rem` of padding.
 
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
@@ -32,19 +99,61 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `SDLC.md` | How a change travels from an issue to a release |
 | `README.md` | What this is and how to start |
 | `CHANGELOG.md` | What changed in each version, in Keep a Changelog 1.1.0 |
-| `package.json` | The one home of the version (`version`), the package manager pinned (`packageManager`), and the scripts `quality` and `test`; private, named `@memorysmithapp/markdown`, with no dependency |
+| `package.json` | The one home of the version (`version`), the package manager pinned (`packageManager`), the toolchain shared by the workspace (`devDependencies`), and the scripts `quality`, `build`, `typecheck` and `test`; private, named `@memorysmithapp/markdown`, never published |
+| `pnpm-workspace.yaml` | The workspace: every directory under `packages/`, and `playground`; and the one dependency allowed to run an install script, `esbuild`, which Vitest needs |
+| `tsconfig.base.json` | The TypeScript options every package extends: strict, ES2022, ESM, `react-jsx`, declarations |
+| `vitest.config.ts` | The one Vitest configuration: a project per package and one for the playground, the renderer's and the playground's in `jsdom` |
+| `packages/markdown-spec/` | `@memorysmithapp/markdown-spec`: `package.json`, `tsconfig.json` (type-checks sources and tests), `tsconfig.build.json` (emits `dist/` from `src/`, tests excluded), `src/`, `test/` |
+| `packages/markdown-spec/SPEC.md` | The specification as a document, CC BY 4.0 |
+| `packages/markdown-spec/spec.json` | Every notation as data: identifier, reader, syntax, example, effect, governing section; validated by `schema/spec.schema.json` |
+| `packages/markdown-spec/tests/conformance.json`, `tests/README.md` | The conformance suite, and its format |
+| `packages/markdown-spec/tools/check-spec.mjs` | The checker that keeps the document, the data and the suite together (RN-SPEC-001, RN-SPEC-002); Node only |
+| `packages/markdown-spec/src/types.ts` | The types of `spec.json` and of a conformance case (RN-SPEC-005) |
+| `packages/markdown-spec/src/index.ts` | The typed entry point: `spec`, `conformance` and `cases`, the JSON files given their types |
+| `packages/markdown-spec/src/json.d.ts` | Types a JSON import as `unknown` for the build, which runs without `resolveJsonModule` so the data stays at the root of the package and is not copied into `dist/` |
+| `packages/markdown-spec/test/` | The tests of the checker and of the types |
+| `packages/*/README.md` | What a package is and how to use it, the page npm shows |
+| `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
+| `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
+| `packages/markdown-renderer/styles.css` | The stylesheet of the reading surface ([§1.2](#12-the-stylesheet-of-the-reading-surface)) |
+| `packages/markdown-renderer/src/NoteBody.tsx`, `Markdown.tsx` | The component and the pipeline of one parsed run ([§1.1](#11-the-renderer)) |
+| `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
+| `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
+| `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
+| `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser: code, fence and table regions, wikilink resolution, the hosts of remote images, and the frontmatter as MemorySmith reads it |
+| `packages/markdown-renderer/src/transclusion.ts`, `Transclusion.tsx` | The split of a body into text and embeds, the cut of a section or a block, and the embed drawn in place |
+| `packages/markdown-renderer/src/wikilink-address.ts` | Where a wikilink goes under the host: its note, the choice, or pending |
+| `packages/markdown-renderer/src/tasklist.ts` | The task boxes of a text, the ordinal of one, and the one-character toggle a host applies |
+| `packages/markdown-renderer/src/LinkChoice.tsx` | The choice a link opens when no single note answers it |
+| `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
+| `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |
+| `packages/markdown-renderer/src/remark-callouts.ts`, `remark-ring.ts` | The remark plugins of callouts, marked text, comments, block identifiers and the dollar rule |
+| `packages/markdown-renderer/src/delegated.ts` | `DELEGATED_TO_THE_BASE_PARSER`, the `reading-surface` entries whose rendering is the base parser's and is not asserted, and `unclassified`, which finds an entry neither asserted nor delegated |
+| `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has; `reading-surface-conformance.test.tsx` asserts every `reading-surface` entry of `@memorysmithapp/markdown-spec`, and `conformance-coverage.test.ts` runs it against a specification with one unclassified entry, which must fail |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |
 | `scripts/quality.test.mjs` | The tests of the checks, one deliberate violation each, on `node:test` |
 | `scripts/release.mjs` | Decides what the workflow *Release* does on a push to `main`: release, nothing, or fail |
 | `scripts/release.test.mjs` | The tests of that decision |
+| `scripts/publish.mjs`, `scripts/publish.test.mjs` | Decides and does what *Release* publishes to npm, and its tests |
+| `scripts/pack-check.mjs` | Compares what each published package packs with what it is meant to ship |
 | `scripts/lib/changelog.mjs` | Reads `CHANGELOG.md`: its sections, categories, link definitions and the notes of a version |
 | `.github/workflows/quality.yml` | The workflow *Quality*, job `Quality` |
 | `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version |
-| `pnpm-lock.yaml` | Written by pnpm; with no dependency, it records only the pinned pnpm |
+| `pnpm-lock.yaml` | Written by pnpm; installed with `--frozen-lockfile` in CI |
+| `notebooks/<slug>/` | A demonstration notebook as MemorySmith keeps one: `GUIDANCE.md`, `STRUCTURE.md`, a folder per kind of note with its `TEMPLATE.md`, the notes, and `assets/`, the files it keeps — three fixture images its notes draw as `../assets/<name>` |
+| `playground/compare/` | The comparison with MemorySmith's reading page ([§3, the renderer draws what MemorySmith draws](#the-renderer-draws-what-memorysmith-draws)): `compare.mjs` drives it, and `reference/` is the page that mounts MemorySmith's own component, copied into a checkout of MemorySmith when it runs |
+| `playground/` | The playground, never published (`"private": true`): `src/notebooks.tsx` builds the in-memory notebook and the host contract over it — names and aliases from the frontmatter, `reaches`, `choose`, `loadNote`, `keeps` and `renderAttachment` over `assets/`, `renderLink` and `navigate` through the History API — `src/App.tsx` draws a note at `/notes/<slug>/<path>`, with `?theme=dark`, `?lang=pt` (the pt-BR words of MemorySmith, through `strings`) and `?bare=1` (the note alone, for screenshots); `vite.config.ts` serves the kept files at `/notes/<slug>/assets/<name>`; `test/` holds the coverage test of the notebooks and a test that draws every note |
 | `.gitignore` | Dependencies, build output, coverage, environment files, logs, operating-system and editor files |
 | `.editorconfig` | UTF-8, LF, two spaces, final newline |
 | `LICENSE` | The MIT licence |
+
+### 2.1 Toolchain
+
+- **pnpm**, pinned in `packageManager` and enabled through Corepack; the workspace links the packages to each other, so the renderer's tests read the specification's data from the package, not from a copy.
+- **TypeScript 5.9**, strict, configured once in `tsconfig.base.json`. Each package type-checks its sources and tests with `tsconfig.json` and emits ESM and declarations into `dist/` with `tsconfig.build.json`; `dist/` is what `exports` names and what a consumer receives.
+- **Vitest 3**, configured once in `vitest.config.ts`. Each package's `test` script runs its project from the root (`cd ../.. && vitest run --project <name>`), so the configuration is never repeated; the renderer's project runs in `jsdom`.
+- The versions of the toolchain and of the renderer's libraries are those the main repository's frontend locks at the commit the renderer is extracted from, so that "draws the same" is not disturbed by an upgrade (*declared* in #1, decision 2; the versions *observed* in that repository's `pnpm-lock.yaml`).
 
 ## 3. Invariants and their mechanisms
 
@@ -54,7 +163,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 
 The version lives in the `version` field of the root `package.json` and nowhere else; `CHANGELOG.md` records the versions that were cut.
 
-**Mechanism:** check 1 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*: the root `package.json` has a SemVer `version`, and it is the latest released section of `CHANGELOG.md`; on the branch `release/vX.Y.Z` it may be ahead of it, bumping to it; before the first cut it may be `0.1.0` with no released section. That the version is written in no other file is held by the writing map and the owner's review.
+**Mechanism:** check 1 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*: the root `package.json` has a SemVer `version`, and it is the latest released section of `CHANGELOG.md`; on the branch `release/vX.Y.Z` it may be ahead of it, bumping to it; before the first cut it may be `0.1.0` with no released section. Check 7 holds the packages to it: every package of the workspace has the root's `version`, and a package that is not `"private": true` declares public access ([§4, npm](#4-integrations)). That the version is written in no other file is held by the writing map and the owner's review.
 
 ### INV-02 CLAUDE.md is only the import
 
@@ -87,6 +196,36 @@ The link condition exists because a repository created from `memorysmithapp-temp
 
 **Mechanism:** checks 2, 4 and 5 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*. Anchors are computed as GitHub computes them (lowercase, punctuation dropped, spaces as hyphens, `-1`, `-2`… for repeated headings), which is what keeps the links of `AGENTS.md` into this document from rotting silently. Code blocks and inline code are skipped, so a link or a footer quoted as code is not read as one. A footer is a line *starting* with "Last revised", "Last updated", "Revision date", "Internal document" and the like; the words inside a sentence are not one.
 
+### The specification keeps its three files together
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-SPEC-001, RN-SPEC-002), enforced here because it is the property the specification package exists for.
+
+**Mechanism:** [`packages/markdown-spec/tools/check-spec.mjs`](packages/markdown-spec/tools/check-spec.mjs), the first half of the package's `test`, run by `pnpm test` and so by the workflow *Quality*. It validates `spec.json` against its schema with a validator that implements only the keywords the schema uses and fails on any other; refuses duplicated identifiers, a case naming an undeclared notation, a case that asserts nothing, a notebook without a resolution and the reverse, a `links` or `frontmatter` notation with no case, and a section reference — in the data or in the prose of `SPEC.md` — with no heading; fails when `SPEC.md` is missing instead of skipping it; and fails when the `url` of `spec.json` is not `SPEC.md` at the tag `v<version>` of the package's `package.json`. Its tests (`test/check-spec.test.ts`) run it against a copy of the package carrying one deliberate defect each.
+
+### The renderer proves every reading-surface entry
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-RENDER-011), enforced here because it is what makes the renderer an implementation of the specification rather than a component that happens to draw most of it.
+
+**Mechanism:** `packages/markdown-renderer/test/reading-surface-conformance.test.tsx`, run by `pnpm test` and so by the workflow *Quality*, reads the entries from `@memorysmithapp/markdown-spec` — the workspace package, never a copy — and holds an expectation for every `reading-surface` entry that is not in `DELEGATED_TO_THE_BASE_PARSER`; it fails on an entry with no expectation, on an expectation with no entry, and when the asserted and the delegated sets do not together make exactly the entries. `conformance-coverage.test.ts` runs that file in its own process against a copy of the data with one fake entry, through `MARKDOWN_SPEC_FIXTURE`, and requires it to fail.
+
+### The demonstration notebooks show the whole notation
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-DEMO-001), enforced here because the notebooks are the first thing to age when a notation changes, and they age while teaching the wrong version to the person learning it.
+
+**Mechanism:** `playground/test/notebooks.test.ts`, run by `pnpm test`, ported from MemorySmith's own guard: every entry of `spec.json` not in `DELEGATED_TO_THE_BASE_PARSER` has a detector and appears in **each** notebook; neither notebook demonstrates a notation the specification does not declare (a query block, a templater expression, a handlebars placeholder, an inline field); the forms the specification does not describe that somebody reaches for first — `#subject`, `H~2~O` — are shown being ignored; every link lands but the ones each notebook declares pending on purpose; and the reserved keys are in en-US in both. `playground/test/every-note.test.tsx` draws every note in both themes and requires every embed to find its note and no error to be logged.
+
+### The renderer draws what MemorySmith draws
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-RENDER-001), enforced here because it is the test that decides whether the renderer is the reading page.
+
+**Mechanism:** `playground/compare/compare.mjs`, run by hand with `pnpm --filter playground compare` ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)); it does not run in *Quality*, because it needs a checkout of MemorySmith with its frontend installed, two dev servers and a browser, and takes minutes. It draws every note of the two demonstration notebooks twice, in light and dark, at a desktop (1280px) and a phone (390px) width, and compares the two images pixel by pixel with `pixelmatch`:
+
+- **The reference is MemorySmith's own component, not its site.** The script checks out `memorysmithapp/memorysmithapp` at `4b67c7e` (into `playground/compare/.memorysmith`, or where `MEMORYSMITH_CHECKOUT` names), installs its frontend, and copies `reference/` into it, so every import of the reference page is MemorySmith's: its `WritableContent` in the `.content-pane` of the note page, its stylesheet and its i18n in English, under a `MemoryRouter`, a `QueryClient` and the notebook's `NotebookIdProvider`. Its API module is replaced, by an alias, with `reference/backend.ts`, which answers the structure, the names and aliases, the kept files, the notes and the link targets from the same notebook files. The production site would differ for reasons unrelated to rendering: its chrome, its data and its fonts.
+- **The other side is the playground**, `?bare=1`: the same note drawn by `NoteBody` with the package's stylesheet, in a pane of MemorySmith's measure, at the same address, so a picture a note writes as `../assets/<name>` reaches the same file.
+- Both pages load the same faces from Google Fonts, and each image is taken once the fonts, the diagrams, the embeds and the pictures are in. A pair matches when at most 0.2% of its pixels differ; a pair that differs past that fails the run unless it is listed in `DELIBERATE`, with its reason. Every pair and its difference are written to `playground/compare/out/`.
+
+At `v0.1.0` every one of the 56 pairs is identical, pixel for pixel (*observed* on 2026-10-12). What the comparison cannot see — what a click does — is held by the renderer's tests, and the differences the renderer has on purpose are behaviour, listed in `PRD.md` (RN-RENDER-009, RN-RENDER-012).
+
 ## 4. Integrations
 
 *Instruction: every external system the project depends on, and what it uses from each.*
@@ -103,13 +242,15 @@ The link condition exists because a repository created from `memorysmithapp-temp
 - **A package never meant to be published declares `"private": true`**, which stops `npm publish` whatever the plan. The root `package.json` of this repository is one: it is never published.
 - **Publishing from CI goes through npm *trusted publishing* from GitHub Actions (OIDC)**, with no stored token, set up by the repository that first publishes, in an issue of its own.
 
+This repository is that repository. Its two packages are published by the workflow *Release* through `scripts/publish.mjs` ([`SDLC.md` §10](SDLC.md#10-release)): the job holds `id-token: write`, npm exchanges the workflow's OIDC token for the right to publish — npm 11.5.1 or later is required, and Node 24 carries it — and generates the provenance attestation itself, since the repository and the packages are public (*declared* by npm's documentation, read on 2026-10-12). Each package is packed with `pnpm pack`, which writes the renderer's `workspace:` range on the specification as a version, and the tarball is published with `npm publish`. What a package ships is its `files`: the built `.js` and `.d.ts` of `src/` (no source map, no test), its `README.md` and `LICENSE`, and for the specification the document, the data, the suite and the checker; `scripts/pack-check.mjs`, run by *Quality*, compares `npm pack --dry-run` with that list and fails on a file missing or extra.
+
 ## 5. Operation
 
 *Instruction: what runs, where, with which permissions and secrets.*
 
 **Quality** (`.github/workflows/quality.yml`) runs on every pull request and every push to `main`, with `contents: read` and no secret; it reads the branch from `GITHUB_HEAD_REF` or `GITHUB_REF_NAME` for check 1.
 
-**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN` and no stored secret: it pushes the tag with git, as `github-actions[bot]`, and creates the Release with `gh`. A tag pushed with that token starts no other workflow.
+**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN`, `id-token: write` for npm trusted publishing, and no stored secret: it pushes the tag with git, as `github-actions[bot]`, creates the Release with `gh`, and on a release — or a run again on its tagged commit — builds the packages and publishes them with `scripts/publish.mjs`. A tag pushed with that token starts no other workflow.
 
 There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once when a repository is created and again whenever its settings drift, with the permissions of the administrator whose `gh` it uses; it needs no token of its own.
 
@@ -118,3 +259,19 @@ There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once
 *Instruction: the decisions behind the architecture, one record each, in the format below.*
 
 Each record has an identifier, never reused; its context, decision, rationale and consequences; its date, status and **origin**. A decision that changes keeps its old record, marked *Superseded by ADR-NNN*, and a new record states the new decision.
+
+### ADR-001 The types of the data live beside the data
+
+- **Context:** the data of the specification is JSON, and every consumer retyped it. The main repository did, in `contracts/src/markdown.ts`, and a hand-retyped response is the defect that file's history warns about: the copy compiles, and drifts from the data in silence (*observed* at `4b67c7e`).
+- **Decision:** `@memorysmithapp/markdown-spec` ships the types of its own data in `src/types.ts`, and typed entry points (`spec`, `conformance`, `cases`) next to the raw JSON exports. A test compiles every notation and every case as a literal against the types, compiles values the schema refuses to prove the types refuse them, and type-checks a consumer against the emitted declarations.
+- **Rationale:** the types change in the same commit as the data (RN-SPEC-001 already makes the data move with the document), and the compiler, not a reader, checks that they agree. Generating them from the schema was not chosen: the schema says nothing about a conformance case, whose semantics live in `tests/README.md`, and a generator would be one more tool for a few dozen lines.
+- **Consequences:** what an implementation decides on top of the specification is not typed here. The two lists the main repository calls "ours and not the profile's" — the entries delegated to the base parser and the forms deliberately left silent — stay with their implementations: the first with the renderer, the second with the main repository.
+- **Date:** 2026-10-12. **Status:** Accepted. **Origin:** declared by the owner in #5.
+
+### ADR-002 How the renderer carries its heavy libraries
+
+- **Context:** `mermaid`, `katex` and `refractor` are heavy, and a host may already carry some of them. MemorySmith's reading page imports Mermaid lazily, typesets with the KaTeX that `rehype-katex` brings, and takes the stylesheet from its own `katex` dependency (*observed* at `4b67c7e`).
+- **Decision:** `refractor` and `hast-util-to-jsx-runtime` are dependencies; so is `mermaid`, imported only through `import('mermaid')` inside `MermaidDiagram`, so a bundler puts it in a chunk of its own that loads when a note holds a diagram. `rehype-katex` is a dependency and brings the KaTeX that typesets; `katex` is a **peer dependency**, because what the host needs from it is the stylesheet and its fonts (`katex/dist/katex.min.css`), which only the host can import into its page. The versions are the ones MemorySmith's frontend locks.
+- **Rationale:** a dependency the renderer cannot draw without belongs to the renderer, and installing it is not the host's problem; Mermaid's weight is paid at load time, not at install time, and the dynamic import is what keeps it out of the initial bundle. KaTeX's stylesheet carries fonts a bundler has to resolve, which is the host's work.
+- **Consequences:** a host imports `katex/dist/katex.min.css` beside the package's stylesheet. A test reads the built `dist/` and fails if any module imports `mermaid` statically.
+- **Date:** 2026-10-12. **Status:** Accepted. **Origin:** decided in #8, as the issue asked.

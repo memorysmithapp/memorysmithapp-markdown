@@ -177,8 +177,9 @@ The format of the main repository, with its scope indicators and its examples of
 4. every relative link and anchor of every Markdown file resolves;
 5. no document carries a version footer ("Last revised", "Internal development document" and the like);
 6. every GitHub link at the foot of `CHANGELOG.md` names the repository the check runs in;
+7. every package of the workspace has the root's `version`, and every package not marked `"private": true` declares public access;
 
-and `pnpm test`, the tests that make each check fail on a deliberate violation. Both run locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
+then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
 
 **The owner reviews and merges** the pull request of a cycle; nobody merges their own cycle without that review.
 
@@ -200,7 +201,7 @@ and `pnpm test`, the tests that make each check fail on a deliberate violation. 
 
 The bump flow, in this order:
 
-1. On the branch `release/vX.Y.Z`, in **one commit** `chore(release): cut vX.Y.Z`: set `version` in the root `package.json` to `X.Y.Z`; in `CHANGELOG.md`, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` with the date of the cut, open a fresh empty `[Unreleased]` above it, and update the compare links in the foot.
+1. On the branch `release/vX.Y.Z`, in **one commit** `chore(release): cut vX.Y.Z`: set `version` in the root `package.json` to `X.Y.Z`, in the `package.json` of every package of the workspace, and in the `url` of `packages/markdown-spec/spec.json`, which names `SPEC.md` at the tag `vX.Y.Z`; in `CHANGELOG.md`, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` with the date of the cut, open a fresh empty `[Unreleased]` above it, and update the compare links in the foot.
 2. Push the branch and open the single pull request of the cycle ([§6](#6-pull-request)).
 3. The owner reviews and merges it. The bump never reaches `main` by a direct push.
 4. The merge is a push to `main`, which runs the workflow **Release** on the merged commit:
@@ -213,6 +214,23 @@ The bump flow, in this order:
 Every push to `main` runs the workflow, and only the push that carries a cut version's section with no tag yet releases anything. A run that failed is run again from the Actions tab once the cause is fixed; a tag that already names the merged commit is left as it is, so running it again is safe.
 
 **A repository that publishes to npm** adds to this flow the publish of the cut version, from the workflow that releases it, through npm trusted publishing; its packages declare `"publishConfig": { "access": "public" }`, and every package not meant to be published declares `"private": true`. Why both fields are required is in [`ARCHITECTURE.md` §4](ARCHITECTURE.md#4-integrations) (npm).
+
+This repository publishes its two packages, `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`. After the workflow **Release** writes the tag, it builds them and runs `scripts/publish.mjs`, which:
+
+1. publishes nothing on a push that is not a release;
+2. publishes every package not marked private at the version of the tag, and fails when a package is at another version;
+3. on a release, fails when that version already exists on npm: a version is published once;
+4. when the run is started again on the same commit (the tag exists there), publishes only what is not on npm yet, so a run that failed halfway is finished by running it again;
+5. leaves a package npm has never seen for the owner, and says so, without failing.
+
+**The first publish of each package is the owner's, once, by hand.** A trusted publisher is configured in the settings of a package on npmjs.com, so the package has to exist first (*declared* by npm's documentation of trusted publishers, read on 2026-10-12). After the merge of the first version, with an npm account that is a member of the `memorysmithapp` organisation:
+
+1. `git checkout v0.1.0 && pnpm install --frozen-lockfile && pnpm --filter "./packages/**" build`, at the root of a clone;
+2. `npm login`;
+3. in `packages/markdown-spec`, then in `packages/markdown-renderer`: `pnpm pack`, then `npm publish memorysmithapp-markdown-<spec|renderer>-0.1.0.tgz --access public`. The package is packed by pnpm, which writes the `workspace:` ranges as versions; `npm publish` run on the folder would publish them as they are;
+4. on npmjs.com, in the **Settings** of each of the two packages, add a **trusted publisher**: GitHub Actions, organisation `memorysmithapp`, repository `memorysmithapp-markdown`, workflow file `release.yml`, no environment.
+
+From then on every cut version is published by the workflow, with provenance, and nobody publishes by hand. A token is never created for this.
 
 When a cycle is cut, every issue delivered in it is closed already ([§5](#5-when-an-issue-closes)), and the ones left behind move to the milestone of the next version: an accepted issue nobody reassessed is a silent promise.
 
