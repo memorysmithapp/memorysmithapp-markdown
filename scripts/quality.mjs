@@ -1,0 +1,270 @@
+#!/usr/bin/env node
+// The checks of the Quality workflow: what the documents promise about themselves and the version.
+// No dependency beyond Node. Run from the root: `pnpm run quality`.
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  CATEGORIES,
+  compareVersions,
+  isSemver,
+  linkedRepositories,
+  namesRepository,
+  parseChangelog,
+  releasedSections,
+  repositoryFromRemote,
+} from './lib/changelog.mjs';
+
+const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'dist', 'coverage']);
+
+// Lines that are a version note rather than content: "Last revised …", "Internal development
+// document", and the like, at the start of a line, after any list, quote or emphasis marker.
+const FOOTER = /^\s*(?:[>*_+-]\s*)*(?:last\s+(?:revised|updated|modified|reviewed)|revision\s+date|internal\s+(?:development\s+)?document)\b/i;
+
+function readText(root, path) {
+  return readFileSync(join(root, path), 'utf8');
+}
+
+export function markdownFiles(root, directory = root) {
+  const files = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!IGNORED_DIRECTORIES.has(entry.name)) files.push(...markdownFiles(root, join(directory, entry.name)));
+    } else if (entry.name.toLowerCase().endsWith('.md')) {
+      files.push(relative(root, join(directory, entry.name)).split(sep).join('/'));
+    }
+  }
+  return files.sort();
+}
+
+// The lines of a Markdown file outside fenced code blocks, each with its number, and with inline
+// code spans blanked, unless asked otherwise, so that nothing quoted as code is read as a link or a
+// footer.
+export function proseLines(text, { blankCode = true } = {}) {
+  const out = [];
+  let fence = null;
+  text.split('\n').forEach((line, index) => {
+    const opening = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+    if (fence) {
+      if (opening && opening[1][0] === fence[0] && opening[1].length >= fence.length) fence = null;
+      return;
+    }
+    if (opening) {
+      fence = opening[1];
+      return;
+    }
+    out.push({ line: index + 1, text: blankCode ? line.replace(/(`+)[^`]*?\1/g, (span) => ' '.repeat(span.length)) : line });
+  });
+  return out;
+}
+
+// GitHub's anchor for a heading: lowercase, punctuation dropped, spaces turned into hyphens, and
+// "-1", "-2"… appended to repeated headings.
+export function headingAnchors(text) {
+  const anchors = new Set();
+  const seen = new Map();
+  for (const { text: line } of proseLines(text, { blankCode: false })) {
+    for (const html of line.matchAll(/<a\s+(?:[^>]*\s)?(?:id|name)="([^"]+)"/gi)) anchors.add(html[1]);
+    const heading = line.match(/^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/);
+    if (!heading) continue;
+    const slug = heading[1]
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/<[^>]+>/g, '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, '')
+      .replace(/ /g, '-');
+    const count = seen.get(slug) ?? 0;
+    seen.set(slug, count + 1);
+    anchors.add(count === 0 ? slug : `${slug}-${count}`);
+  }
+  return anchors;
+}
+
+function linkTargets(text) {
+  const targets = [];
+  for (const { line, text: content } of proseLines(text)) {
+    for (const match of content.matchAll(/\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+"[^"]*")?\s*\)/g)) {
+      targets.push({ line, target: match[1].replace(/^<|>$/g, '') });
+    }
+    const definition = content.match(/^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/);
+    if (definition) targets.push({ line, target: definition[1].replace(/^<|>$/g, '') });
+  }
+  return targets;
+}
+
+function currentBranch(root) {
+  if (process.env.GITHUB_HEAD_REF) return process.env.GITHUB_HEAD_REF;
+  if (process.env.GITHUB_REF_NAME) return process.env.GITHUB_REF_NAME;
+  try {
+    return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function currentRepository(root) {
+  if (process.env.GITHUB_REPOSITORY) return process.env.GITHUB_REPOSITORY;
+  try {
+    return repositoryFromRemote(execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  } catch {
+    return null;
+  }
+}
+
+// 1. The version has one home, and the changelog agrees with it.
+export function checkVersion(root, branch) {
+  const problems = [];
+  if (!existsSync(join(root, 'package.json'))) return ['package.json: missing at the root'];
+  let version;
+  try {
+    version = JSON.parse(readText(root, 'package.json')).version;
+  } catch (error) {
+    return [`package.json: not valid JSON (${error.message})`];
+  }
+  if (!isSemver(version)) return [`package.json: "version" must be a SemVer version, got ${JSON.stringify(version)}`];
+  if (!existsSync(join(root, 'CHANGELOG.md'))) return ['CHANGELOG.md: missing at the root'];
+
+  const released = releasedSections(parseChangelog(readText(root, 'CHANGELOG.md')));
+  const latest = released[0]?.title;
+  if (latest === version) return problems;
+  if (branch === `release/v${version}` && (!latest || (isSemver(latest) && compareVersions(version, latest) > 0))) {
+    return problems;
+  }
+  if (!latest && version === '0.1.0') return problems;
+  problems.push(
+    latest
+      ? `package.json: version ${version} is not the latest released section of CHANGELOG.md (${latest}), and the branch "${branch}" is not release/v${version} bumping to it`
+      : `package.json: version ${version} has no released section in CHANGELOG.md, and the branch "${branch}" is not release/v${version}`,
+  );
+  return problems;
+}
+
+// 2. The changelog keeps the format of Keep a Changelog 1.1.0.
+export function checkChangelog(root) {
+  if (!existsSync(join(root, 'CHANGELOG.md'))) return ['CHANGELOG.md: missing at the root'];
+  const changelog = parseChangelog(readText(root, 'CHANGELOG.md'));
+  const problems = [];
+  const at = (line) => `CHANGELOG.md:${line}`;
+
+  if (changelog.sections[0]?.title !== 'Unreleased') {
+    problems.push(`${at(changelog.sections[0]?.line ?? 1)}: the first section must be "## [Unreleased]"`);
+  }
+  for (const other of changelog.otherH2) {
+    problems.push(`${at(other.line)}: "${other.text}" is not "## [Unreleased]" nor "## [X.Y.Z] - YYYY-MM-DD"`);
+  }
+  let previous = null;
+  for (const section of changelog.sections) {
+    if (section.title === 'Unreleased') {
+      if (section !== changelog.sections[0]) problems.push(`${at(section.line)}: [Unreleased] must be the first section`);
+      if (section.date) problems.push(`${at(section.line)}: [Unreleased] carries no date`);
+    } else {
+      if (!isSemver(section.title)) problems.push(`${at(section.line)}: [${section.title}] is not a SemVer version`);
+      if (!section.date) problems.push(`${at(section.line)}: [${section.title}] needs " - YYYY-MM-DD" after it`);
+      if (previous && isSemver(previous) && isSemver(section.title) && compareVersions(previous, section.title) <= 0) {
+        problems.push(`${at(section.line)}: [${section.title}] must be older than [${previous}] above it`);
+      }
+      previous = section.title;
+    }
+    for (const { line, text } of section.lines) {
+      const category = text.match(/^###\s+(.*?)\s*$/);
+      if (category && !CATEGORIES.includes(category[1])) {
+        problems.push(`${at(line)}: "${category[1]}" is not a Keep a Changelog category (${CATEGORIES.join(', ')})`);
+      }
+      if (/^#{4,}\s/.test(text) || /^#\s/.test(text)) problems.push(`${at(line)}: only "## [version]" and "### Category" headings belong in a section`);
+    }
+    if (!changelog.links.has(section.title.toLowerCase())) {
+      problems.push(`${at(section.line)}: [${section.title}] has no compare link at the foot`);
+    }
+  }
+  if (changelog.firstLinkLine !== -1) {
+    const trailing = changelog.lines.slice(changelog.firstLinkLine - 1);
+    trailing.forEach((text, offset) => {
+      if (text.trim() !== '' && !/^\[[^\]]+\]:\s*\S+\s*$/.test(text)) {
+        problems.push(`${at(changelog.firstLinkLine + offset)}: only link definitions belong after the first one, at the foot`);
+      }
+    });
+  }
+  return problems;
+}
+
+// 3. CLAUDE.md is exactly the import of AGENTS.md.
+export function checkClaude(root) {
+  if (!existsSync(join(root, 'CLAUDE.md'))) return ['CLAUDE.md: missing at the root'];
+  const text = readText(root, 'CLAUDE.md');
+  return text === '@AGENTS.md\n' || text === '@AGENTS.md' ? [] : ['CLAUDE.md: must be exactly the line "@AGENTS.md"'];
+}
+
+// 4. Every relative link, and every anchor, of every Markdown file resolves.
+export function checkLinks(root) {
+  const problems = [];
+  const anchorCache = new Map();
+  const anchorsOf = (path) => {
+    if (!anchorCache.has(path)) anchorCache.set(path, headingAnchors(readFileSync(path, 'utf8')));
+    return anchorCache.get(path);
+  };
+  for (const file of markdownFiles(root)) {
+    const absolute = join(root, file);
+    for (const { line, target } of linkTargets(readFileSync(absolute, 'utf8'))) {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) continue;
+      const hash = target.indexOf('#');
+      const pathPart = decodeURIComponent(hash === -1 ? target : target.slice(0, hash));
+      const anchor = hash === -1 ? null : decodeURIComponent(target.slice(hash + 1));
+      const resolved = pathPart === '' ? absolute : pathPart.startsWith('/') ? join(root, pathPart) : resolve(dirname(absolute), pathPart);
+      if (!existsSync(resolved)) {
+        problems.push(`${file}:${line}: "${target}" points at a file that does not exist`);
+        continue;
+      }
+      if (anchor && statSync(resolved).isFile() && resolved.toLowerCase().endsWith('.md') && !anchorsOf(resolved).has(anchor)) {
+        problems.push(`${file}:${line}: "${target}" points at an anchor that does not exist`);
+      }
+    }
+  }
+  return problems;
+}
+
+// 5. No document carries a version footer.
+export function checkFooters(root) {
+  const problems = [];
+  for (const file of markdownFiles(root)) {
+    for (const { line, text } of proseLines(readText(root, file))) {
+      if (FOOTER.test(text)) problems.push(`${file}:${line}: a version note or footer ("${text.trim()}"); history lives in CHANGELOG.md and git`);
+    }
+  }
+  return problems;
+}
+
+// 6. The links at the foot of the changelog name this repository, which is what lets the release
+// workflow publish here: a copy that still links to the repository it came from releases nothing.
+export function checkChangelogRepository(root, repository) {
+  if (!existsSync(join(root, 'CHANGELOG.md'))) return ['CHANGELOG.md: missing at the root'];
+  if (!repository) return ['cannot tell which repository this is: set GITHUB_REPOSITORY or add an origin remote on GitHub'];
+  const changelog = parseChangelog(readText(root, 'CHANGELOG.md'));
+  if (namesRepository(changelog, repository)) return [];
+  const linked = [...linkedRepositories(changelog)].join(', ') || 'no GitHub repository';
+  return [`CHANGELOG.md: the links at the foot name ${linked}, not ${repository}; rewrite them for this repository; a repository created from memorysmithapp-template rewrites them when it is adopted`];
+}
+
+export function runChecks(root, branch = currentBranch(root), repository = currentRepository(root)) {
+  return [
+    { name: 'The version has one home and agrees with CHANGELOG.md', problems: checkVersion(root, branch) },
+    { name: 'CHANGELOG.md keeps the Keep a Changelog format', problems: checkChangelog(root) },
+    { name: 'CLAUDE.md is exactly @AGENTS.md', problems: checkClaude(root) },
+    { name: 'Relative links and anchors resolve', problems: checkLinks(root) },
+    { name: 'No document carries a version footer', problems: checkFooters(root) },
+    { name: 'CHANGELOG.md links to this repository', problems: checkChangelogRepository(root, repository) },
+  ];
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const root = resolve(process.argv[2] ?? '.');
+  const results = runChecks(root);
+  for (const { name, problems } of results) {
+    console.log(`${problems.length === 0 ? 'ok  ' : 'FAIL'} ${name}`);
+    for (const problem of problems) console.log(`       ${problem}`);
+  }
+  const failed = results.filter((r) => r.problems.length > 0).length;
+  console.log(failed === 0 ? '\nAll checks passed.' : `\n${failed} of ${results.length} checks failed.`);
+  process.exitCode = failed === 0 ? 0 : 1;
+}

@@ -1,0 +1,31 @@
+# The checks of what the documents promise about themselves and the version (scripts/quality.mjs),
+# and their tests. The job is named Quality, the status check the ruleset `main` requires.
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          # No dependency to cache, and pnpm is not on the PATH until Corepack is enabled.
+          package-manager-cache: false
+      - name: Enable the pnpm pinned in package.json
+        run: corepack enable
+      - name: Check the documents and the version
+        run: pnpm run quality
+      - name: Test the checks
+        run: pnpm test
