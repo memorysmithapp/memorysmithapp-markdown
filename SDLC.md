@@ -2,8 +2,6 @@
 
 How a change travels in this repository, from a need to a release. It does not say what the product does or under which rule ([`PRD.md`](PRD.md)), nor how the repository is organised ([`ARCHITECTURE.md`](ARCHITECTURE.md)).
 
-*Kept on adoption.*
-
 A repository that ships something deployable extends [§10](#10-release) and [§11](#11-rollback) for what it ships, and changes nothing else here without an issue of its own.
 
 ## Contents

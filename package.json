@@ -1,12 +1,12 @@
 {
-  "name": "@memorysmithapp/template",
-  "version": "0.2.1",
+  "name": "@memorysmithapp/markdown",
+  "version": "0.1.0",
   "private": true,
-  "description": "The starting point of every repository of the memorysmithapp organisation: the documents humans and agents work by.",
+  "description": "The MemorySmith Markdown Specification and a React renderer that draws a note as MemorySmith does.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/memorysmithapp/memorysmithapp-template.git"
+    "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git"
   },
   "scripts": {
     "quality": "node scripts/quality.mjs",
