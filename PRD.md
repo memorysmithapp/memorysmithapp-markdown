@@ -24,7 +24,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 **Delivers:**
 
 - `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together, and the TypeScript types of its data ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-005).
-- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-005).
+- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-007).
 
 **Deliberately does not** (*declared* in #1):
 
@@ -61,6 +61,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-003 | The renderer never rewrites the source: a note is drawn from its bytes as the host keeps them, its frontmatter is not drawn, and nothing it does changes what the host stores | declared in #1, decision 4 |
 | RN-RENDER-004 | The renderer renders no raw HTML: a `<script>`, an HTML block or an inline tag in a note is drawn as its text. It is a security boundary, because a notebook is written by several people and by agents (`SPEC.md` §7.9) | declared in #1, decision 2 |
 | RN-RENDER-005 | A link is followed only to `http:`, `https:` and `mailto:`, to a path or to an anchor of the note; any other address — an editor's scheme, `data:`, `javascript:`, `file:` — stays on the page as text, not clickable, with a title that says why. An anchor scrolls inside the note it was drawn in and never navigates; the web opens in a new tab with `rel="noreferrer"` | declared in #6 |
+| RN-RENDER-006 | A wikilink target is a name, literal, compared after NFC and never slugified; nothing inside code is touched. One note answering it is a link to the host's address; none is a pending link, drawn as such and never as a link; several — or none, when the host can ask about aliases — open a choice in place. Only an embed reaches a file the notebook keeps, and it carries the dimensions after its pipe | declared in #9 |
+| RN-RENDER-007 | A note whose images name another host says so under its body, naming each host once, unless the host discloses it elsewhere (`SPEC.md` §7.10) | declared in #9 |
 
 ## 8. Quality requirements
 
@@ -82,3 +84,5 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-003 | No export of the package returns a note other than the one it was given, but for `toggleTaskAt`, which the host calls itself |
 | RN-RENDER-004 | A note carrying `<script>` renders no `script` element, and its text is on the page |
 | RN-RENDER-005 | `test/address.test.ts` keeps each allowed address and refuses one of each refused kind |
+| RN-RENDER-006 | `test/links.test.tsx`, `link-target.test.ts`, `code-is-text.test.ts`, `image-and-attachment.test.ts` and `attachment-address.test.tsx` pass |
+| RN-RENDER-007 | The remote-notice cases of `test/links.test.tsx` and of the conformance test pass |

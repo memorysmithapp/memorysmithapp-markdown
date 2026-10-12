@@ -22,6 +22,30 @@ export interface NoteStrings {
   readonly copy: string;
   /** What that button says once the block is copied. */
   readonly copied: string;
+  /** The notice under a note that fetched images from other sites, naming them. */
+  readonly remoteImages: (hosts: readonly string[]) => string;
+  /** The accessible name of the choice a link opens. */
+  readonly linkChoice: (target: string) => string;
+  /** The heading of the choice when no note answers the target yet. */
+  readonly linkLeadsNowhere: string;
+  /** The heading of the choice when several notes answer it. */
+  readonly linkLeadsToSeveral: string;
+  /** What the choice says when no note answers the target. */
+  readonly targetPending: (target: string) => string;
+  /** What it says when notes are named the target. */
+  readonly targetNamed: (target: string, count: number) => string;
+  /** What it says when notes carry the target as an alias. */
+  readonly targetAliased: (target: string, count: number) => string;
+  /** The caption of a note that has no name. */
+  readonly unnamedNote: string;
+  /** What a region says while it waits for the host. */
+  readonly loading: string;
+  /** What a region says when the host failed to answer. */
+  readonly failed: string;
+  /** The control that closes the choice. */
+  readonly close: string;
+  /** The button that dismisses the choice. */
+  readonly cancel: string;
 }
 
 /** The callout titles of MemorySmith, in English. */
@@ -65,6 +89,28 @@ export const ENGLISH: NoteStrings = {
   attachmentMissing: 'This notebook keeps no file under that name.',
   copy: 'Copy',
   copied: 'Copied',
+  remoteImages: (hosts) =>
+    hosts.length === 1
+      ? `Opening this note fetched an image from ${hosts.join(', ')}, so that site was told your address and the moment you read this.`
+      : `Opening this note fetched images from ${hosts.length} other sites — ${hosts.join(', ')} — so each of them was told your address and the moment you read this.`,
+  linkChoice: (target) => `The notes the link “${target}” may lead to`,
+  linkLeadsNowhere: 'This link leads nowhere yet',
+  linkLeadsToSeveral: 'This link leads to more than one note',
+  targetPending: (target) =>
+    `No note carries the name “${target}” yet. The link is kept and resolves on its own when one does.`,
+  targetNamed: (target, count) =>
+    count === 1
+      ? `“${target}” is the name of one note.`
+      : `“${target}” is the name of ${count} notes, each in its own folder. Choose which one to open.`,
+  targetAliased: (target, count) =>
+    count === 1
+      ? `No note is named “${target}”. One note carries it as an alias.`
+      : `No note is named “${target}”, so it matched ${count} notes that carry it as an alias — and one of them gives the link up the day somebody writes a note under this name.`,
+  unnamedNote: 'Unnamed note',
+  loading: 'Loading…',
+  failed: 'Something went wrong.',
+  close: 'Close',
+  cancel: 'Cancel',
 };
 
 /** The host's words over the English ones, key by key. */

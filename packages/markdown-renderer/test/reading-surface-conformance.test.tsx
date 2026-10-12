@@ -16,6 +16,40 @@ const render = (markdown: string): string => html(markdown);
 
 /** What each declared entry has to be true of, once rendered. */
 const EXPECTED: Record<string, (html: string) => void> = {
+  attachment: (html) => {
+    /**
+     * A file of the notebook that is not a note. The host of this case keeps
+     * NONE — the extension of the name decides nothing — so the reference
+     * reaches nothing and is reported the way a pending link is (§5.8). What
+     * it must never be is a link: a reader following it would land on a note
+     * nobody will ever write.
+     */
+    expect(html).toContain('engelbart.jpg');
+    expect(html).toMatch(/pending/);
+    expect(html).not.toContain('![[');
+    expect(html).not.toMatch(/<a[^>]*>engelbart/);
+  },
+  'image-dimensions': (html) => {
+    // The pipe carries width and height, and neither it nor the digits reach
+    // the page as text.
+    expect(html).toContain('width="100"');
+    expect(html).toContain('height="145"');
+    expect(html).toContain('alt="Engelbart"');
+    expect(html).not.toContain('100x145');
+    expect(html).not.toContain('Engelbart|');
+  },
+  'pending-link-display': (html) => {
+    expect(html).toContain('wikilink-pending');
+    // Visibly pending, never hidden: the text of the target stays on screen.
+    expect(html).toContain('A note nobody has written');
+    expect(html).not.toContain('[[A note nobody has written]]');
+  },
+  'autolink-extended': (html) => {
+    // Bare, and still a link. External, so it is a plain anchor and never one
+    // of ours: `wikilink` is the class this surface puts on an edge.
+    expect(html).toContain('href="https://example.org/lei-14133"');
+    expect(html).not.toContain('class="wikilink"');
+  },
   mermaid: (html) => {
     // The container is rendered before the library is imported, which is the
     // whole point: the fence became a diagram and not a code block.
@@ -238,5 +272,101 @@ describe('a block of code has a frame and a Copy button, and inline code has nei
     expect(html).toContain('mermaid-diagram');
     expect(html).not.toContain('code-block');
     expect(html).not.toContain('code-copy');
+  });
+});
+
+/**
+ * A public image is content, and an address is a decision: what this surface
+ * will and will not follow is part of rendering a picture.
+ */
+describe('a picture in a note, and the addresses around it', () => {
+  it('renders a public image, with the description the author wrote', () => {
+    const html = render('![The maturation curve](https://example.org/curve.png "Serra Gaucha")');
+
+    expect(html).toContain('src="https://example.org/curve.png"');
+    expect(html).toContain('alt="The maturation curve"');
+    expect(html).toContain('title="Serra Gaucha"');
+  });
+
+  it('renders one inside a callout, where a note actually puts it', () => {
+    const html = render('> [!tip] The curve\n> ![The curve](https://example.org/c.png)\n');
+
+    expect(html).toContain('class="callout"');
+    expect(html).toContain('src="https://example.org/c.png"');
+  });
+
+  it('follows a link to the web and to a person', () => {
+    expect(render('[The text](https://example.org/x)')).toContain('href="https://example.org/x"');
+    expect(render('[Write](mailto:a@example.org)')).toContain('href="mailto:a@example.org"');
+  });
+
+  it('leaves an address it does not follow as text, and never as a link', () => {
+    const html = render('[Open it](obsidian://open?vault=Notas&file=Lei)');
+
+    expect(html).toContain('Open it');
+    expect(html).toContain('link-refused');
+    expect(html).not.toContain('<a');
+    expect(html).not.toContain('obsidian://');
+  });
+
+  it('does the same with a page carried inside the address', () => {
+    const html = render('[Click](data:text/html;base64,PHNjcmlwdD4=)');
+
+    expect(html).toContain('link-refused');
+    expect(html).not.toContain('data:text/html');
+  });
+
+  it('still draws the pending link, which is the scheme all of this was for', () => {
+    const html = render('[[A note nobody has written]]');
+
+    expect(html).toContain('wikilink-pending');
+    expect(html).toContain('A note nobody has written');
+  });
+});
+
+/**
+ * §7.10: an image whose destination names a host is a request to that host,
+ * made when the note is opened, by whoever opens it. A Reader MUST state
+ * whether that happens; only silence does not conform. This surface fetches
+ * and says so, exactly where it is true.
+ */
+describe('a note that fetches from another site says so', () => {
+  it('names the host when an image reaches outside', () => {
+    const html = render('![A curve](https://example.org/curve.png)');
+
+    expect(html).toContain('remote-notice');
+    expect(html).toContain('example.org');
+  });
+
+  it('says nothing when nothing is fetched', () => {
+    const html = render('![A curve](./curve.png)\n\nAnd [a link](https://example.org).');
+
+    expect(html).not.toContain('remote-notice');
+  });
+
+  it('keeps the alt text, which is what a person gets when the image does not load', () => {
+    const html = render('![Fourteen minutes against thirty](https://example.org/x.png)');
+
+    expect(html).toContain('alt="Fourteen minutes against thirty"');
+  });
+
+  it('does not count an image written inside a fence, which fetches nothing', () => {
+    const html = render('```\n![A curve](https://example.org/curve.png)\n```\n');
+
+    expect(html).not.toContain('remote-notice');
+  });
+
+  it('names each host once, however many images came from it', () => {
+    const html = render(
+      '![One](https://example.org/a.png)\n\n![Two](https://example.org/b.png)\n\n![Three](https://cdn.example.net/c.png)\n',
+    );
+
+    // Asserted on the notice and not on the whole page, which also carries the
+    // host in each `src` and in the preload React emits for it.
+    const notice = /<p class="remote-notice">(.*?)<\/p>/.exec(html)?.[1] ?? '';
+
+    expect(notice).toContain('example.org');
+    expect(notice).toContain('cdn.example.net');
+    expect((notice.match(/(^|[^.])example\.org/g) ?? []).length).toBe(1);
   });
 });

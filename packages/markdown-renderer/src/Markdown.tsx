@@ -9,7 +9,8 @@ import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
 import { highlightLanguage, highlightTree } from './highlight.js';
 import { useHost } from './host.js';
-import { readImageAlt } from './image-dimensions.js';
+import { readDimensions, readImageAlt } from './image-dimensions.js';
+import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { remarkCallouts } from './remark-callouts.js';
@@ -79,8 +80,52 @@ function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnch
   );
 }
 
+/**
+ * A file the notebook keeps, where a note embedded it. The host draws it by its
+ * type — an image, audio, video, or a card — and a name the notebook keeps
+ * nothing under is reported the way a pending link is: a notebook is read most
+ * while it is being written (§5.8).
+ */
+function Attachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+  const host = useHost();
+  if (!host.keeps(name)) {
+    return (
+      <span className="attachment-missing" title={host.strings.attachmentMissing}>
+        {name}
+      </span>
+    );
+  }
+  if (!host.renderAttachment) return <span className="attachment-loading">{name}</span>;
+  return <>{host.renderAttachment({ name, width, height })}</>;
+}
+
 function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
   const host = useHost();
+  if (href?.startsWith('attachment:')) {
+    /**
+     * The address carries the dimension the pipe declared, after the encoded
+     * name, where nothing else can be (§3.14).
+     *
+     * **Decoded before it is split**, because the parser percent-encodes what
+     * it does not have to leave alone: the separator arrives as `%7C` and
+     * looking for `|` found nothing, which sent the whole string — dimension
+     * included — to be looked up as the name of a file. A name carrying a
+     * pipe is no name anyway (§5.3), so the last one is the separator or
+     * there is none.
+     */
+    const address = decodeURIComponent(href.slice('attachment:'.length));
+    const at = address.lastIndexOf('|');
+    const measured = at === -1 ? null : readDimensions(address.slice(at + 1));
+    const name = measured ? address.slice(0, at) : address;
+    return <Attachment name={name} width={measured?.width ?? null} height={measured?.height ?? null} />;
+  }
+  if (href?.startsWith('pending:')) {
+    return (
+      <span className="wikilink-pending" title={host.strings.pendingLink}>
+        {children}
+      </span>
+    );
+  }
   // Refused by `followable`: the text stays on the page and stops being
   // something to click. An author sees they got nothing, which is the same
   // answer the specification gives for a notation it does not implement.
@@ -91,6 +136,9 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
       </span>
     );
   }
+  // A target no single note answers by name opens its choice in place.
+  const choice = choiceTargetOf(href);
+  if (choice !== null) return <LinkChoice target={choice}>{children}</LinkChoice>;
   // An address of the host's own: its router draws it.
   if (href.startsWith('/')) return <>{host.renderLink({ href, className: 'wikilink', children })}</>;
   if (href.startsWith('#')) {

@@ -31,17 +31,24 @@ The repository is made of:
   5. `remarkMathDollarRule`, **after** `remark-math`: it gives back to the text an inline formula that breaks the dollar rule of `SPEC.md` §7.8, reading the source the parser read, so `R$100 e o frete R$200` stays a sentence;
   6. `rehype-katex` with `throwOnError: false`, so a formula KaTeX cannot typeset shows its source.
 
+  Before the parser, `NoteBody` rewrites the text it hands it, never the note: `resolveWikilinks` (`src/markdown.ts`) turns each `[[name]]` outside code into a Markdown link to the host's address, to `pending:` when no note answers, to `choice:` when the host has `choose` and no single note answers, and each `![[file]]` the host `keeps` into `attachment:` with its dimension. Code — fences by the specification's rules, code spans by their runs — is found before anything is rewritten, so notation inside it stays characters. The anchor of the surface turns each of those schemes into what it is: `pending:` into a pending span, `attachment:` into the host's `renderAttachment`, `choice:` into `LinkChoice`, a modal dialog of the notes the host's `choose` answers. `followable` lets the three schemes through.
+
   Code is drawn by three branches, in this order: a `mermaid` fence reaches `MermaidDiagram` untouched; a fence whose language `refractor` carries (`src/highlight.ts`, MemorySmith's fifteen grammars) is tokenised into a hast tree that `hast-util-to-jsx-runtime` turns into React elements, never an HTML string; everything else is drawn as it was typed. A fence other than a diagram sits in a `.code-block` frame with a `CopyButton` that copies the `textContent` of the code less the newline before the closing fence.
 - **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:
 
 | Prop | Shape | Default |
 |---|---|---|
-| `resolve` | `(name) => string \| null`: the address of the one note a target names | Every link is pending |
+| `resolve` | `(name) => string \| null`: the address of the one note a target names, compared after NFC | Every link is pending |
+| `reaches` | `(name) => number`: how many notes a target reaches, by name or by alias | 1 when `resolve` answers, 0 otherwise |
+| `choose` | `(name) => Promise<LinkChoices>`: the notes a target no single note answers may lead to, asked on a click | Such a link is pending and asks nothing |
+| `targetAddress` | `(name) => string \| null`: the host's page about a target, for a new tab | None |
+| `navigate` | `(address) => void`: goes to an internal address | `location.assign` |
 | `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
 | `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
 | `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
+| `remoteNotice` | `boolean`: whether a note that fetched images from other sites says so under its body | `true` |
 | `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
-| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied | MemorySmith's English (`ENGLISH`) |
+| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, and the words of the choice a link opens | MemorySmith's English (`ENGLISH`) |
 
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
@@ -77,7 +84,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
 | `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
-| `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser |
+| `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser: code, fence and table regions, wikilink resolution, the hosts of remote images, and the frontmatter as MemorySmith reads it |
+| `packages/markdown-renderer/src/LinkChoice.tsx` | The choice a link opens when no single note answers it |
 | `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
 | `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |
 | `packages/markdown-renderer/src/remark-callouts.ts`, `remark-ring.ts` | The remark plugins of callouts, marked text, comments, block identifiers and the dollar rule |

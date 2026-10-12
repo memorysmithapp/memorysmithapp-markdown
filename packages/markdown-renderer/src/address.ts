@@ -14,7 +14,8 @@
  *
  * **What passes, and why:**
  *
- * - `pending:` — ours, and the reason the filter was off in the first place.
+ * - `pending:` — ours, and the reason the filter was off in the first place;
+ *   and `attachment:` and `choice:`, ours too.
  * - A path of the application (`/`), a relative one (`./`, `../`) and an
  *   anchor of the page (`#`).
  * - `http:` and `https:` — the web, which is what a note cites.
@@ -43,13 +44,14 @@
  */
 
 /**
- * `pending:` and `attachment:` are this surface's own: a wikilink that matched
- * no note and a reference to a file the notebook keeps beside its notes. Neither
- * leaves the page — the anchor of the surface turns both into text that says
- * what happened — and they are listed here so the filter does not empty them
- * into the refusal case, which says something else entirely.
+ * `pending:`, `attachment:` and `choice:` are this surface's own: a wikilink
+ * that matched no note, a reference to a file the notebook keeps beside its
+ * notes, and a wikilink several notes may answer. None of them leaves the page
+ * — the anchor of the surface turns each into what it is — and they are listed
+ * here so the filter does not empty them into the refusal case, which says
+ * something else entirely.
  */
-const ALLOWED_SCHEME = /^(https?|mailto|pending|attachment):/i;
+const ALLOWED_SCHEME = /^(https?|mailto|pending|attachment|choice):/i;
 
 /** Anything of the shape `word:`, which is what makes an address absolute. */
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
