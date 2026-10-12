@@ -23,7 +23,13 @@ The repository is made of:
 `@memorysmithapp/markdown-renderer` exports one component, **`NoteBody`**, which draws the body of a note. The name says what it draws — the body, never the frontmatter, which a host shows as properties — and leaves `Markdown` to the component that draws one parsed run, as MemorySmith's reading page names it.
 
 - **`NoteBody`** (`src/NoteBody.tsx`) takes the note as the host keeps it, frontmatter included, cuts the frontmatter off, and draws the rest inside `<div class="markdown">`. It is MemorySmith's `WritableContent` without the write: the host contract replaces its hooks.
-- **`Markdown`** (`src/Markdown.tsx`) is MemorySmith's `Markdown` component: `react-markdown` over the text, with newlines normalised, `remark-gfm` at `singleTilde: false`, no raw HTML (no `rehype-raw`), `followable` as `urlTransform`, the footnote labels of the host, and the components that draw an anchor and an image.
+- **`Markdown`** (`src/Markdown.tsx`) is MemorySmith's `Markdown` component: `react-markdown` over the text with newlines normalised, no raw HTML (no `rehype-raw`), `followable` as `urlTransform`, the footnote labels of the host, and the components that draw an anchor and an image. Its plugins run in this order, and the order is part of the contract:
+  1. `remark-gfm`, at `singleTilde: false`, so `H~2~O` is not struck;
+  2. `remarkCallouts` (`src/remark-callouts.ts`), titled by `strings.callouts`, or by the kind capitalised;
+  3. `remarkHighlight`, `remarkComments` and `remarkBlockIds` (`src/remark-ring.ts`), on text nodes only, so nothing inside code is touched;
+  4. `remark-math`;
+  5. `remarkMathDollarRule`, **after** `remark-math`: it gives back to the text an inline formula that breaks the dollar rule of `SPEC.md` §7.8, reading the source the parser read, so `R$100 e o frete R$200` stays a sentence;
+  6. `rehype-katex` with `throwOnError: false`, so a formula KaTeX cannot typeset shows its source.
 - **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:
 
 | Prop | Shape | Default |
@@ -69,6 +75,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
 | `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
 | `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser |
+| `packages/markdown-renderer/src/remark-callouts.ts`, `remark-ring.ts` | The remark plugins of callouts, marked text, comments, block identifiers and the dollar rule |
 | `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |

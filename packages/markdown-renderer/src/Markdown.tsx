@@ -1,10 +1,14 @@
 import type { AnchorHTMLAttributes, ImgHTMLAttributes, MouseEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import { followable } from './address.js';
 import { useHost } from './host.js';
 import { readImageAlt } from './image-dimensions.js';
 import { toUnixNewlines } from './markdown.js';
+import { remarkCallouts } from './remark-callouts.js';
+import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
 
 /**
  * One run of a note, parsed and drawn: the pipeline of MemorySmith's reading page.
@@ -101,6 +105,8 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
 export function Markdown({ children }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
+  const calloutTitle = (kind: string): string | undefined =>
+    Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
 
   return (
     <div className="markdown">
@@ -118,11 +124,20 @@ export function Markdown({ children }: MarkdownProps) {
            * the specification says they get, which is nothing.
            */
           [remarkGfm, { singleTilde: false }],
+          [remarkCallouts, { titleOf: calloutTitle }],
+          remarkHighlight,
+          remarkComments,
+          remarkBlockIds,
+          remarkMath,
+          // After remark-math, and it gives back what was never a formula.
+          remarkMathDollarRule,
         ]}
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a
         // notebook is written by several people and by agents (§7.9).
+        // A formula KaTeX cannot typeset shows its source, never an error (§7.8).
+        rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
         // Footnotes (§7.12): the words around them are the reader's, and the
         // label heads the notes gathered at the end of the note, where a
         // reader sees it — GFM hides it, and a stylesheet that hides nothing
