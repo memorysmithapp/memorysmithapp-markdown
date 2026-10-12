@@ -17,6 +17,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveWikilinks } from '../src/markdown.js';
+import { demoteEmbeds, splitEmbeds } from '../src/transclusion.js';
 
 const resolve = (name: string): string | null => (name === 'Target' ? '/v/a/target' : null);
 
@@ -49,5 +50,26 @@ describe('a wikilink written inside code stays written', () => {
     const out = resolveWikilinks('Prose.\n\n    [[Target]]\n', resolve);
 
     expect(out).toContain('[Target](/v/a/target)');
+  });
+});
+
+describe('an embed written inside code is an example of one', () => {
+  it('is not expanded into a transclusion', () => {
+    const segments = splitEmbeds('Write `![[Target]]` to embed it.\n');
+
+    expect(segments.every((segment) => segment.kind === 'text')).toBe(true);
+    expect(segments.map((s) => (s.kind === 'text' ? s.text : '')).join('')).toContain(
+      '`![[Target]]`',
+    );
+  });
+
+  it('is not demoted to a wikilink either, inside a fence', () => {
+    expect(demoteEmbeds('```\n![[Target]]\n```\n')).toContain('![[Target]]');
+  });
+
+  it('still expands the one written outside code, in the same body', () => {
+    const segments = splitEmbeds('Write `![[Target]]`, and here it is:\n\n![[Target]]\n');
+
+    expect(segments.filter((segment) => segment.kind === 'embed')).toHaveLength(1);
   });
 });

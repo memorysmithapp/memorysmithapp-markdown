@@ -12,6 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveWikilinks } from '../src/markdown.js';
+import { splitEmbeds } from '../src/transclusion.js';
 
 describe('an attachment is a file the notebook keeps, and not a name that looks like one', () => {
   /**
@@ -92,6 +93,14 @@ describe('an attachment is a file the notebook keeps, and not a name that looks 
       keeps,
     );
     expect(note).toBe('[engelbart.jpg](/v/a/nota)');
+  });
+
+  it('is never transcluded, because there is no note to expand', () => {
+    const segments = splitEmbeds('![[engelbart.jpg]] and ![[Lei 14.133]]', keeps);
+    expect(segments.filter((each) => each.kind === 'embed')).toHaveLength(1);
+    expect(
+      segments.some((each) => each.kind === 'text' && each.text.includes('engelbart.jpg')),
+    ).toBe(true);
   });
 });
 

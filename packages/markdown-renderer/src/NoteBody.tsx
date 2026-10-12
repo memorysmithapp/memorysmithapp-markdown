@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
-import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from './host.js';
-import { CHOICE_SCHEME } from './LinkChoice.js';
+import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
 import { Markdown } from './Markdown.js';
 import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
+import { Transclusion } from './Transclusion.js';
+import { splitEmbeds } from './transclusion.js';
+import { wikilinkAddress } from './wikilink-address.js';
 
 export interface NoteBodyProps extends NoteHost {
   /**
@@ -10,18 +12,6 @@ export interface NoteBodyProps extends NoteHost {
    * rewritten; the frontmatter is not drawn, because a host shows it as properties.
    */
   readonly markdown: string;
-}
-
-/**
- * Where a wikilink goes: the note when exactly one answers it, and the choice
- * otherwise — several notes, or none, which is pending and still asks — when
- * the host can say which notes a target may lead to. With no such host, a
- * target no single note answers is pending.
- */
-export function wikilinkAddress(host: ResolvedHost, name: string): string | null {
-  const address = host.resolve(name);
-  if (address !== null) return address;
-  return host.choose ? `${CHOICE_SCHEME}${encodeURIComponent(name)}` : null;
 }
 
 /**
@@ -39,9 +29,19 @@ export function NoteBody({ markdown, ...host }: NoteBodyProps) {
   // Frontmatter is shown as properties, not as prose, so the reading surface
   // starts after it.
   const body = markdown.slice(bodyStart(markdown));
-  // One resolver for every surface: one note is a link, several are the
-  // choice, and none is pending and still asks.
-  const rendered = resolveWikilinks(body, (name) => wikilinkAddress(resolved, name), resolved.keeps);
+
+  // The body is cut into runs of text and the embeds between them; each run
+  // is parsed on its own, as on MemorySmith's reading page.
+  const segments = splitEmbeds(body, resolved.keeps).map((segment) =>
+    segment.kind === 'text'
+      ? {
+          ...segment,
+          // One resolver for every run: one note is a link, several are the
+          // choice, and none is pending and still asks.
+          rendered: resolveWikilinks(segment.text, (name) => wikilinkAddress(resolved, name), resolved.keeps),
+        }
+      : segment,
+  );
 
   /**
    * Whom this note asked the browser to talk to (§7.10).
@@ -61,7 +61,13 @@ export function NoteBody({ markdown, ...host }: NoteBodyProps) {
   return (
     <HostProvider value={resolved}>
       <div className="markdown">
-        <Markdown>{rendered}</Markdown>
+        {segments.map((segment, index) =>
+          'rendered' in segment ? (
+            <Markdown key={index}>{segment.rendered}</Markdown>
+          ) : (
+            <Transclusion key={index} target={segment.target} anchor={segment.anchor} />
+          ),
+        )}
         {hosts.length > 0 && <p className="remote-notice">{resolved.strings.remoteImages(hosts)}</p>}
       </div>
     </HostProvider>

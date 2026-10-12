@@ -36,6 +36,8 @@ export interface NoteStrings {
   readonly targetNamed: (target: string, count: number) => string;
   /** What it says when notes carry the target as an alias. */
   readonly targetAliased: (target: string, count: number) => string;
+  /** What an embed says when the section or block it names is not in the note. */
+  readonly embedSectionMissing: (section: string) => string;
   /** The caption of a note that has no name. */
   readonly unnamedNote: string;
   /** What a region says while it waits for the host. */
@@ -106,6 +108,7 @@ export const ENGLISH: NoteStrings = {
     count === 1
       ? `No note is named “${target}”. One note carries it as an alias.`
       : `No note is named “${target}”, so it matched ${count} notes that carry it as an alias — and one of them gives the link up the day somebody writes a note under this name.`,
+  embedSectionMissing: (section) => `The section "${section}" is not in this note.`,
   unnamedNote: 'Unnamed note',
   loading: 'Loading…',
   failed: 'Something went wrong.',

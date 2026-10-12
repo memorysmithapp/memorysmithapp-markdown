@@ -35,6 +35,12 @@ export interface NoteHost {
   readonly targetAddress?: (name: string) => string | null;
   /** Goes to an internal address, through the host's router. Defaults to `location.assign`. */
   readonly navigate?: (address: string) => void;
+  /**
+   * The note a target names, for an embed to draw in place: its body as the host keeps it, its name
+   * and its address. Asked only for a target exactly one note reaches; `null` draws the embed as
+   * pending. Without it, every embed of a note is pending. The package never fetches.
+   */
+  readonly loadNote?: (name: string) => Promise<EmbeddedNote | null>;
   /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
   readonly keeps?: (name: string) => boolean;
   /**
@@ -75,6 +81,16 @@ export interface LinkChoiceNote {
   readonly folderDescription: string;
 }
 
+/** A note an embed draws in place. */
+export interface EmbeddedNote {
+  /** The note as the host keeps it, frontmatter included. */
+  readonly markdown: string;
+  /** Its name, or `null` for a note that has none. */
+  readonly name: string | null;
+  /** Its address, which the caption under the embed links to, or `null`. */
+  readonly address: string | null;
+}
+
 /** A file to draw: its name, and the dimensions the embed declared. */
 export interface AttachmentRequest {
   readonly name: string;
@@ -85,7 +101,7 @@ export interface AttachmentRequest {
 /** A link to draw through the host's router. */
 export interface LinkRequest {
   readonly href: string;
-  readonly className: string;
+  readonly className?: string;
   readonly children: ReactNode;
 }
 
@@ -99,6 +115,7 @@ export const HOST_KEYS = Object.keys({
   choose: 1,
   targetAddress: 1,
   navigate: 1,
+  loadNote: 1,
   keeps: 1,
   renderAttachment: 1,
   renderLink: 1,
@@ -115,6 +132,7 @@ export interface ResolvedHost {
   readonly targetAddress: (name: string) => string | null;
   readonly navigate: (address: string) => void;
   readonly remoteNotice: boolean;
+  readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
@@ -139,6 +157,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     targetAddress: host.targetAddress ?? nothing,
     navigate: host.navigate ?? ((address) => window.location.assign(address)),
     remoteNotice: host.remoteNotice ?? true,
+    loadNote: host.loadNote ?? null,
     keeps: host.keeps ?? never,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,

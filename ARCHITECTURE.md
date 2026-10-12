@@ -22,7 +22,7 @@ The repository is made of:
 
 `@memorysmithapp/markdown-renderer` exports one component, **`NoteBody`**, which draws the body of a note. The name says what it draws — the body, never the frontmatter, which a host shows as properties — and leaves `Markdown` to the component that draws one parsed run, as MemorySmith's reading page names it.
 
-- **`NoteBody`** (`src/NoteBody.tsx`) takes the note as the host keeps it, frontmatter included, cuts the frontmatter off, and draws the rest inside `<div class="markdown">`. It is MemorySmith's `WritableContent` without the write: the host contract replaces its hooks.
+- **`NoteBody`** (`src/NoteBody.tsx`) takes the note as the host keeps it, frontmatter included, cuts the frontmatter off, and draws the rest inside `<div class="markdown">`. It is MemorySmith's `WritableContent`: it splits the body into runs of text and embeds (`splitEmbeds`, `src/transclusion.ts`), resolves the wikilinks of each run, and draws each run with `Markdown` and each embed with `Transclusion` — the body of the one note a target reaches, asked of the host's `loadNote`, cut to the section or block its anchor names, its own embeds demoted to links so the page expands one level only, and the note it came from named in a caption. Past `EMBED_LIMIT` (10) embeds, and inside a table cell or code, an embed is a link, never dropped.
 - **`Markdown`** (`src/Markdown.tsx`) is MemorySmith's `Markdown` component: `react-markdown` over the text with newlines normalised, no raw HTML (no `rehype-raw`), `followable` as `urlTransform`, the footnote labels of the host, and the components that draw an anchor and an image. Its plugins run in this order, and the order is part of the contract:
   1. `remark-gfm`, at `singleTilde: false`, so `H~2~O` is not struck;
   2. `remarkCallouts` (`src/remark-callouts.ts`), titled by `strings.callouts`, or by the kind capitalised;
@@ -43,12 +43,13 @@ The repository is made of:
 | `choose` | `(name) => Promise<LinkChoices>`: the notes a target no single note answers may lead to, asked on a click | Such a link is pending and asks nothing |
 | `targetAddress` | `(name) => string \| null`: the host's page about a target, for a new tab | None |
 | `navigate` | `(address) => void`: goes to an internal address | `location.assign` |
+| `loadNote` | `(name) => Promise<{ markdown, name, address } \| null>`: the note an embed draws in place, asked only when exactly one note reaches the target | Every embed of a note is pending |
 | `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
 | `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
 | `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
 | `remoteNotice` | `boolean`: whether a note that fetched images from other sites says so under its body | `true` |
 | `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
-| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, and the words of the choice a link opens | MemorySmith's English (`ENGLISH`) |
+| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, the words of the choice a link opens, and what an embed says when its section is missing | MemorySmith's English (`ENGLISH`) |
 
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
@@ -85,6 +86,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
 | `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
 | `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser: code, fence and table regions, wikilink resolution, the hosts of remote images, and the frontmatter as MemorySmith reads it |
+| `packages/markdown-renderer/src/transclusion.ts`, `Transclusion.tsx` | The split of a body into text and embeds, the cut of a section or a block, and the embed drawn in place |
+| `packages/markdown-renderer/src/wikilink-address.ts` | Where a wikilink goes under the host: its note, the choice, or pending |
 | `packages/markdown-renderer/src/LinkChoice.tsx` | The choice a link opens when no single note answers it |
 | `packages/markdown-renderer/src/highlight.ts` | The fifteen grammars `refractor` registers, and the tokens of a fence as a hast tree |
 | `packages/markdown-renderer/src/MermaidDiagram.tsx`, `CopyButton.tsx` | A diagram drawn by a lazily imported Mermaid, and the button that copies a block |

@@ -16,6 +16,13 @@ const render = (markdown: string): string => html(markdown);
 
 /** What each declared entry has to be true of, once rendered. */
 const EXPECTED: Record<string, (html: string) => void> = {
+  transclusion: (html) => {
+    // The embed left the prose and became a region of its own. Which region
+    // depends on the host's answer, which has not arrived in a static render;
+    // that it is no longer the literal `![[...]]` is what this entry declares.
+    expect(html).not.toContain('![[');
+    expect(html).toMatch(/embed|status/);
+  },
   attachment: (html) => {
     /**
      * A file of the notebook that is not a note. The host of this case keeps
@@ -368,5 +375,48 @@ describe('a note that fetches from another site says so', () => {
     expect(notice).toContain('example.org');
     expect(notice).toContain('cdn.example.net');
     expect((notice.match(/(^|[^.])example\.org/g) ?? []).length).toBe(1);
+  });
+});
+
+/**
+ * The three places an embed cannot expand, and the one answer to all of them
+ * (§7.3): where expansion cannot happen the embed becomes a link, and it is
+ * never dropped.
+ */
+describe('an embed where no block fits', () => {
+  const TABLE = '| Rule | Where |\n|---|---|\n| The general one | ![[Lei 14.133]] |\n';
+
+  it('keeps the table whole, with the embed inside the cell', () => {
+    const html = render(TABLE);
+
+    expect(html).toContain('<table>');
+    expect((html.match(/<table>/g) ?? []).length).toBe(1);
+    expect(html).toContain('The general one');
+    expect(html).not.toMatch(/<p>\s*\|\s*<\/p>/);
+    expect(html).not.toContain('<td></td>');
+  });
+
+  it('draws the embed in the cell as a link, and never drops it', () => {
+    const html = render(TABLE);
+
+    expect(html).toContain('Lei 14.133');
+    expect(html).not.toContain('![[');
+    expect(html).not.toContain('[[Lei 14.133]]');
+    expect(html).toMatch(/wikilink/);
+  });
+
+  it('still expands an embed written outside the table in the same note', () => {
+    const html = render(`${TABLE}\n![[Another note]]\n`);
+
+    expect(html).toContain('<table>');
+    expect(html).toMatch(/embed|status/);
+    expect(html).not.toContain('![[');
+  });
+
+  it('leaves an embed written inside a fence alone, table or no table', () => {
+    const html = render('```\n| A | B |\n|---|---|\n| x | ![[Lei 14.133]] |\n```\n');
+
+    expect(html).toContain('![[Lei 14.133]]');
+    expect(html).not.toContain('<table>');
   });
 });
