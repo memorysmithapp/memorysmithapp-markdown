@@ -32,6 +32,8 @@ jobs:
         run: pnpm run quality
       - name: Build the packages
         run: pnpm -r build
+      - name: Check what each package ships
+        run: node scripts/pack-check.mjs
       - name: Type-check the packages and their tests
         run: pnpm -r typecheck
       - name: Test the checks and the packages

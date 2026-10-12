@@ -2,17 +2,39 @@
   "name": "@memorysmithapp/markdown-renderer",
   "version": "0.1.0",
   "description": "A React component that draws a MemorySmith note exactly as MemorySmith's reading page does.",
+  "keywords": [
+    "markdown",
+    "react",
+    "remark",
+    "renderer",
+    "wikilink",
+    "callout",
+    "katex",
+    "mermaid",
+    "memorysmith"
+  ],
+  "homepage": "https://github.com/memorysmithapp/memorysmithapp-markdown/tree/main/packages/markdown-renderer#readme",
+  "bugs": {
+    "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/issues"
+  },
   "license": "MIT",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git",
     "directory": "packages/markdown-renderer"
   },
-  "files": [
-    "dist",
-    "styles.css"
+  "type": "module",
+  "sideEffects": [
+    "*.css"
   ],
+  "files": [
+    "dist/*.js",
+    "dist/*.d.ts",
+    "styles.css",
+    "LICENSE",
+    "README.md"
+  ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -30,6 +52,15 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "dependencies": {
+    "hast-util-to-jsx-runtime": "2.3.6",
+    "mermaid": "11.17.0",
+    "react-markdown": "9.1.0",
+    "refractor": "5.0.0",
+    "rehype-katex": "7.0.1",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0"
+  },
   "devDependencies": {
     "@memorysmithapp/markdown-spec": "workspace:*",
     "@types/hast": "3.0.5",
@@ -41,17 +72,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "hast-util-to-jsx-runtime": "2.3.6",
-    "mermaid": "11.17.0",
-    "react-markdown": "9.1.0",
-    "refractor": "5.0.0",
-    "rehype-katex": "7.0.1",
-    "remark-gfm": "4.0.1",
-    "remark-math": "6.0.0"
-  },
-  "sideEffects": [
-    "*.css"
-  ]
+  }
 }

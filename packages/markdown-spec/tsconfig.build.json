@@ -4,7 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "noEmit": false,
-    "resolveJsonModule": false
+    "resolveJsonModule": false,
+    "sourceMap": false
   },
   "include": [
     "src"

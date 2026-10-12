@@ -215,6 +215,23 @@ Every push to `main` runs the workflow, and only the push that carries a cut ver
 
 **A repository that publishes to npm** adds to this flow the publish of the cut version, from the workflow that releases it, through npm trusted publishing; its packages declare `"publishConfig": { "access": "public" }`, and every package not meant to be published declares `"private": true`. Why both fields are required is in [`ARCHITECTURE.md` §4](ARCHITECTURE.md#4-integrations) (npm).
 
+This repository publishes its two packages, `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`. After the workflow **Release** writes the tag, it builds them and runs `scripts/publish.mjs`, which:
+
+1. publishes nothing on a push that is not a release;
+2. publishes every package not marked private at the version of the tag, and fails when a package is at another version;
+3. on a release, fails when that version already exists on npm: a version is published once;
+4. when the run is started again on the same commit (the tag exists there), publishes only what is not on npm yet, so a run that failed halfway is finished by running it again;
+5. leaves a package npm has never seen for the owner, and says so, without failing.
+
+**The first publish of each package is the owner's, once, by hand.** A trusted publisher is configured in the settings of a package on npmjs.com, so the package has to exist first (*declared* by npm's documentation of trusted publishers, read on 2026-10-12). After the merge of the first version, with an npm account that is a member of the `memorysmithapp` organisation:
+
+1. `git checkout v0.1.0 && pnpm install --frozen-lockfile && pnpm --filter "./packages/**" build`, at the root of a clone;
+2. `npm login`;
+3. in `packages/markdown-spec`, then in `packages/markdown-renderer`: `pnpm pack`, then `npm publish memorysmithapp-markdown-<spec|renderer>-0.1.0.tgz --access public`. The package is packed by pnpm, which writes the `workspace:` ranges as versions; `npm publish` run on the folder would publish them as they are;
+4. on npmjs.com, in the **Settings** of each of the two packages, add a **trusted publisher**: GitHub Actions, organisation `memorysmithapp`, repository `memorysmithapp-markdown`, workflow file `release.yml`, no environment.
+
+From then on every cut version is published by the workflow, with provenance, and nobody publishes by hand. A token is never created for this.
+
 When a cycle is cut, every issue delivered in it is closed already ([§5](#5-when-an-issue-closes)), and the ones left behind move to the milestone of the next version: an accepted issue nobody reassessed is a silent promise.
 
 ## 11. Rollback

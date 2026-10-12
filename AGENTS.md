@@ -72,6 +72,8 @@ Each command with the directory it runs in, what it does, and the date somebody 
 | `pnpm install` | The root | Installs the workspace from `pnpm-lock.yaml` | 2026-10-12 |
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-10-12 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-10-12 |
+| `node scripts/pack-check.mjs` | The root, after the build | Compares what `npm pack --dry-run` packs for each published package with what it is meant to ship | 2026-10-12 |
+| `node scripts/publish.mjs <action> <tag> --dry-run` | The root, after the build | Decides what *Release* would publish to npm for that action and tag, packs it and asks npm for a dry run; sends nothing | 2026-10-12 |
 | `pnpm run quality` | The root | Runs the checks of the workflow *Quality* ([SDLC §8](SDLC.md#8-tests-and-review)); exit 1 and the failing lines when one fails | 2026-10-12 |
 | `pnpm test` | The root | Runs the tests of the checks, each against a deliberate violation, then builds the packages and runs every package's tests | 2026-10-12 |
 | `pnpm --filter <package> test` | The root | Runs one package's tests | 2026-10-12 |

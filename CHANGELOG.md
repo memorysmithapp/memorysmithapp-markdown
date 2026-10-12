@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The demonstration notebooks `continuity-engineering` (en-US) and `enologia` (pt-BR), brought from MemorySmith's history at `9dbc682` with a footnote added to each, the one notation they lagged on, and three fixture images they draw; a test guards that each shows every declared notation and none the specification does not declare (#14).
 - A playground, a private Vite page of the workspace that draws any note of the two notebooks with the renderer under an in-memory host, in light and dark (#14).
 - `pnpm --filter playground compare`, which draws every note of the demonstration notebooks with MemorySmith's own reading surface at `4b67c7e` and with the renderer, in light and dark, at a desktop and a phone width, and compares the images: the 56 pairs are identical (#15).
+- The workflow `Release` publishes both packages to npm after it writes the tag, through trusted publishing with provenance and no token, by `scripts/publish.mjs`: only on a release, only the version of the tag, failing when that version exists already, and leaving a package npm has never seen for the owner's first publish, whose steps `SDLC.md` §10 lists (#16).
+- Both packages are complete for npm — description, keywords, homepage, repository, `files`, `exports` and types, a `README.md` and a `LICENSE` each — and `Quality` checks with `npm pack --dry-run` that each ships exactly the files meant to ship (#16).
 - A seventh check in `Quality`: every package of the workspace has the root's `version`, and a package not marked private declares public access; the workflow also installs, builds, type-checks and tests the packages (#3).
 
 ### Changed

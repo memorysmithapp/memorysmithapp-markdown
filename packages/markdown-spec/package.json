@@ -2,23 +2,40 @@
   "name": "@memorysmithapp/markdown-spec",
   "version": "0.1.0",
   "description": "The MemorySmith Markdown Specification: the notation MemorySmith notebooks are written in, as a document, as data and as a conformance suite.",
+  "keywords": [
+    "markdown",
+    "commonmark",
+    "gfm",
+    "specification",
+    "conformance",
+    "wikilink",
+    "knowledge-management",
+    "memorysmith"
+  ],
+  "homepage": "https://github.com/memorysmithapp/memorysmithapp-markdown/tree/main/packages/markdown-spec#readme",
+  "bugs": {
+    "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/issues"
+  },
   "license": "MIT AND CC-BY-4.0",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git",
     "directory": "packages/markdown-spec"
   },
+  "type": "module",
   "files": [
-    "dist",
+    "dist/*.js",
+    "dist/*.d.ts",
     "SPEC.md",
     "spec.json",
     "schema/spec.schema.json",
     "tests/conformance.json",
     "tests/README.md",
     "tools/check-spec.mjs",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -37,6 +54,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "types": "./dist/index.d.ts"
+  }
 }

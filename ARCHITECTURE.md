@@ -112,6 +112,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-spec/src/index.ts` | The typed entry point: `spec`, `conformance` and `cases`, the JSON files given their types |
 | `packages/markdown-spec/src/json.d.ts` | Types a JSON import as `unknown` for the build, which runs without `resolveJsonModule` so the data stays at the root of the package and is not copied into `dist/` |
 | `packages/markdown-spec/test/` | The tests of the checker and of the types |
+| `packages/*/README.md` | What a package is and how to use it, the page npm shows |
 | `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
 | `packages/markdown-renderer/styles.css` | The stylesheet of the reading surface ([§1.2](#12-the-stylesheet-of-the-reading-surface)) |
@@ -134,6 +135,8 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `scripts/quality.test.mjs` | The tests of the checks, one deliberate violation each, on `node:test` |
 | `scripts/release.mjs` | Decides what the workflow *Release* does on a push to `main`: release, nothing, or fail |
 | `scripts/release.test.mjs` | The tests of that decision |
+| `scripts/publish.mjs`, `scripts/publish.test.mjs` | Decides and does what *Release* publishes to npm, and its tests |
+| `scripts/pack-check.mjs` | Compares what each published package packs with what it is meant to ship |
 | `scripts/lib/changelog.mjs` | Reads `CHANGELOG.md`: its sections, categories, link definitions and the notes of a version |
 | `.github/workflows/quality.yml` | The workflow *Quality*, job `Quality` |
 | `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version |
@@ -239,13 +242,15 @@ At `v0.1.0` every one of the 56 pairs is identical, pixel for pixel (*observed* 
 - **A package never meant to be published declares `"private": true`**, which stops `npm publish` whatever the plan. The root `package.json` of this repository is one: it is never published.
 - **Publishing from CI goes through npm *trusted publishing* from GitHub Actions (OIDC)**, with no stored token, set up by the repository that first publishes, in an issue of its own.
 
+This repository is that repository. Its two packages are published by the workflow *Release* through `scripts/publish.mjs` ([`SDLC.md` §10](SDLC.md#10-release)): the job holds `id-token: write`, npm exchanges the workflow's OIDC token for the right to publish — npm 11.5.1 or later is required, and Node 24 carries it — and generates the provenance attestation itself, since the repository and the packages are public (*declared* by npm's documentation, read on 2026-10-12). Each package is packed with `pnpm pack`, which writes the renderer's `workspace:` range on the specification as a version, and the tarball is published with `npm publish`. What a package ships is its `files`: the built `.js` and `.d.ts` of `src/` (no source map, no test), its `README.md` and `LICENSE`, and for the specification the document, the data, the suite and the checker; `scripts/pack-check.mjs`, run by *Quality*, compares `npm pack --dry-run` with that list and fails on a file missing or extra.
+
 ## 5. Operation
 
 *Instruction: what runs, where, with which permissions and secrets.*
 
 **Quality** (`.github/workflows/quality.yml`) runs on every pull request and every push to `main`, with `contents: read` and no secret; it reads the branch from `GITHUB_HEAD_REF` or `GITHUB_REF_NAME` for check 1.
 
-**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN` and no stored secret: it pushes the tag with git, as `github-actions[bot]`, and creates the Release with `gh`. A tag pushed with that token starts no other workflow.
+**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN`, `id-token: write` for npm trusted publishing, and no stored secret: it pushes the tag with git, as `github-actions[bot]`, creates the Release with `gh`, and on a release — or a run again on its tagged commit — builds the packages and publishes them with `scripts/publish.mjs`. A tag pushed with that token starts no other workflow.
 
 There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once when a repository is created and again whenever its settings drift, with the permissions of the administrator whose `gh` it uses; it needs no token of its own.
 

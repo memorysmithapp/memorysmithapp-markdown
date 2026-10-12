@@ -47,7 +47,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 
 *Instruction: what the product provides, as business rules with codes `RN-{AREA}-{NNN}`.*
 
-Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package), `RENDER` (the renderer), `DEMO` (the demonstration notebooks and the playground).
+Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package), `RENDER` (the renderer), `DEMO` (the demonstration notebooks and the playground), `PUB` (publishing).
 
 | Code | Rule | Status |
 |---|---|---|
@@ -56,6 +56,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | The package exports the document and the data at stable paths: `./SPEC.md`, `./spec.json`, `./conformance.json` and `./schema.json` | declared in #4 |
 | RN-SPEC-004 | The text of the specification (`SPEC.md` and the prose of `tests/README.md`) is CC BY 4.0; the data, the suite and the checker are MIT, so an implementation may embed them without an attribution obligation on its output | *observed* in `SPEC.md`, carried over from the main repository |
 | RN-SPEC-005 | The package ships the TypeScript types of its own data — the specification, its sources, each notation and its reader, a conformance case — and typed entry points `spec`, `conformance` and `cases`, so a consumer never retypes the JSON. The types admit every notation and case of the data, and nothing the schema refuses | declared in #5 |
+| RN-PUB-001 | Both packages are public on npm under `@memorysmithapp`, at the version of this repository; after a package's first publish, which is the owner's, every version is published by the workflow *Release* through trusted publishing, with provenance and no token, once per version | declared in #1 and #16 |
+| RN-PUB-002 | A package ships only what a consumer needs: its built modules and declarations, its `README.md` and `LICENSE`, the renderer's stylesheet, and the specification's document, data, suite and checker — no test, no fixture, no source map | declared in #16 |
 | RN-DEMO-001 | The two demonstration notebooks, `continuity-engineering` in en-US and `enologia` in pt-BR, are not translations of each other; each demonstrates in context every notation of the specification but those delegated to the base parser, demonstrates none the specification does not declare, and shows the forms it does not describe being ignored, beside what to write instead | declared in #1 and #14 |
 | RN-DEMO-002 | The playground draws any note of the two notebooks with the renderer, under an in-memory host, in the light and the dark theme; it is never published | declared in #14 |
 | RN-RENDER-001 | The renderer draws what MemorySmith's reading page draws today: it is that page extracted, not a new design, and what the page decided — no raw HTML, strikethrough with two tildes only, the address filter, highlight tokens as elements — is kept with its reason | declared in #1, decision 2 |
@@ -86,6 +88,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | A consumer resolves each of the four paths from the installed package |
 | RN-SPEC-004 | `SPEC.md` ends with its licence section, and the package declares `MIT AND CC-BY-4.0` |
 | RN-SPEC-005 | `test/types.test.ts` compiles every notation and case against the types with no error, compiles a value the schema refuses with one, and type-checks a consumer project against the emitted declarations |
+| RN-PUB-001 | `scripts/publish.test.mjs` passes: nothing is published off a release, only the version of the tag, a release whose version exists fails, a run again finishes a half-done one, and a package npm has never seen is left for the owner; and both packages are on npm at the cut version |
+| RN-PUB-002 | `node scripts/pack-check.mjs`, run by *Quality*, finds no file missing or extra |
 | RN-DEMO-001 | `playground/test/notebooks.test.ts` passes, and fails when a declared notation is removed from either notebook |
 | RN-DEMO-002 | `pnpm --filter playground dev` opens the notebooks, and `playground/test/every-note.test.tsx` draws every note in both themes with no error |
 | RN-RENDER-001 | `pnpm --filter playground compare` draws every note of the demonstration notebooks with MemorySmith's own component at `4b67c7e` and with the renderer, in light and dark, at a desktop and a phone width, and every pair matches within 0.2% of its pixels or is listed as deliberate with its reason |
