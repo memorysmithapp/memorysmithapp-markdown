@@ -23,7 +23,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 
 **Delivers:**
 
-- `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-004).
+- `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together, and the TypeScript types of its data ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-005).
 
 **Deliberately does not** (*declared* in #1):
 
@@ -54,6 +54,7 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-002 | The specification has no version of its own: it follows the version of this repository, which both packages carry. The `url` of `spec.json` names `SPEC.md` at the tag of that version, never at `main`, so a published package names the text it implements | declared in #1 |
 | RN-SPEC-003 | The package exports the document and the data at stable paths: `./SPEC.md`, `./spec.json`, `./conformance.json` and `./schema.json` | declared in #4 |
 | RN-SPEC-004 | The text of the specification (`SPEC.md` and the prose of `tests/README.md`) is CC BY 4.0; the data, the suite and the checker are MIT, so an implementation may embed them without an attribution obligation on its output | *observed* in `SPEC.md`, carried over from the main repository |
+| RN-SPEC-005 | The package ships the TypeScript types of its own data — the specification, its sources, each notation and its reader, a conformance case — and typed entry points `spec`, `conformance` and `cases`, so a consumer never retypes the JSON. The types admit every notation and case of the data, and nothing the schema refuses | declared in #5 |
 
 ## 8. Quality requirements
 
@@ -69,3 +70,4 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-002 | The same test fails when the `url` of `spec.json` does not name `SPEC.md` at `v<version>` of the package |
 | RN-SPEC-003 | A consumer resolves each of the four paths from the installed package |
 | RN-SPEC-004 | `SPEC.md` ends with its licence section, and the package declares `MIT AND CC-BY-4.0` |
+| RN-SPEC-005 | `test/types.test.ts` compiles every notation and case against the types with no error, compiles a value the schema refuses with one, and type-checks a consumer project against the emitted declarations |

@@ -12,7 +12,7 @@
     "quality": "node scripts/quality.mjs",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "test": "node --test \"scripts/**/*.test.mjs\" && pnpm -r test"
+    "test": "node --test \"scripts/**/*.test.mjs\" && pnpm -r build && pnpm -r test"
   },
   "type": "module",
   "devDependencies": {

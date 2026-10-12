@@ -73,7 +73,7 @@ Each command with the directory it runs in, what it does, and the date somebody 
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-10-12 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-10-12 |
 | `pnpm run quality` | The root | Runs the checks of the workflow *Quality* ([SDLC §8](SDLC.md#8-tests-and-review)); exit 1 and the failing lines when one fails | 2026-10-12 |
-| `pnpm test` | The root | Runs the tests of the checks, each against a deliberate violation, then every package's tests | 2026-10-12 |
+| `pnpm test` | The root | Runs the tests of the checks, each against a deliberate violation, then builds the packages and runs every package's tests | 2026-10-12 |
 | `pnpm --filter <package> test` | The root | Runs one package's tests | 2026-10-12 |
 
 ## 7. Before calling something done

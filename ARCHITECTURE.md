@@ -42,6 +42,10 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-spec/spec.json` | Every notation as data: identifier, reader, syntax, example, effect, governing section; validated by `schema/spec.schema.json` |
 | `packages/markdown-spec/tests/conformance.json`, `tests/README.md` | The conformance suite, and its format |
 | `packages/markdown-spec/tools/check-spec.mjs` | The checker that keeps the document, the data and the suite together (RN-SPEC-001, RN-SPEC-002); Node only |
+| `packages/markdown-spec/src/types.ts` | The types of `spec.json` and of a conformance case (RN-SPEC-005) |
+| `packages/markdown-spec/src/index.ts` | The typed entry point: `spec`, `conformance` and `cases`, the JSON files given their types |
+| `packages/markdown-spec/src/json.d.ts` | Types a JSON import as `unknown` for the build, which runs without `resolveJsonModule` so the data stays at the root of the package and is not copied into `dist/` |
+| `packages/markdown-spec/test/` | The tests of the checker and of the types |
 | `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
@@ -142,3 +146,11 @@ There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once
 *Instruction: the decisions behind the architecture, one record each, in the format below.*
 
 Each record has an identifier, never reused; its context, decision, rationale and consequences; its date, status and **origin**. A decision that changes keeps its old record, marked *Superseded by ADR-NNN*, and a new record states the new decision.
+
+### ADR-001 The types of the data live beside the data
+
+- **Context:** the data of the specification is JSON, and every consumer retyped it. The main repository did, in `contracts/src/markdown.ts`, and a hand-retyped response is the defect that file's history warns about: the copy compiles, and drifts from the data in silence (*observed* at `4b67c7e`).
+- **Decision:** `@memorysmithapp/markdown-spec` ships the types of its own data in `src/types.ts`, and typed entry points (`spec`, `conformance`, `cases`) next to the raw JSON exports. A test compiles every notation and every case as a literal against the types, compiles values the schema refuses to prove the types refuse them, and type-checks a consumer against the emitted declarations.
+- **Rationale:** the types change in the same commit as the data (RN-SPEC-001 already makes the data move with the document), and the compiler, not a reader, checks that they agree. Generating them from the schema was not chosen: the schema says nothing about a conformance case, whose semantics live in `tests/README.md`, and a generator would be one more tool for a few dozen lines.
+- **Consequences:** what an implementation decides on top of the specification is not typed here. The two lists the main repository calls "ours and not the profile's" — the entries delegated to the base parser and the forms deliberately left silent — stay with their implementations: the first with the renderer, the second with the main repository.
+- **Date:** 2026-10-12. **Status:** Accepted. **Origin:** declared by the owner in #5.
