@@ -8,13 +8,27 @@ Claims carry their status when it is not obvious: *observed* (seen in this repos
 
 *Instruction: the pain the product removes, for whom, and how it shows today.*
 
+The notation MemorySmith notebooks are written in, and the way MemorySmith draws a note, lived only inside the main repository, [`memorysmithapp/memorysmithapp`](https://github.com/memorysmithapp/memorysmithapp): the specification as a document beside the product's code, and the drawing as a component bound to the product's API, router, locale and query cache. Nobody outside that repository could implement the notation against a published text, or draw a note the way MemorySmith does, without copying both (*declared* in #1).
+
 ## 2. Audience
 
 *Instruction: who uses the product, and what each of them needs from it.*
 
+- **Implementers of the notation**, MemorySmith first: need the specification as a text to read, as data to build from, and as a suite to prove against, at a version that does not move (*declared* in #1).
+- **Hosts that draw notes**, MemorySmith's reading page first: need a component that draws a note as MemorySmith does and asks the host for every piece of notebook data (*declared* in #1).
+
 ## 3. Goals and scope
 
 *Instruction: what the current version delivers, and what it deliberately does not.*
+
+**Delivers:**
+
+- `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-004).
+
+**Deliberately does not** (*declared* in #1):
+
+- An editor. If one comes, it comes as a need opened in this repository.
+- Any change to the main repository: incorporating the packages there is that repository's work.
 
 ## 4. Principles
 
@@ -32,7 +46,14 @@ Claims carry their status when it is not obvious: *observed* (seen in this repos
 
 *Instruction: what the product provides, as business rules with codes `RN-{AREA}-{NNN}`.*
 
-Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason.
+Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package).
+
+| Code | Rule | Status |
+|---|---|---|
+| RN-SPEC-001 | A notation lives in three files at once — `SPEC.md`, `spec.json` and `tests/conformance.json` — and the three move in the same commit, together with the reader that implements it. A notation whose `reader` is `links` or `frontmatter` and has no conformance case is not part of the specification; one whose `reader` is `reading-surface` is rendering, and is proved by the renderer instead of a JSON case | declared in #1 |
+| RN-SPEC-002 | The specification has no version of its own: it follows the version of this repository, which both packages carry. The `url` of `spec.json` names `SPEC.md` at the tag of that version, never at `main`, so a published package names the text it implements | declared in #1 |
+| RN-SPEC-003 | The package exports the document and the data at stable paths: `./SPEC.md`, `./spec.json`, `./conformance.json` and `./schema.json` | declared in #4 |
+| RN-SPEC-004 | The text of the specification (`SPEC.md` and the prose of `tests/README.md`) is CC BY 4.0; the data, the suite and the checker are MIT, so an implementation may embed them without an attribution obligation on its output | *observed* in `SPEC.md`, carried over from the main repository |
 
 ## 8. Quality requirements
 
@@ -41,3 +62,10 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 ## 9. Acceptance criteria
 
 *Instruction: how each rule is checked, by its code.*
+
+| Rule | The rule holds when |
+|---|---|
+| RN-SPEC-001 | `pnpm --filter @memorysmithapp/markdown-spec test` passes, and fails on a missing `SPEC.md`, a `links` or `frontmatter` notation with no case, a case naming a notation that does not exist, or a section reference with no heading |
+| RN-SPEC-002 | The same test fails when the `url` of `spec.json` does not name `SPEC.md` at `v<version>` of the package |
+| RN-SPEC-003 | A consumer resolves each of the four paths from the installed package |
+| RN-SPEC-004 | `SPEC.md` ends with its licence section, and the package declares `MIT AND CC-BY-4.0` |

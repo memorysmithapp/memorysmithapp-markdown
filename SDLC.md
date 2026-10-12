@@ -201,7 +201,7 @@ then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck
 
 The bump flow, in this order:
 
-1. On the branch `release/vX.Y.Z`, in **one commit** `chore(release): cut vX.Y.Z`: set `version` in the root `package.json` to `X.Y.Z`; in `CHANGELOG.md`, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` with the date of the cut, open a fresh empty `[Unreleased]` above it, and update the compare links in the foot.
+1. On the branch `release/vX.Y.Z`, in **one commit** `chore(release): cut vX.Y.Z`: set `version` in the root `package.json` to `X.Y.Z`, in the `package.json` of every package of the workspace, and in the `url` of `packages/markdown-spec/spec.json`, which names `SPEC.md` at the tag `vX.Y.Z`; in `CHANGELOG.md`, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` with the date of the cut, open a fresh empty `[Unreleased]` above it, and update the compare links in the foot.
 2. Push the branch and open the single pull request of the cycle ([§6](#6-pull-request)).
 3. The owner reviews and merges it. The bump never reaches `main` by a direct push.
 4. The merge is a push to `main`, which runs the workflow **Release** on the merged commit:

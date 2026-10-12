@@ -37,7 +37,12 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `pnpm-workspace.yaml` | The workspace: every directory under `packages/`; and the one dependency allowed to run an install script, `esbuild`, which Vitest needs |
 | `tsconfig.base.json` | The TypeScript options every package extends: strict, ES2022, ESM, `react-jsx`, declarations |
 | `vitest.config.ts` | The one Vitest configuration: a project per package, the renderer's in `jsdom` |
-| `packages/markdown-spec/` | `@memorysmithapp/markdown-spec`: `package.json`, `tsconfig.json` (type-checks sources and tests), `tsconfig.build.json` (emits `dist/` from `src/`, tests excluded), `src/` |
+| `packages/markdown-spec/` | `@memorysmithapp/markdown-spec`: `package.json`, `tsconfig.json` (type-checks sources and tests), `tsconfig.build.json` (emits `dist/` from `src/`, tests excluded), `src/`, `test/` |
+| `packages/markdown-spec/SPEC.md` | The specification as a document, CC BY 4.0 |
+| `packages/markdown-spec/spec.json` | Every notation as data: identifier, reader, syntax, example, effect, governing section; validated by `schema/spec.schema.json` |
+| `packages/markdown-spec/tests/conformance.json`, `tests/README.md` | The conformance suite, and its format |
+| `packages/markdown-spec/tools/check-spec.mjs` | The checker that keeps the document, the data and the suite together (RN-SPEC-001, RN-SPEC-002); Node only |
+| `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |
@@ -99,6 +104,12 @@ The link condition exists because a repository created from `memorysmithapp-temp
 `CHANGELOG.md` keeps the format of Keep a Changelog 1.1.0, every relative link and anchor resolves, and no document carries a version footer.
 
 **Mechanism:** checks 2, 4 and 5 of [`scripts/quality.mjs`](scripts/quality.mjs), run by the workflow *Quality*. Anchors are computed as GitHub computes them (lowercase, punctuation dropped, spaces as hyphens, `-1`, `-2`… for repeated headings), which is what keeps the links of `AGENTS.md` into this document from rotting silently. Code blocks and inline code are skipped, so a link or a footer quoted as code is not read as one. A footer is a line *starting* with "Last revised", "Last updated", "Revision date", "Internal document" and the like; the words inside a sentence are not one.
+
+### The specification keeps its three files together
+
+Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-SPEC-001, RN-SPEC-002), enforced here because it is the property the specification package exists for.
+
+**Mechanism:** [`packages/markdown-spec/tools/check-spec.mjs`](packages/markdown-spec/tools/check-spec.mjs), the first half of the package's `test`, run by `pnpm test` and so by the workflow *Quality*. It validates `spec.json` against its schema with a validator that implements only the keywords the schema uses and fails on any other; refuses duplicated identifiers, a case naming an undeclared notation, a case that asserts nothing, a notebook without a resolution and the reverse, a `links` or `frontmatter` notation with no case, and a section reference — in the data or in the prose of `SPEC.md` — with no heading; fails when `SPEC.md` is missing instead of skipping it; and fails when the `url` of `spec.json` is not `SPEC.md` at the tag `v<version>` of the package's `package.json`. Its tests (`test/check-spec.test.ts`) run it against a copy of the package carrying one deliberate defect each.
 
 ## 4. Integrations
 
