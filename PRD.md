@@ -24,7 +24,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 **Delivers:**
 
 - `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together, and the TypeScript types of its data ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-005).
-- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-011).
+- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-012).
 
 **Deliberately does not** (*declared* in #1):
 
@@ -69,6 +69,7 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-009 | A task box shows the state written in the source, and is one box per item. Where the host makes the note writable, a click reports the ordinal of the box among the boxes of the note as the host gave it; the host applies it as a one-character change with `toggleTaskAt`, and the package writes nothing. The boxes are disabled when the note is not writable, when the source and the drawn text disagree on how many boxes there are, and inside an embedded note, whose boxes belong to another note. A box inside a callout is counted in its place: on MemorySmith's reading page it reports the next box outside the callout, a defect this renderer does not carry | declared in #11 |
 | RN-RENDER-010 | The package ships the stylesheet of the reading surface, `styles.css`: a host that imports it, KaTeX's stylesheet and the faces draws a note as MemorySmith draws it, in the light and the dark theme. Every selector is under `.markdown`, so the package styles the note and never the page, and a host themes it through `--markdown-*` custom properties without overriding a selector | declared in #12 |
 | RN-RENDER-011 | Every entry of the specification whose `reader` is `reading-surface` is asserted by a rendering test, or listed as delegated to the base parser with the reason; an entry the specification adds that is neither fails the build | declared in #1 and #13 |
+| RN-RENDER-012 | The renderer differs from MemorySmith's reading page only where the package must not reach outside the note, and says so: when the choice a link opens is up, MemorySmith stops the page behind it from scrolling by a class on `body`, and the renderer, which styles and touches nothing outside `.markdown`, leaves that to the host; and a box inside a callout keeps its own ordinal (RN-RENDER-009) | declared in #15 |
 
 ## 8. Quality requirements
 
@@ -87,7 +88,7 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-005 | `test/types.test.ts` compiles every notation and case against the types with no error, compiles a value the schema refuses with one, and type-checks a consumer project against the emitted declarations |
 | RN-DEMO-001 | `playground/test/notebooks.test.ts` passes, and fails when a declared notation is removed from either notebook |
 | RN-DEMO-002 | `pnpm --filter playground dev` opens the notebooks, and `playground/test/every-note.test.tsx` draws every note in both themes with no error |
-| RN-RENDER-001 | The renderer and MemorySmith's reading page draw the same image of every note of the demonstration notebooks |
+| RN-RENDER-001 | `pnpm --filter playground compare` draws every note of the demonstration notebooks with MemorySmith's own component at `4b67c7e` and with the renderer, in light and dark, at a desktop and a phone width, and every pair matches within 0.2% of its pixels or is listed as deliberate with its reason |
 | RN-RENDER-002 | `test/note-body.test.tsx` draws a note with only the package and React installed, and with no host prop at all |
 | RN-RENDER-003 | No export of the package returns a note other than the one it was given, but for `toggleTaskAt`, which the host calls itself |
 | RN-RENDER-004 | A note carrying `<script>` renders no `script` element, and its text is on the page |
@@ -98,3 +99,4 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-RENDER-009 | `test/task-toggle.test.tsx` ticks every enabled box of a note with boxes in nested lists, in callouts and around embeds, and each tick changes exactly the character between that box's brackets; `task-box.test.tsx` and `tasklist.test.ts` pass |
 | RN-RENDER-010 | `test/stylesheet.test.ts` finds no selector outside `.markdown` and every public property in `ARCHITECTURE.md` §1.2; the comparison with MemorySmith's page matches in both themes |
 | RN-RENDER-011 | `test/reading-surface-conformance.test.tsx` passes with the asserted and the delegated sets covering all the entries, and fails, in `conformance-coverage.test.ts`, when a fake entry is added |
+| RN-RENDER-012 | The differences are the ones listed here, and the comparison finds no other |

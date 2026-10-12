@@ -132,7 +132,21 @@
 
 /* ── What the page around a note gave it ────────────────────────────────────
    On MemorySmith's page these came from the document; here they are scoped to
-   the note. */
+   the note.
+
+   The root of a note is where MemorySmith's page had the document: the runs of
+   text are each a `.markdown` inside it, and an embed, a pending embed and the
+   notice of remote images sit beside them, outside any `.markdown`, under the
+   body's line height and with a paragraph's own margins. The root draws them
+   the same, which the rules on `.markdown[data-theme]` below are for. */
+.markdown[data-theme] {
+  line-height: 1.45;
+  overflow-wrap: normal;
+}
+.markdown[data-theme] > p,
+.markdown .embed-body > p.embed-missing {
+  margin-block: 1em;
+}
 .markdown,
 .markdown *,
 .markdown *::before,
@@ -195,7 +209,7 @@
 .markdown :is(h1, h2, h3, h4, h5, h6) {
   margin-block: var(--ms-heading-spacing) 0;
 }
-.markdown > :first-child {
+.markdown:not([data-theme]) > :first-child {
   margin-block-start: 0;
 }
 
@@ -753,7 +767,7 @@
 
 /* What this note asked the browser to fetch (§7.10). A disclosure and not a
    warning: it reads as a footnote of the note, in the soft text. */
-.markdown .remote-notice {
+.markdown[data-theme] > .remote-notice {
   margin-top: 2rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--ms-border);

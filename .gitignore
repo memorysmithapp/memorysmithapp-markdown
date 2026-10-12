@@ -19,3 +19,7 @@ Thumbs.db
 .vscode/
 .obsidian/
 *.swp
+
+# The comparison with MemorySmith's reading page: its checkout and its images
+playground/compare/.memorysmith/
+playground/compare/out/

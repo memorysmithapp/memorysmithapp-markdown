@@ -28,6 +28,17 @@ pnpm --filter playground dev   # http://localhost:5173/
 
 `?theme=dark` draws the dark theme, `?lang=pt` the words of the page in Brazilian Portuguese.
 
+## Compare it with MemorySmith
+
+The renderer is MemorySmith's reading page, extracted. This draws every note of the two notebooks with MemorySmith's own component and with the renderer, in light and dark, at a desktop and a phone width, and compares the images:
+
+```sh
+npx playwright install --with-deps chromium   # once
+pnpm --filter playground compare
+```
+
+The first run clones MemorySmith at the commit the renderer was extracted from and installs its frontend; the images land in `playground/compare/out/`.
+
 ## Repository settings
 
 The settings a copy of the files does not carry — description, topics, merge options, wiki and discussions off, and the ruleset `main` that protects the default branch — are applied by a script, with `gh` authenticated as an administrator and [`jq`](https://jqlang.org/) installed. It was run with:

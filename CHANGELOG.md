@@ -17,18 +17,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `NoteBody` resolves wikilinks as MemorySmith does — a literal name after NFC, nothing inside code touched, a pending link drawn as such, a choice in place when several notes answer through the host's `reaches` and `choose` — draws a file the notebook `keeps` only for an embed, through the host's `renderAttachment`, and says under the body which hosts a note's images fetched from; `splitFrontmatter` and `remoteImageHosts` are exported for hosts (#9).
 - `NoteBody` draws embedded notes in place — a whole note, a section or a block, with the note they came from named under them — from the body the host's `loadNote` gives, one level deep, at most ten per note, and as a link inside a table cell or code (#10).
 - `NoteBody` draws task boxes that report the ordinal of the ticked box through `onToggleTask` when the host makes the note `writable`, and exports `toggleTaskAt`, `taskCheckedAt`, `taskBoxes` and `ordinalAt`, so the host applies a tick as a one-character change; a box inside a callout keeps an ordinal of its own, which MemorySmith's reading page does not give it (#11).
-- `@memorysmithapp/markdown-renderer/styles.css`, the stylesheet of MemorySmith's reading surface scoped under `.markdown`, with its colours, faces and radii as `--markdown-*` custom properties in a light and a dark theme, picked by the `data-theme` the root of a note carries from `theme` (#12).
+- `@memorysmithapp/markdown-renderer/styles.css`, the stylesheet of MemorySmith's reading surface scoped under `.markdown`, with its colours, faces and radii as `--markdown-*` custom properties in a light and a dark theme, picked by the `data-theme` the root of a note carries from `theme`; the root draws what sits beside the runs of text — an embed, a pending embed, the notice of remote images — under the body's line height, as MemorySmith's page does (#12, #15).
 - Every `reading-surface` entry of the specification is asserted by the renderer's conformance test, reading the entries from `@memorysmithapp/markdown-spec`, or listed in the exported `DELEGATED_TO_THE_BASE_PARSER`; an entry in neither fails the build (#13).
 - The demonstration notebooks `continuity-engineering` (en-US) and `enologia` (pt-BR), brought from MemorySmith's history at `9dbc682` with a footnote added to each, the one notation they lagged on, and three fixture images they draw; a test guards that each shows every declared notation and none the specification does not declare (#14).
 - A playground, a private Vite page of the workspace that draws any note of the two notebooks with the renderer under an in-memory host, in light and dark (#14).
+- `pnpm --filter playground compare`, which draws every note of the demonstration notebooks with MemorySmith's own reading surface at `4b67c7e` and with the renderer, in light and dark, at a desktop and a phone width, and compares the images: the 56 pairs are identical (#15).
 - A seventh check in `Quality`: every package of the workspace has the root's `version`, and a package not marked private declares public access; the workflow also installs, builds, type-checks and tests the packages (#3).
-
-### Fixed
-
-- `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
 ### Changed
 
 - The repository adopts `memorysmithapp-template` v0.2.1: `AGENTS.md`, `README.md` and `package.json` name `memorysmithapp-markdown`; `PRD.md` and `ARCHITECTURE.md` keep their skeletons and the description of the parts kept; the version restarts at `0.1.0` and the changelog names this repository (#2).
+
+### Fixed
+
+- `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
 [unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/commits/main
