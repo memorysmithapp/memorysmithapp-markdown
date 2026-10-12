@@ -19,6 +19,7 @@ export default defineConfig({
           root: 'packages/markdown-renderer',
           include: ['src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
           environment: 'jsdom',
+          setupFiles: ['test/setup.ts'],
         },
       },
     ],

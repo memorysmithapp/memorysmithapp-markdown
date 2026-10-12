@@ -24,6 +24,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 **Delivers:**
 
 - `@memorysmithapp/markdown-spec`: the MemorySmith Markdown Specification as a document (`SPEC.md`), as data (`spec.json` and its schema) and as a conformance suite (`tests/conformance.json`), with the checker that keeps the three together, and the TypeScript types of its data ([§7](#7-features-and-rules), RN-SPEC-001 to RN-SPEC-005).
+- `@memorysmithapp/markdown-renderer`: a React component, `NoteBody`, that draws the body of a note as MemorySmith's reading page draws it, asking the host for every piece of notebook data (RN-RENDER-001 to RN-RENDER-005).
 
 **Deliberately does not** (*declared* in #1):
 
@@ -46,7 +47,7 @@ The notation MemorySmith notebooks are written in, and the way MemorySmith draws
 
 *Instruction: what the product provides, as business rules with codes `RN-{AREA}-{NNN}`.*
 
-Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package).
+Codes are append-only: never renumbered, never reused. A rule that stops holding stays on its own line, marked **Removed** with the version and the reason. Areas: `SPEC` (the specification package), `RENDER` (the renderer).
 
 | Code | Rule | Status |
 |---|---|---|
@@ -55,6 +56,11 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | The package exports the document and the data at stable paths: `./SPEC.md`, `./spec.json`, `./conformance.json` and `./schema.json` | declared in #4 |
 | RN-SPEC-004 | The text of the specification (`SPEC.md` and the prose of `tests/README.md`) is CC BY 4.0; the data, the suite and the checker are MIT, so an implementation may embed them without an attribution obligation on its output | *observed* in `SPEC.md`, carried over from the main repository |
 | RN-SPEC-005 | The package ships the TypeScript types of its own data — the specification, its sources, each notation and its reader, a conformance case — and typed entry points `spec`, `conformance` and `cases`, so a consumer never retypes the JSON. The types admit every notation and case of the data, and nothing the schema refuses | declared in #5 |
+| RN-RENDER-001 | The renderer draws what MemorySmith's reading page draws today: it is that page extracted, not a new design, and what the page decided — no raw HTML, strikethrough with two tildes only, the address filter, highlight tokens as elements — is kept with its reason | declared in #1, decision 2 |
+| RN-RENDER-002 | The renderer knows no API, no router, no i18n library and no query cache: what it needs from the notebook reaches it through the host contract, as functions and words, and every default is the safe one — with no `resolve` every link is pending, with no `keeps` no embed reaches a file, with no `strings` the words are MemorySmith's English | declared in #1, decision 3 |
+| RN-RENDER-003 | The renderer never rewrites the source: a note is drawn from its bytes as the host keeps them, its frontmatter is not drawn, and nothing it does changes what the host stores | declared in #1, decision 4 |
+| RN-RENDER-004 | The renderer renders no raw HTML: a `<script>`, an HTML block or an inline tag in a note is drawn as its text. It is a security boundary, because a notebook is written by several people and by agents (`SPEC.md` §7.9) | declared in #1, decision 2 |
+| RN-RENDER-005 | A link is followed only to `http:`, `https:` and `mailto:`, to a path or to an anchor of the note; any other address — an editor's scheme, `data:`, `javascript:`, `file:` — stays on the page as text, not clickable, with a title that says why. An anchor scrolls inside the note it was drawn in and never navigates; the web opens in a new tab with `rel="noreferrer"` | declared in #6 |
 
 ## 8. Quality requirements
 
@@ -71,3 +77,8 @@ Codes are append-only: never renumbered, never reused. A rule that stops holding
 | RN-SPEC-003 | A consumer resolves each of the four paths from the installed package |
 | RN-SPEC-004 | `SPEC.md` ends with its licence section, and the package declares `MIT AND CC-BY-4.0` |
 | RN-SPEC-005 | `test/types.test.ts` compiles every notation and case against the types with no error, compiles a value the schema refuses with one, and type-checks a consumer project against the emitted declarations |
+| RN-RENDER-001 | The renderer and MemorySmith's reading page draw the same image of every note of the demonstration notebooks |
+| RN-RENDER-002 | `test/note-body.test.tsx` draws a note with only the package and React installed, and with no host prop at all |
+| RN-RENDER-003 | No export of the package returns a note other than the one it was given, but for `toggleTaskAt`, which the host calls itself |
+| RN-RENDER-004 | A note carrying `<script>` renders no `script` element, and its text is on the page |
+| RN-RENDER-005 | `test/address.test.ts` keeps each allowed address and refuses one of each refused kind |

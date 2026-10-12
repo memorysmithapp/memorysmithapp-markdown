@@ -18,6 +18,22 @@ The repository is made of:
 - **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged.
 - **GitHub configuration**: the ruleset `main` and the settings the script applies.
 
+### 1.1 The renderer
+
+`@memorysmithapp/markdown-renderer` exports one component, **`NoteBody`**, which draws the body of a note. The name says what it draws — the body, never the frontmatter, which a host shows as properties — and leaves `Markdown` to the component that draws one parsed run, as MemorySmith's reading page names it.
+
+- **`NoteBody`** (`src/NoteBody.tsx`) takes the note as the host keeps it, frontmatter included, cuts the frontmatter off, and draws the rest inside `<div class="markdown">`. It is MemorySmith's `WritableContent` without the write: the host contract replaces its hooks.
+- **`Markdown`** (`src/Markdown.tsx`) is MemorySmith's `Markdown` component: `react-markdown` over the text, with newlines normalised, `remark-gfm` at `singleTilde: false`, no raw HTML (no `rehype-raw`), `followable` as `urlTransform`, the footnote labels of the host, and the components that draw an anchor and an image.
+- **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:
+
+| Prop | Shape | Default |
+|---|---|---|
+| `resolve` | `(name) => string \| null`: the address of the one note a target names | Every link is pending |
+| `keeps` | `(name) => boolean`: whether the notebook keeps a file by that name | No embed reaches a file |
+| `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
+| `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
+| `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment | MemorySmith's English (`ENGLISH`) |
+
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
 ## 2. Layout
@@ -48,6 +64,12 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-spec/test/` | The tests of the checker and of the types |
 | `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
+| `packages/markdown-renderer/src/NoteBody.tsx`, `Markdown.tsx` | The component and the pipeline of one parsed run ([§1.1](#11-the-renderer)) |
+| `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
+| `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
+| `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
+| `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser |
+| `packages/markdown-renderer/test/` | The renderer's tests, in `jsdom`; `setup.ts` gives jsdom the `CSS.escape` a browser has |
 | `scripts/setup-repo.sh` | Applies the settings a copy does not carry to a repository; uses only `gh` and `jq`; the mechanism of INV-03 |
 | `scripts/quality.mjs` | The checks of the workflow *Quality*, Node only |
 | `scripts/quality.test.mjs` | The tests of the checks, one deliberate violation each, on `node:test` |

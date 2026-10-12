@@ -9,7 +9,9 @@
     "url": "git+https://github.com/memorysmithapp/memorysmithapp-markdown.git",
     "directory": "packages/markdown-renderer"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -26,6 +28,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@memorysmithapp/markdown-spec": "workspace:*",
+    "@types/hast": "3.0.5",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "react": "19.2.8",
@@ -33,5 +37,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "react-markdown": "9.1.0",
+    "remark-gfm": "4.0.1"
   }
 }
