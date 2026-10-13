@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
-import { Markdown } from './Markdown.js';
+import { planFootnotes } from './footnotes.js';
+import { Markdown, readingPlugins } from './Markdown.js';
 import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { taskBoxes } from './tasklist.js';
 import { Transclusion } from './Transclusion.js';
@@ -82,6 +83,18 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
    */
   const hosts = resolved.remoteNotice ? remoteImageHosts(body) : [];
 
+  // The footnotes of a note an embed cuts (§7.12): each run is handed the
+  // definitions of the others and the numbers of the note, and the note's one
+  // section is drawn at its end, below the last embed too. Null, and nothing
+  // changes, for a note no embed cuts or with no footnote to carry.
+  const runs = segments.flatMap((segment) => ('rendered' in segment ? [segment.rendered] : []));
+  const footnotes = useMemo(
+    () => planFootnotes(runs, runs.length < segments.length, readingPlugins(() => undefined)),
+    // The runs and whether an embed cut them are the whole input.
+    [runs.join('\u0000'), runs.length < segments.length],
+  );
+  let run = 0;
+
   return (
     <HostProvider value={resolved}>
       {/* The root of the note carries the theme, which is where the stylesheet
@@ -93,20 +106,27 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
+          const planned = footnotes?.runs[run++];
           return (
             <Markdown
               key={index}
               // The text the ordinal is counted over, stated rather than left to
               // a default: it is the one the parser reports offsets into, and
               // `mappable` above is what makes it safe to write back through.
-              source={segment.rendered}
+              // A planned run is the same text with definitions appended after
+              // it, so every box keeps the offset it had.
+              source={planned?.text ?? segment.rendered}
               onToggleTask={onToggleTask && ((ordinal) => onToggleTask(base + ordinal))}
               writable={writable && mappable}
+              {...(planned ? { footnotes: { refs: planned.refs } } : {})}
             >
-              {segment.rendered}
+              {planned?.text ?? segment.rendered}
             </Markdown>
           );
         })}
+        {/* Its boxes, if a footnote holds any, are drawn read-only: they are
+            not where the ordinals of the runs count them. */}
+        {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
         {hosts.length > 0 && <p className="remote-notice">{resolved.strings.remoteImages(hosts)}</p>}
       </div>
     </HostProvider>

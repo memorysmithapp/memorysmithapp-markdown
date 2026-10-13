@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- `NoteBody` draws a footnote whose reference and definition an embed separates: a note an embed cuts numbers its footnotes once, in the order of the note, with ids that never repeat, and draws their one section at its end, below its last embed too, where MemorySmith's reading page draws the reference as its characters; a way back reaches a reference in another run (#20).
+
 ## [0.1.0] - 2026-10-12
 
 ### Added

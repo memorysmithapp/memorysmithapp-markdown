@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import ReactMarkdown from 'react-markdown';
+import type { PluggableList } from 'unified';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -23,6 +24,7 @@ import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { remarkCallouts } from './remark-callouts.js';
 import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
+import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { ordinalAt } from './tasklist.js';
 
 /**
@@ -43,6 +45,12 @@ export interface MarkdownProps {
   readonly source?: string;
   readonly onToggleTask?: (ordinal: number) => void;
   readonly writable?: boolean;
+  /**
+   * How this run takes part in the footnotes of a note drawn in several runs
+   * (`footnotes.ts`): the number and id of each of its references, or
+   * `'section'` for the pass that draws the note's one section.
+   */
+  readonly footnotes?: { readonly refs: readonly FootnoteRef[] } | 'section';
 }
 
 type LiProps = HTMLAttributes<HTMLLIElement> & { node?: unknown };
@@ -88,8 +96,15 @@ function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAttributes
 function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
   const follow = (event: MouseEvent<HTMLAnchorElement>): void => {
     const id = decodeURIComponent(href.slice(1));
-    const note = event.currentTarget.closest('.markdown');
-    const target = note?.querySelector(`[id="${CSS.escape(id)}"]`);
+    // The note is the root `NoteBody` draws, since a footnote's way back may
+    // cross runs; inside an embed it is the embed's own run. A match inside
+    // an embed answers only a link inside that same embed.
+    const link = event.currentTarget;
+    const embed = link.closest('.embed');
+    const note = embed ? link.closest('.markdown') : (link.closest('.markdown[data-theme]') ?? link.closest('.markdown'));
+    const target = [...(note?.querySelectorAll(`[id="${CSS.escape(id)}"]`) ?? [])].find(
+      (candidate) => candidate.closest('.embed') === embed,
+    );
     if (!(target instanceof HTMLElement)) return;
     event.preventDefault();
     target.scrollIntoView({ block: 'center' });
@@ -337,7 +352,35 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, writable = false }: MarkdownProps) {
+/**
+ * The remark plugins of the reading surface, in their order. `planFootnotes` reads a note
+ * through the same list, so it counts the references this surface draws and no other.
+ */
+export function readingPlugins(titleOf: (kind: string) => string | undefined): PluggableList {
+  return [
+    /**
+     * `singleTilde: false` is a decision and not a default.
+     *
+     * GFM specifies strikethrough as `~~x~~`; GitHub also accepts a
+     * single tilde, outside its own specification. Here that extension
+     * actively misrenders a notation the specification leaves out:
+     * somebody writing `H~2~O` for a subscript would get `H` struck-out
+     * `2` `O`, which is a worse answer than nothing. With it off the
+     * characters stay on the page, and the author can see they got what
+     * the specification says they get, which is nothing.
+     */
+    [remarkGfm, { singleTilde: false }],
+    [remarkCallouts, { titleOf }],
+    remarkHighlight,
+    remarkComments,
+    remarkBlockIds,
+    remarkMath,
+    // After remark-math, and it gives back what was never a formula.
+    remarkMathDollarRule,
+  ];
+}
+
+export function Markdown({ children, source, onToggleTask, writable = false, footnotes }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
@@ -346,38 +389,27 @@ export function Markdown({ children, source, onToggleTask, writable = false }: M
   return (
     <div className="markdown">
       <ReactMarkdown
-        remarkPlugins={[
-          /**
-           * `singleTilde: false` is a decision and not a default.
-           *
-           * GFM specifies strikethrough as `~~x~~`; GitHub also accepts a
-           * single tilde, outside its own specification. Here that extension
-           * actively misrenders a notation the specification leaves out:
-           * somebody writing `H~2~O` for a subscript would get `H` struck-out
-           * `2` `O`, which is a worse answer than nothing. With it off the
-           * characters stay on the page, and the author can see they got what
-           * the specification says they get, which is nothing.
-           */
-          [remarkGfm, { singleTilde: false }],
-          [remarkCallouts, { titleOf: calloutTitle }],
-          remarkHighlight,
-          remarkComments,
-          remarkBlockIds,
-          remarkMath,
-          // After remark-math, and it gives back what was never a formula.
-          remarkMathDollarRule,
-        ]}
+        remarkPlugins={readingPlugins(calloutTitle)}
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a
         // notebook is written by several people and by agents (§7.9).
         // A formula KaTeX cannot typeset shows its source, never an error (§7.8).
-        rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
+        rehypePlugins={[
+          [rehypeKatex, { throwOnError: false }],
+          ...(footnotes === undefined
+            ? []
+            : footnotes === 'section'
+              ? [rehypeFootnoteSection]
+              : [[rehypeFootnoteRun, footnotes] as [typeof rehypeFootnoteRun, typeof footnotes]]),
+        ]}
         // Footnotes (§7.12): the words around them are the reader's, and the
         // label heads the notes gathered at the end of the note, where a
         // reader sees it — GFM hides it, and a stylesheet that hides nothing
         // shows it as a visible heading, so it is in the reader's language.
         remarkRehypeOptions={{
+          // remark-rehype's own default, stated: `footnotes.ts` renumbers by it.
+          clobberPrefix: CLOBBER_PREFIX,
           footnoteLabel: strings.footnotes,
           footnoteLabelProperties: { className: ['footnotes-label'] },
           footnoteBackLabel: (referenceIndex: number) => strings.footnoteBack(referenceIndex + 1),
