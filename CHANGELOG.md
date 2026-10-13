@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - `SDLC.md` §10 says the trusted publishers allow `npm publish`, as the workflow needs: without that permission npm refuses the workflow's publish instead of staging it, which is what the release of v0.1.1 met; the section also says a new trusted publisher expires unless it publishes within two days (#22).
+- `pnpm run quality` reads only the Markdown files git tracks or would track, so it passes locally after `pnpm --filter playground compare` has left MemorySmith's checkout in the tree, instead of reading that checkout's documents as this repository's (#23).
 
 ## [0.1.1] - 2026-10-13
 

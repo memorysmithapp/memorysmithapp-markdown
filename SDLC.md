@@ -179,6 +179,8 @@ The format of the main repository, with its scope indicators and its examples of
 6. every GitHub link at the foot of `CHANGELOG.md` names the repository the check runs in;
 7. every package of the workspace has the root's `version`, and every package not marked `"private": true` declares public access;
 
+checks 4 and 5 read the Markdown files git tracks or would track, never one `.gitignore` keeps out, such as the MemorySmith checkout the comparison leaves in `playground/compare/.memorysmith/`;
+
 then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
 
 **The owner reviews and merges** the pull request of a cycle; nobody merges their own cycle without that review.

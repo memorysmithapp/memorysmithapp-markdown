@@ -27,16 +27,39 @@ function readText(root, path) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-export function markdownFiles(root, directory = root) {
+// The files git tracks or would track: tracked, and untracked but not ignored. Null when the root
+// is not a git work tree, as in the tests' fixtures, which are then walked whole.
+function gitFiles(root) {
+  try {
+    const out = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    // A file deleted in the work tree is still in the index until the deletion is staged.
+    return out.split('\0').filter((file) => file !== '' && existsSync(join(root, file)));
+  } catch {
+    return null;
+  }
+}
+
+function walk(root, directory) {
   const files = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!IGNORED_DIRECTORIES.has(entry.name)) files.push(...markdownFiles(root, join(directory, entry.name)));
-    } else if (entry.name.toLowerCase().endsWith('.md')) {
+      if (!IGNORED_DIRECTORIES.has(entry.name)) files.push(...walk(root, join(directory, entry.name)));
+    } else {
       files.push(relative(root, join(directory, entry.name)).split(sep).join('/'));
     }
   }
-  return files.sort();
+  return files;
+}
+
+// The Markdown files the checks read: what git tracks or would track, so a checkout or an output
+// that .gitignore keeps out of the repository — the comparison's MemorySmith checkout among them —
+// is never read as one of its documents.
+export function markdownFiles(root) {
+  return (gitFiles(root) ?? walk(root, root)).filter((file) => file.toLowerCase().endsWith('.md')).sort();
 }
 
 // The lines of a Markdown file outside fenced code blocks, each with its number, and with inline
