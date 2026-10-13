@@ -3,6 +3,9 @@ node_modules/
 dist/
 coverage/
 
+# The tarballs `pnpm pack` writes into a package (SDLC.md §10)
+*.tgz
+
 # Environment and secrets
 .env
 .env.*
