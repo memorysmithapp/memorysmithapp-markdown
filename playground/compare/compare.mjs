@@ -44,7 +44,10 @@ const THEMES = ['light', 'dark'];
  * Pairs that differ on purpose, by `<slug>/<path>`, each with the reason a person reads in the
  * report. A difference listed here is reported and does not fail the run; one that is not fails it.
  */
-export const DELIBERATE = {};
+export const DELIBERATE = {
+  'enologia/01 Castas/Índice de Polifenóis Totais.md':
+    'Its footnote is referenced above an embed and defined below it: MemorySmith draws the reference as text and no notes, the renderer draws the footnote (RN-RENDER-013).',
+};
 
 const REFERENCE_PORT = 5301;
 const RENDERER_PORT = 5302;

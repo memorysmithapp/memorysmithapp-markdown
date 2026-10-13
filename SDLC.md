@@ -223,14 +223,14 @@ This repository publishes its two packages, `@memorysmithapp/markdown-spec` and 
 4. when the run is started again on the same commit (the tag exists there), publishes only what is not on npm yet, so a run that failed halfway is finished by running it again;
 5. leaves a package npm has never seen for the owner, and says so, without failing.
 
-**The first publish of each package is the owner's, once, by hand.** A trusted publisher is configured in the settings of a package on npmjs.com, so the package has to exist first (*declared* by npm's documentation of trusted publishers, read on 2026-10-12). After the merge of the first version, with an npm account that is a member of the `memorysmithapp` organisation:
+**The first publish of each package is the owner's, once, by hand.** A trusted publisher is configured in the settings of a package on npmjs.com, so the package has to exist first (*declared* by npm's documentation of trusted publishers, read on 2026-10-12). After the merge of the first version, with an npm account that is a member of the `memorysmithapp` organisation and has two-factor authentication turned on — without it npm refuses the publish with `E403`, *Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages* (*observed* on 2026-10-13):
 
 1. `git checkout v0.1.0 && pnpm install --frozen-lockfile && pnpm --filter "./packages/**" build`, at the root of a clone;
-2. `npm login`;
+2. `npm login`; each `npm publish` below asks for the second factor;
 3. in `packages/markdown-spec`, then in `packages/markdown-renderer`: `pnpm pack`, then `npm publish memorysmithapp-markdown-<spec|renderer>-0.1.0.tgz --access public`. The package is packed by pnpm, which writes the `workspace:` ranges as versions; `npm publish` run on the folder would publish them as they are;
-4. on npmjs.com, in the **Settings** of each of the two packages, add a **trusted publisher**: GitHub Actions, organisation `memorysmithapp`, repository `memorysmithapp-markdown`, workflow file `release.yml`, no environment.
+4. on npmjs.com, in the **Settings** of each of the two packages, add a **trusted publisher**: GitHub Actions, organisation `memorysmithapp`, repository `memorysmithapp-markdown`, workflow file `release.yml`, no environment, with **Allow npm publish** and **Allow npm dist-tag** both left unchecked. Unchecked, a version the workflow publishes is **staged**, and goes live only when a maintainer approves it on npmjs.com with the second factor; checked, it goes live at once, which the form marks *not recommended* (*declared* by npm's form, read on 2026-10-13). The workflow never moves a dist-tag, so it is never given that right.
 
-From then on every cut version is published by the workflow, with provenance, and nobody publishes by hand. A token is never created for this.
+From then on every cut version is published by the workflow, with provenance, and nobody publishes by hand; **the owner approves each staged version on npmjs.com**, and only then is it on npm. A token is never created for this.
 
 When a cycle is cut, every issue delivered in it is closed already ([§5](#5-when-an-issue-closes)), and the ones left behind move to the milestone of the next version: an accepted issue nobody reassessed is a silent promise.
 
