@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Themes: `defineTheme` and a `theme` prop that takes a theme a host writes in its own project, at three levels it may mix — properties written on the root as `--markdown-*`, now naming every value the stylesheet reads, metrics, headings, quotations, tables and callout icons included; its own CSS, scoped by the root class `markdown-theme-<name>`; and twelve slots, React components called with the notation already interpreted — with `scheme` choosing light or dark. MemorySmith's look is the theme `default`, and `theme="light"` and `theme="dark"` keep meaning it (#28).
+- The stylesheet is `structure.css`, what every theme needs, and `theme-default.css`, MemorySmith's look; `styles.css` is the two together, as before (#28).
+- The playground picks the theme and the scheme in its sidebar and its address, among the default theme and three example themes that live only there: `sepia`, properties alone; `docs`, its own CSS; and `terminal`, slots with icons from `lucide-react` (#28).
+
+### Changed
+
+- The root of a note carries the class `markdown-theme-<name>` beside `markdown`, and a callout written with a fold marker carries it as `data-fold` (#28).
+
 ## [0.1.2] - 2026-10-13
 
 ### Fixed

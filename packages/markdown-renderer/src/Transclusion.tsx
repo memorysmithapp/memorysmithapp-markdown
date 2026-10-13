@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useHost, type EmbeddedNote } from './host.js';
 import { Markdown } from './Markdown.js';
+import { drawSlot, useSlot } from './slots.js';
 import { bodyStart, resolveWikilinks } from './markdown.js';
 import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './transclusion.js';
 import { wikilinkAddress } from './wikilink-address.js';
@@ -43,6 +44,7 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
   // passage the page can inline on their behalf.
   const one = host.loadNote !== null && host.reaches(name) === 1;
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
+  const slot = useSlot('embed');
 
   useEffect(() => {
     if (!one || !host.loadNote) return;
@@ -61,16 +63,20 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
   // is still being written, so a target that does not exist yet is an
   // expected state and never an error that stops the page.
   if (!one || loaded.state === 'missing') {
-    return (
+    const marker = (
       <p className="embed-pending">
         <span className="wikilink-pending" title={strings.pendingLink}>
           {target}
         </span>
       </p>
     );
+    return slot ? drawSlot(slot, { state: 'pending', target, anchor, caption: null, children: marker }) : marker;
   }
 
-  if (loaded.state === 'loading') return <TransclusionSkeleton loading={strings.loading} />;
+  if (loaded.state === 'loading') {
+    const skeleton = <TransclusionSkeleton loading={strings.loading} />;
+    return slot ? drawSlot(slot, { state: 'loading', target, anchor, caption: null, children: skeleton }) : skeleton;
+  }
 
   const { note } = loaded;
   const whole = note.markdown.slice(bodyStart(note.markdown));
@@ -82,33 +88,43 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
   // section named `^x` and a block called `x` would answer for each other.
   const cut = !anchor ? whole : isBlockAnchor(anchor) ? blockOf(whole, anchor.slice(1)) : sectionOf(whole, anchor);
   const caption = anchor ? `${sourceLabel} › ${anchor}` : sourceLabel;
+  const named = note.address === null ? caption : host.renderLink({ href: note.address, children: caption });
+
+  const content =
+    cut === null ? (
+      <p className="embed-missing">{strings.embedSectionMissing(anchor ?? '')}</p>
+    ) : (
+      /**
+       * Resolved, like every other run of the note. Without this every
+       * `[[link]]` inside transcluded content reached the page with its
+       * brackets — and the sharpest case is the one the one-level rule
+       * creates itself: `demoteEmbeds` turns an embed found in embedded
+       * content into a wikilink, and that embed is drawn as A LINK to its
+       * target. Raw text is not a link.
+       */
+      <Markdown>
+        {resolveWikilinks(
+          demoteEmbeds(cut, host.keeps),
+          (each) => wikilinkAddress(host, each),
+          host.keeps,
+        )}
+      </Markdown>
+    );
+
+  if (slot) {
+    return drawSlot(slot, {
+      state: cut === null ? 'section-missing' : 'ready',
+      target,
+      anchor,
+      caption: named,
+      children: content,
+    });
+  }
 
   return (
     <figure className="embed">
-      <div className="embed-body">
-        {cut === null ? (
-          <p className="embed-missing">{strings.embedSectionMissing(anchor ?? '')}</p>
-        ) : (
-          /**
-           * Resolved, like every other run of the note. Without this every
-           * `[[link]]` inside transcluded content reached the page with its
-           * brackets — and the sharpest case is the one the one-level rule
-           * creates itself: `demoteEmbeds` turns an embed found in embedded
-           * content into a wikilink, and that embed is drawn as A LINK to its
-           * target. Raw text is not a link.
-           */
-          <Markdown>
-            {resolveWikilinks(
-              demoteEmbeds(cut, host.keeps),
-              (each) => wikilinkAddress(host, each),
-              host.keeps,
-            )}
-          </Markdown>
-        )}
-      </div>
-      <figcaption className="embed-source">
-        {note.address === null ? caption : host.renderLink({ href: note.address, children: caption })}
-      </figcaption>
+      <div className="embed-body">{content}</div>
+      <figcaption className="embed-source">{named}</figcaption>
     </figure>
   );
 }

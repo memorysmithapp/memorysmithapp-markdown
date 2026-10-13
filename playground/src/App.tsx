@@ -2,6 +2,7 @@ import { NoteBody, toggleTaskAt } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useState } from 'react';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
+import { schemesOf, themeNamed, THEMES, type PlaygroundTheme } from './themes/index.js';
 
 /** Every note of the two notebooks, read at build time; nothing is fetched. */
 const sources = import.meta.glob<string>('../../notebooks/*/**/*.md', { query: '?raw', import: 'default', eager: true });
@@ -17,11 +18,16 @@ for (const path of Object.keys(kept)) {
 }
 const NOTEBOOKS: readonly Notebook[] = buildNotebooks(files, keptBySlug);
 
-/** What the page shows, read from its address: `/notes/enologia/01 Castas/Índice?theme=dark&lang=pt&bare=1`. */
+/**
+ * What the page shows, read from its address:
+ * `/notes/enologia/01 Castas/Índice?theme=sepia&scheme=dark&lang=pt&bare=1`. `?theme=light` and
+ * `?theme=dark` are the default theme in that scheme, as they were before themes existed.
+ */
 interface View {
   readonly notebook: Notebook;
   readonly note: Note;
-  readonly theme: 'light' | 'dark';
+  readonly theme: PlaygroundTheme;
+  readonly scheme: 'light' | 'dark';
   readonly lang: 'en' | 'pt';
   /** Only the note, in its column: what the comparison screenshots. */
   readonly bare: boolean;
@@ -36,15 +42,24 @@ function readView(): View {
   return {
     notebook,
     note,
-    theme: query.get('theme') === 'dark' ? 'dark' : 'light',
+    ...themeAndScheme(query),
     lang: query.get('lang') === 'pt' ? 'pt' : 'en',
     bare: query.get('bare') === '1',
   };
 }
 
-function withQuery(key: string, value: string): string {
+function themeAndScheme(query: URLSearchParams): { theme: PlaygroundTheme; scheme: 'light' | 'dark' } {
+  const named = query.get('theme');
+  const legacy = named === 'light' || named === 'dark' ? named : null;
+  const theme = themeNamed(legacy ? 'default' : named);
+  const asked = query.get('scheme') === 'dark' || legacy === 'dark' ? 'dark' : 'light';
+  const schemes = schemesOf(theme);
+  return { theme, scheme: schemes.includes(asked) ? asked : (schemes[0] ?? 'light') };
+}
+
+function withQuery(changes: Record<string, string>): string {
   const query = new URLSearchParams(window.location.search);
-  query.set(key, value);
+  for (const [key, value] of Object.entries(changes)) query.set(key, value);
   return `${window.location.pathname}?${query.toString()}`;
 }
 
@@ -61,8 +76,12 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset['theme'] = view.theme;
-  }, [view.theme]);
+    const root = document.documentElement;
+    root.dataset['theme'] = view.scheme;
+    // The page takes the colours of the theme, so the pane does not frame the note in another one.
+    const page = view.theme.page[view.scheme];
+    for (const [name, value] of Object.entries(page ?? {})) root.style.setProperty(`--page-${name}`, value);
+  }, [view.theme, view.scheme]);
 
   const key = `${view.notebook.slug}/${view.note.path}`;
   const markdown = edited[key] ?? view.note.markdown;
@@ -87,7 +106,8 @@ export function App() {
         key={key}
         markdown={markdown}
         {...host}
-        theme={view.theme}
+        theme={view.theme.theme}
+        scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         writable
         onToggleTask={(ordinal) => {
@@ -105,8 +125,42 @@ export function App() {
       <nav className="sidebar">
         <p className="brand">memorysmithapp-markdown</p>
         <div className="controls">
-          <a href={withQuery('theme', view.theme === 'dark' ? 'light' : 'dark')}>{view.theme === 'dark' ? 'Light' : 'Dark'}</a>
-          <a href={withQuery('lang', view.lang === 'pt' ? 'en' : 'pt')}>{view.lang === 'pt' ? 'English' : 'Português'}</a>
+          <a href={withQuery({ lang: view.lang === 'pt' ? 'en' : 'pt' })}>{view.lang === 'pt' ? 'English' : 'Português'}</a>
+        </div>
+        <div className="controls themes">
+          <label>
+            Theme{' '}
+            <select
+              value={view.theme.theme.name}
+              onChange={(event) => {
+                window.history.pushState(null, '', withQuery({ theme: event.target.value, scheme: view.scheme }));
+                setView(readView());
+              }}
+            >
+              {THEMES.map((each) => (
+                <option key={each.theme.name} value={each.theme.name}>
+                  {each.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Scheme{' '}
+            <select
+              value={view.scheme}
+              disabled={schemesOf(view.theme).length < 2}
+              onChange={(event) => {
+                window.history.pushState(null, '', withQuery({ theme: view.theme.theme.name, scheme: event.target.value }));
+                setView(readView());
+              }}
+            >
+              {schemesOf(view.theme).map((scheme) => (
+                <option key={scheme} value={scheme}>
+                  {scheme === 'dark' ? 'Dark' : 'Light'}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {NOTEBOOKS.map((notebook) => (
           <section key={notebook.slug}>

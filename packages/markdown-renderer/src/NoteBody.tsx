@@ -4,6 +4,7 @@ import { planFootnotes } from './footnotes.js';
 import { Markdown, readingPlugins } from './Markdown.js';
 import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { taskBoxes } from './tasklist.js';
+import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './transclusion.js';
 import { wikilinkAddress } from './wikilink-address.js';
@@ -99,7 +100,11 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
     <HostProvider value={resolved}>
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
-      <div className="markdown" data-theme={resolved.theme}>
+      <div
+        className={`markdown markdown-theme-${resolved.theme.name}`}
+        data-theme={resolved.scheme}
+        style={rootStyle(resolved.theme, resolved.scheme)}
+      >
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
             return <Transclusion key={index} target={segment.target} anchor={segment.anchor} />;

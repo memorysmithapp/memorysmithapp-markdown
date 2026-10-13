@@ -13,7 +13,7 @@ import { publishedPackages } from './publish.mjs';
 /** The files a package ships beside its built modules. */
 export const SHIPPED = {
   '@memorysmithapp/markdown-spec': ['LICENSE', 'README.md', 'SPEC.md', 'package.json', 'schema/spec.schema.json', 'spec.json', 'tests/README.md', 'tests/conformance.json', 'tools/check-spec.mjs'],
-  '@memorysmithapp/markdown-renderer': ['LICENSE', 'README.md', 'package.json', 'styles.css'],
+  '@memorysmithapp/markdown-renderer': ['LICENSE', 'README.md', 'package.json', 'styles.css', 'structure.css', 'theme-default.css'],
 };
 
 /** The built modules of a package's `src/`: a module and its declarations, for every source but the tests. */

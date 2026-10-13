@@ -29,9 +29,46 @@ import 'katex/dist/katex.min.css';
 />;
 ```
 
-Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. The stylesheet styles nothing outside `.markdown`; theme it with the `--markdown-*` custom properties. The faces are Inter and Space Grotesk, which the page loads.
+Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
 
-The host contract, the stylesheet's properties and the decisions behind them are in the repository's [`ARCHITECTURE.md`](https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/ARCHITECTURE.md).
+## Themes
+
+With no theme, a note looks as it does in MemorySmith, in `theme="light"` or `theme="dark"`. To give it your own look, write a theme in your project and pass it:
+
+```tsx
+import { defineTheme, NoteBody } from '@memorysmithapp/markdown-renderer';
+import '@memorysmithapp/markdown-renderer/styles.css';
+import './acme-theme.css';                          // your CSS, under .markdown-theme-acme
+
+const acme = defineTheme({
+  name: 'acme',                                    // the root of a note carries .markdown-theme-acme
+  schemes: ['light', 'dark'],
+  properties: {                                    // level 1: values, no CSS needed
+    light: { bg: '#ffffff', text: '#222222', accent: '#e11d48', fontSans: "'IBM Plex Sans', sans-serif" },
+    dark: { bg: '#111111', text: '#eeeeee', accent: '#fb7185' },
+  },
+  icons: { warning: <AlertTriangle />, tip: <Lightbulb /> }, // any icon library
+  components: {                                    // level 3: draw a block your way
+    table: ({ children }) => <table className="acme-table">{children}</table>,
+    callout: ({ kind, title, icon, children }) => (
+      <aside className={`acme-callout acme-${kind}`}>
+        <header>{icon}{title}</header>
+        {children}
+      </aside>
+    ),
+  },
+});
+
+<NoteBody markdown={note} theme={acme} scheme="dark" />;
+```
+
+- **Properties** name every value the stylesheet reads — colours, faces, sizes, spacing, headings, quotations, tables, callout hues and icons — and are written on the root as `--markdown-*`, so your CSS may set them too.
+- **Your CSS** is scoped by `.markdown-theme-<name>`, and reaches the note and nothing else.
+- **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
+
+Import `structure.css` instead of `styles.css` for a theme that draws everything itself. A theme names faces; your page loads them.
+
+The host contract, the stylesheet's properties, the slots and the decisions behind them are in the repository's [`ARCHITECTURE.md`](https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/ARCHITECTURE.md).
 
 ## Licence
 

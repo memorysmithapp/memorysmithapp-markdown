@@ -13,7 +13,7 @@ The repository is made of:
 - **Documents**, the core of what it delivers: `CLAUDE.md` imports `AGENTS.md`; `AGENTS.md` maps the reading and the writing onto `PRD.md`, `ARCHITECTURE.md`, `SDLC.md` and `README.md`, and states the limits and invariants in one line each; `CHANGELOG.md` records what each version changed.
 - **Two packages**, in a pnpm workspace under `packages/`: `@memorysmithapp/markdown-spec` and `@memorysmithapp/markdown-renderer`, each built with TypeScript into its own `dist/` and tested with Vitest.
 - **Two demonstration notebooks**, `notebooks/continuity-engineering` (en-US) and `notebooks/enologia` (pt-BR), written in MemorySmith's repository so that every declared notation appears in context; they are fixtures of the tests and documentation for a person.
-- **A playground**, `playground/`, a private Vite page of the workspace that draws any note of the two notebooks with the renderer, under an in-memory host, in light and dark; it is how a person looks at the renderer.
+- **A playground**, `playground/`, a private Vite page of the workspace that draws any note of the two notebooks with the renderer, under an in-memory host, in the default theme, light and dark, and in three example themes; it is how a person looks at the renderer.
 - **Repository files:** `package.json`, the one home of the version and the root of the workspace; `.gitignore`, `.editorconfig` and `LICENSE`.
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
 - **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
@@ -54,14 +54,15 @@ The repository is made of:
 | `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file | The file's name as text |
 | `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router | A plain `<a>` |
 | `remoteNotice` | `boolean`: whether a note that fetched images from other sites says so under its body | `true` |
-| `theme` | `'light' \| 'dark'`: the theme the host draws in, which picks Mermaid's | `light` (Mermaid's `neutral`) |
+| `theme` | A `Theme` ([§1.3](#13-themes)), or `'light' \| 'dark'`, which are the default theme in that scheme | The default theme |
+| `scheme` | `'light' \| 'dark'`: the scheme the theme is drawn in, which also picks Mermaid's theme; a theme of one scheme is drawn in it whatever is asked | The scheme `theme` names, else `light` (Mermaid's `neutral`) |
 | `strings` | `Partial<NoteStrings>`: callout titles by kind, the footnote label and back label, the titles of a pending link, a refused link and a missing attachment, the verb of the Copy button and what it says once copied, the notice of remote images, the words of the choice a link opens, and what an embed says when its section is missing | MemorySmith's English (`ENGLISH`) |
 
 ### 1.2 The stylesheet of the reading surface
 
-`@memorysmithapp/markdown-renderer/styles.css` carries every rule of MemorySmith's stylesheet that draws the body of a note — the reading surface's headings, lists, task items, blockquotes, footnotes, code and its frame, tables, callouts, embeds, wikilinks, pending and refused links, highlight tokens, Mermaid, the choice dialog and the embed skeleton — and none of the page around it. Every selector starts with `.markdown`, and a test parses the file to prove it. What MemorySmith's page gave the note from the document (the text face, the colour, `box-sizing`, the colour of a link) is set on the root of the note instead.
+The stylesheet is three files. `theme-default.css` is the **default theme**: it carries every rule of MemorySmith's stylesheet that draws the body of a note — the reading surface's headings, lists, task items, blockquotes, footnotes, code and its frame, tables, callouts, embeds, wikilinks, pending and refused links, highlight tokens, Mermaid, the choice dialog and the embed skeleton — and none of the page around it. Every selector starts with `.markdown`, and a test parses the files to prove it. `structure.css` holds the few rules every theme needs whatever it looks like — `box-sizing`, an image no wider than its column, a diagram's SVG fitted to it, the text kept for a screen reader, and the place of an icon a theme draws as an element — and reads no colour, face or metric. `styles.css` imports the two, structure first, and is what a host imports for the default theme or for a theme built on it; a theme that draws everything itself imports `structure.css` alone. What MemorySmith's page gave the note from the document (the text face, the colour, `box-sizing`, the colour of a link) is set on the root of the note instead.
 
-`NoteBody` draws its root as `<div class="markdown" data-theme="light|dark">`, from the `theme` prop. The root stands where MemorySmith's page had the document: each run of text is a `.markdown` inside it, and an embed, a pending embed and the notice of remote images sit beside the runs, outside any `.markdown`. So the rules on `.markdown[data-theme]` give the root the body's line height (1.45) and a paragraph's own margins to the paragraphs that sit directly in it, and the rule that takes the top margin off a first child applies to the runs, not to the root. The stylesheet sets its values there, as private `--ms-*` properties read from public `--markdown-*` ones with MemorySmith's value as the fallback, once for the light theme and once for the dark. A host themes a note by setting a `--markdown-*` property on the root or on any ancestor; it overrides no selector. The colours, faces and radii are public; the metrics — the modular heading scale, the paragraph and list spacing, the line heights — are not, because they are what drawing a note the same means.
+`NoteBody` draws its root as `<div class="markdown markdown-theme-<name>" data-theme="light|dark">`: the class names the theme, and `data-theme` carries the scheme. The root stands where MemorySmith's page had the document: each run of text is a `.markdown` inside it, and an embed, a pending embed and the notice of remote images sit beside the runs, outside any `.markdown`. So the rules on `.markdown[data-theme]` give the root the body's line height (1.45) and a paragraph's own margins to the paragraphs that sit directly in it, and the rule that takes the top margin off a first child applies to the runs, not to the root. The stylesheet sets its values there, as private `--ms-*` properties read from public `--markdown-*` ones with MemorySmith's value as the fallback, once for the light scheme and once for the dark. **Every value a rule of the default theme reads is public**, metrics included: a theme's `properties` are written on the root as these custom properties, and a host or a theme's own CSS may set them on the root or on any ancestor; nothing overrides a selector. Left unset, each one is MemorySmith's value, so the default theme draws what MemorySmith draws; a test holds the list of `ThemeProperties` and the properties the stylesheet reads to the same set.
 
 | Property | What it sets | Light | Dark |
 |---|---|---|---|
@@ -81,8 +82,48 @@ The repository is made of:
 | `--markdown-font-mono` | Code | `ui-monospace, 'Cascadia Code', Consolas, monospace` | the same |
 | `--markdown-radius` | Code frames, callouts, buttons, options | `8px` | the same |
 | `--markdown-radius-large` | The choice dialog | `12px` | the same |
+| `--markdown-font-heading` | The face of the headings | the text face | the same |
+| `--markdown-code-border` | The edge of a block of code | the border colour | the border colour |
+| `--markdown-inline-code-bg`, `--markdown-inline-code-padding` | The fill and the padding of a code span | `transparent`, `0` | the same |
+| `--markdown-icon-note`, `--markdown-icon-info`, `--markdown-icon-summary`, `--markdown-icon-tip`, `--markdown-icon-success`, `--markdown-icon-question`, `--markdown-icon-warning`, `--markdown-icon-failure`, `--markdown-icon-danger`, `--markdown-icon-example`, `--markdown-icon-quote` | The icon of each family of callouts, a CSS image used as a mask, so it takes the callout's colour | Lucide's pencil, info, clipboard, flame, check, question, alert, cross, zap, list and quote | the same |
+| `--markdown-font-size` | The size of the text | `1rem` | the same |
+| `--markdown-line-height`, `--markdown-line-height-tight`, `--markdown-root-line-height` | The line height of a run, of headings and tables, and of the root | `1.5`, `1.3`, `1.45` | the same |
+| `--markdown-paragraph-spacing`, `--markdown-heading-spacing` | The space around a paragraph, a list, a block; the space above a heading | `1rem`, two and a half paragraphs | the same |
+| `--markdown-list-indent`, `--markdown-list-spacing` | The indent of a list, and the space between its items | `2em`, `0.075em` | the same |
+| `--markdown-heading-weight`, `--markdown-heading-color`, `--markdown-h1-weight`, `--markdown-h6-color` | The weight and colour of headings, the first heading's weight, the sixth's colour | `600`, the text, `700`, the soft text | the same |
+| `--markdown-h1-size`, `--markdown-h2-size`, `--markdown-h3-size`, `--markdown-h4-size`, `--markdown-h5-size`, `--markdown-h6-size` | The modular heading scale | `1.802em`, `1.602em`, `1.424em`, `1.266em`, `1.125em`, `1em` | the same |
+| `--markdown-quote-border-color`, `--markdown-quote-border-width`, `--markdown-quote-color` | The rule and the ink of a quotation | the border colour, `2px`, the text | the same |
+| `--markdown-table-border`, `--markdown-table-cell-padding` | The rules and the padding of a table's cells | the border colour, `4px 8px` | the same |
+| `--markdown-table-header-bg`, `--markdown-table-header-rule` | The header row's fill and the rule under it | `transparent`, `2px solid` the soft text | the same |
+| `--markdown-table-stripe-bg`, `--markdown-table-hover-bg` | Every second row's fill, and the row under the pointer | `transparent`, the code background | the same |
+| `--markdown-embed-rule` | The rule down the side of an embed | the accent | the accent |
 
 A host loads the faces (Inter 400 and 600, Space Grotesk 500 and 700, as MemorySmith does from Google Fonts) and imports `katex/dist/katex.min.css` beside this stylesheet ([ADR-002](#adr-002-how-the-renderer-carries-its-heavy-libraries)). The width of the column is the host's: MemorySmith draws a note 700px wide, in a pane of `48.75rem` with `2rem 2.5rem` of padding.
+
+### 1.3 Themes
+
+A **theme** (`src/theme.ts`) decides how a note looks, never what its notation means ([ADR-003](#adr-003-themes-are-objects-a-host-writes-at-three-levels)). It is an object a host writes and checks with `defineTheme` — a `name` that becomes the root's class, the `schemes` it draws in (both, unless it names one), `properties` for every scheme or per scheme, `icons` by callout kind, and `components` — and passes as `theme`. MemorySmith's look is `DEFAULT_THEME`, named `default`: the stylesheet with nothing set over it, and the only theme the package ships. A theme works at three levels:
+
+1. **Properties.** `ThemeProperties` names every custom property of [§1.2](#12-the-stylesheet-of-the-reading-surface) in camel case (`textSoft` is `--markdown-text-soft`); `NoteBody` writes the theme's values for the scheme on the root's `style`.
+2. **Its own CSS**, scoped by `.markdown-theme-<name>`, which reaches anything inside the note and nothing outside it. It may also set the `--markdown-*` properties.
+3. **Slots**: React components a theme fills, each called with the notation already interpreted (`src/slots.tsx`, where each one, left empty, draws exactly the default theme's markup):
+
+| Slot | Called with | Where |
+|---|---|---|
+| `callout` | `kind`, `fold` (`+`, `-` or `null`, from `remarkCallouts`'s `data-fold`), `title`, `icon`, `children` | `MarkdownDiv`, for the `div.callout` `remarkCallouts` builds |
+| `calloutIcon` | `kind`, when `icons` has none for it; the icon is drawn in the title as `.callout-icon` and the stylesheet's mask is hidden | the callout's title |
+| `table` | `align` of each column, read from the first row, and `children` | `MarkdownTable` |
+| `codeBlock` | `language`, `code` as typed, `children` (the highlighted `<code>`), `copy` (the Copy button, which copies `code`) | `MarkdownPre`, for a fence other than a diagram |
+| `inlineCode` | `children` | `MarkdownCode`, outside a block (`InBlock` tells them apart) |
+| `heading` | `level`, `children`; the footnotes' heading is never one | `headings` |
+| `blockquote` | `children`; a callout is never one | `MarkdownBlockquote` |
+| `embed` | `state` (`ready`, `section-missing`, `loading`, `pending`), `target`, `anchor`, `caption`, `children` | `Transclusion` |
+| `footnotes` | `label`, `children` (the list) | `MarkdownSection`, for the section remark-rehype gathers |
+| `taskBox` | `checked`, `enabled`, `toggle`, which reports the box's ordinal and does nothing when it is not enabled | `TaskItem` |
+| `wikilink` | `pending`, `children`, `link`, which draws a label as the host's link to the resolved address, the choice, or the pending marker | `MarkdownAnchor` |
+| `diagram` | `source`, `state` (`loading`, `ready`, `failed`), `children` (the SVG, its space, or the source) | `MermaidDiagram` |
+
+What a slot is handed is the result of the pipeline of [§1.1](#11-the-renderer), never the source: the address filter, the refusal of raw HTML, wikilink resolution, the task ordinal and the footnote numbers are decided before it is called, and the tests of `test/themes.test.tsx` fill every slot and prove that none of them undoes one. The slots and the properties are public API: changing a slot's props or removing a property is a breaking change.
 
 Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism here; a rule is stated in `PRD.md` and enforced where §3 says.
 
@@ -115,7 +156,9 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/*/README.md` | What a package is and how to use it, the page npm shows |
 | `packages/markdown-spec/LICENSE` | The MIT licence of the data, the suite and the checker, shipped with the package |
 | `packages/markdown-renderer/` | `@memorysmithapp/markdown-renderer`, laid out as `markdown-spec`; `react` and `react-dom` 19 are its peer dependencies |
-| `packages/markdown-renderer/styles.css` | The stylesheet of the reading surface ([§1.2](#12-the-stylesheet-of-the-reading-surface)) |
+| `packages/markdown-renderer/styles.css`, `structure.css`, `theme-default.css` | The stylesheet of the reading surface: the default theme, what every theme needs, and the two together ([§1.2](#12-the-stylesheet-of-the-reading-surface)) |
+| `packages/markdown-renderer/src/theme.ts`, `slots.tsx` | Themes: their type, `defineTheme`, the properties and the slots, and where each slot is called ([§1.3](#13-themes)) |
+| `packages/markdown-renderer/src/footnotes.ts` | The footnotes of a note an embed cuts, planned as one document |
 | `packages/markdown-renderer/src/NoteBody.tsx`, `Markdown.tsx` | The component and the pipeline of one parsed run ([§1.1](#11-the-renderer)) |
 | `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
@@ -143,7 +186,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `pnpm-lock.yaml` | Written by pnpm; installed with `--frozen-lockfile` in CI |
 | `notebooks/<slug>/` | A demonstration notebook as MemorySmith keeps one: `GUIDANCE.md`, `STRUCTURE.md`, a folder per kind of note with its `TEMPLATE.md`, the notes, and `assets/`, the files it keeps — three fixture images its notes draw as `../assets/<name>` |
 | `playground/compare/` | The comparison with MemorySmith's reading page ([§3, the renderer draws what MemorySmith draws](#the-renderer-draws-what-memorysmith-draws)): `compare.mjs` drives it, and `reference/` is the page that mounts MemorySmith's own component, copied into a checkout of MemorySmith when it runs |
-| `playground/` | The playground, never published (`"private": true`): `src/notebooks.tsx` builds the in-memory notebook and the host contract over it — names and aliases from the frontmatter, `reaches`, `choose`, `loadNote`, `keeps` and `renderAttachment` over `assets/`, `renderLink` and `navigate` through the History API — `src/App.tsx` draws a note at `/notes/<slug>/<path>`, with `?theme=dark`, `?lang=pt` (the pt-BR words of MemorySmith, through `strings`) and `?bare=1` (the note alone, for screenshots); `vite.config.ts` serves the kept files at `/notes/<slug>/assets/<name>`; `test/` holds the coverage test of the notebooks and a test that draws every note |
+| `playground/` | The playground, never published (`"private": true`): `src/notebooks.tsx` builds the in-memory notebook and the host contract over it — names and aliases from the frontmatter, `reaches`, `choose`, `loadNote`, `keeps` and `renderAttachment` over `assets/`, `renderLink` and `navigate` through the History API — `src/App.tsx` draws a note at `/notes/<slug>/<path>`, with `?theme=<name>` and `?scheme=dark` (`?theme=dark` and `?theme=light` are the default theme in that scheme), selectable in the sidebar, `?lang=pt` (the pt-BR words of MemorySmith, through `strings`) and `?bare=1` (the note alone, for screenshots); `vite.config.ts` serves the kept files at `/notes/<slug>/assets/<name>`; `src/themes/` holds the three example themes, written against the public API only and never published — `sepia`, properties alone; `docs`, its own CSS; `terminal`, slots, with icons from `lucide-react` — and the page colours each one is shown on; `test/` holds the coverage test of the notebooks and a test that draws every note in every theme |
 | `.gitignore` | Dependencies, build output, coverage, environment files, logs, operating-system and editor files |
 | `.editorconfig` | UTF-8, LF, two spaces, final newline |
 | `LICENSE` | The MIT licence |
@@ -212,7 +255,7 @@ Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-RENDER-011), enforced he
 
 Not an invariant of `AGENTS.md`, a rule of `PRD.md` (RN-DEMO-001), enforced here because the notebooks are the first thing to age when a notation changes, and they age while teaching the wrong version to the person learning it.
 
-**Mechanism:** `playground/test/notebooks.test.ts`, run by `pnpm test`, ported from MemorySmith's own guard: every entry of `spec.json` not in `DELEGATED_TO_THE_BASE_PARSER` has a detector and appears in **each** notebook; neither notebook demonstrates a notation the specification does not declare (a query block, a templater expression, a handlebars placeholder, an inline field); the forms the specification does not describe that somebody reaches for first — `#subject`, `H~2~O` — are shown being ignored; every link lands but the ones each notebook declares pending on purpose; and the reserved keys are in en-US in both. `playground/test/every-note.test.tsx` draws every note in both themes and requires every embed to find its note and no error to be logged.
+**Mechanism:** `playground/test/notebooks.test.ts`, run by `pnpm test`, ported from MemorySmith's own guard: every entry of `spec.json` not in `DELEGATED_TO_THE_BASE_PARSER` has a detector and appears in **each** notebook; neither notebook demonstrates a notation the specification does not declare (a query block, a templater expression, a handlebars placeholder, an inline field); the forms the specification does not describe that somebody reaches for first — `#subject`, `H~2~O` — are shown being ignored; every link lands but the ones each notebook declares pending on purpose; and the reserved keys are in en-US in both. `playground/test/every-note.test.tsx` draws every note in both schemes of the default theme and in every scheme of each example theme, and requires every embed to find its note and no error to be logged.
 
 ### The renderer draws what MemorySmith draws
 
@@ -275,3 +318,11 @@ Each record has an identifier, never reused; its context, decision, rationale an
 - **Rationale:** a dependency the renderer cannot draw without belongs to the renderer, and installing it is not the host's problem; Mermaid's weight is paid at load time, not at install time, and the dynamic import is what keeps it out of the initial bundle. KaTeX's stylesheet carries fonts a bundler has to resolve, which is the host's work.
 - **Consequences:** a host imports `katex/dist/katex.min.css` beside the package's stylesheet. A test reads the built `dist/` and fails if any module imports `mermaid` statically.
 - **Date:** 2026-10-12. **Status:** Accepted. **Origin:** decided in #8, as the issue asked.
+
+### ADR-003 Themes are objects a host writes, at three levels
+
+- **Context:** a host that is not MemorySmith wants a note to look like its own pages, and to build that look in its own project and ship it with it (#28). Until v0.2.0 the renderer opened its colours, faces and radii as custom properties and kept the metrics, the callout icons and the table treatment private, because they are what drawing a note the same as MemorySmith means.
+- **Decision:** a theme is an object (`defineTheme`) passed as `theme`, at three levels a host mixes: properties written on the root as `--markdown-*`, now naming every value the default theme reads; its own CSS, scoped by the root class `markdown-theme-<name>`; and a closed set of slots, React components called with the notation already interpreted. MemorySmith's look is the theme `default`, built the same way, and the only theme the package ships; `light` and `dark` keep meaning it. The stylesheet is split into `structure.css` and `theme-default.css`, with `styles.css` the two together.
+- **Rationale:** properties alone cover most of a look with no CSS; a scoped stylesheet covers what a property cannot name without the package growing one per wish; slots cover a different structure — a callout drawn as something else, an icon from the host's library — which no stylesheet can. Handing a slot the interpreted notation rather than the source keeps what a notation means in one place, so any note works under any theme and no theme can reopen a security boundary. Fonts are not loaded by a theme: a theme names faces and the host loads them, as for the default theme.
+- **Consequences:** the default theme's guarantee — the same drawing as MemorySmith — holds for the default theme only; the comparison tests it with no theme. Every property and slot is public API, so a change to one is breaking. Example themes live in the playground and are never published, so they can change freely.
+- **Date:** 2026-10-13. **Status:** Accepted. **Origin:** declared by the owner in #28.

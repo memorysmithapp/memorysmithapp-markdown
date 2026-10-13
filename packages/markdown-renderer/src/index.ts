@@ -2,6 +2,28 @@
 export { NoteBody, type NoteBodyProps } from './NoteBody.js';
 export type { AttachmentRequest, EmbeddedNote, LinkChoiceNote, LinkChoices, LinkRequest, NoteHost } from './host.js';
 export { ENGLISH, type NoteStrings } from './strings.js';
+export {
+  customPropertyOf,
+  DEFAULT_THEME,
+  defineTheme,
+  THEME_PROPERTIES,
+  THEME_SLOTS,
+  type BlockquoteSlotProps,
+  type CalloutSlotProps,
+  type CodeBlockSlotProps,
+  type DiagramSlotProps,
+  type EmbedSlotProps,
+  type FootnotesSlotProps,
+  type HeadingSlotProps,
+  type InlineCodeSlotProps,
+  type Scheme,
+  type TableSlotProps,
+  type TaskBoxSlotProps,
+  type Theme,
+  type ThemeComponents,
+  type ThemeProperties,
+  type WikilinkSlotProps,
+} from './theme.js';
 export { followable } from './address.js';
 export { readDimensions, readImageAlt, type ImageAlt } from './image-dimensions.js';
 export {

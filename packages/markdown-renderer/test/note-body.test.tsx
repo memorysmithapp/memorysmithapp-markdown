@@ -10,7 +10,7 @@ import { draw, html } from './render.js';
 describe('a host with nothing but the package', () => {
   it('draws a note inside .markdown', () => {
     const out = html('# Título\n\nUm parágrafo com *ênfase*.');
-    expect(out).toMatch(/^<div class="markdown" data-theme="light"><div class="markdown">/);
+    expect(out).toMatch(/^<div class="markdown markdown-theme-default" data-theme="light"><div class="markdown">/);
     expect(out).toContain('<h1>Título</h1>');
     expect(out).toContain('<em>ênfase</em>');
   });

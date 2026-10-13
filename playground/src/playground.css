@@ -9,14 +9,14 @@
 }
 
 :root {
-  --page: #edefec;
+  --page-bg: #edefec;
   --page-text: #0e1526;
   --page-soft: #545d73;
   --page-line: #dce0da;
   --page-accent: #0f56d7;
 }
 :root[data-theme='dark'] {
-  --page: #0b1220;
+  --page-bg: #0b1220;
   --page-text: #edefec;
   --page-soft: #93a0ba;
   --page-line: #24304a;
@@ -25,7 +25,7 @@
 
 body {
   margin: 0;
-  background: var(--page);
+  background: var(--page-bg);
   color: var(--page-text);
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
@@ -48,8 +48,20 @@ body {
 }
 .sidebar .controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+.sidebar .controls select {
+  font: inherit;
+  color: var(--page-text);
+  background: var(--page-bg);
+  border: 1px solid var(--page-line);
+  border-radius: 6px;
+  padding: 0.15rem 0.3rem;
+}
+.sidebar .controls select:disabled {
+  opacity: 0.55;
 }
 .sidebar h2 {
   margin: 1rem 0 0.4rem;

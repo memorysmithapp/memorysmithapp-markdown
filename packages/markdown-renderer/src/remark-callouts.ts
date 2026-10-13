@@ -27,7 +27,7 @@ interface MdastNode {
 }
 
 /** `[!type]`, an optional fold marker, and whatever titles it. */
-const MARKER = /^\[!([A-Za-z][\w-]*)\][+-]?[ \t]*(.*)$/;
+const MARKER = /^\[!([A-Za-z][\w-]*)\]([+-]?)[ \t]*(.*)$/;
 
 export interface CalloutOptions {
   /**
@@ -62,14 +62,16 @@ function rewrite(quote: MdastNode, options: CalloutOptions): void {
 
   const kind = (marker[1] ?? '').toLowerCase();
   const { title, body } = split(
-    marker[2] ?? '',
+    marker[3] ?? '',
     broke === -1 ? null : lead.value.slice(broke + 1),
     inline,
   );
 
   quote.data = {
     hName: 'div',
-    hProperties: { className: ['callout'], 'data-callout': kind },
+    // The fold marker travels too, for a theme that folds; the default theme
+    // draws a callout open whatever it says, as MemorySmith's page does.
+    hProperties: { className: ['callout'], 'data-callout': kind, ...(marker[2] ? { 'data-fold': marker[2] } : {}) },
   };
   quote.children = [
     {

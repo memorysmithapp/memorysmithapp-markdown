@@ -26,7 +26,7 @@ pnpm -r build
 pnpm --filter playground dev   # http://localhost:5173/
 ```
 
-`?theme=dark` draws the dark theme, `?lang=pt` the words of the page in Brazilian Portuguese.
+The sidebar picks the theme and the scheme: the default theme, MemorySmith's look, and three example themes in `playground/src/themes/` — `sepia`, properties alone; `docs`, its own CSS; `terminal`, components. The address carries them (`?theme=sepia&scheme=dark`; `?theme=dark` is the default theme, dark), and `?lang=pt` draws the words of the page in Brazilian Portuguese.
 
 ## Compare it with MemorySmith
 
