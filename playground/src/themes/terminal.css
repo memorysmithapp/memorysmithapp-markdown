@@ -91,3 +91,30 @@
 .markdown-theme-terminal .wikilink {
   font-weight: 400;
 }
+
+/* The frontmatter, drawn by the theme's `properties` slot as YAML. */
+.markdown-theme-terminal .term-front {
+  margin: 0 0 1.5rem;
+  border: 1px solid #1f3324;
+  background: #0f1611;
+}
+.markdown-theme-terminal .term-front-prompt {
+  padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid #1f3324;
+  color: #6fa77a;
+  font-size: 0.8rem;
+}
+.markdown-theme-terminal .term-front pre {
+  margin: 0;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  font-family: var(--markdown-font-mono);
+  font-size: 0.875em;
+}
+.markdown-theme-terminal .term-key {
+  color: #79c0ff;
+}
+.markdown-theme-terminal .term-name {
+  color: #f0f6fc;
+  font-weight: 600;
+}

@@ -10,10 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Themes: `defineTheme` and a `theme` prop that takes a theme a host writes in its own project, at three levels it may mix — properties written on the root as `--markdown-*`, now naming every value the stylesheet reads, metrics, headings, quotations, tables and callout icons included; its own CSS, scoped by the root class `markdown-theme-<name>`; and twelve slots, React components called with the notation already interpreted — with `scheme` choosing light or dark. MemorySmith's look is the theme `default`, and `theme="light"` and `theme="dark"` keep meaning it (#28).
 - The stylesheet is `structure.css`, what every theme needs, and `theme-default.css`, MemorySmith's look; `styles.css` is the two together, as before (#28).
-- The playground picks the theme and the scheme in its sidebar and its address, among the default theme and three example themes that live only there: `sepia`, properties alone; `docs`, its own CSS; and `terminal`, slots with icons from `lucide-react` (#28).
+- A note's frontmatter is drawn, as the theme decides: `NoteBody` reads it by the shapes of the specification (`readProperties`) and hands it to the theme's `properties` slot; the default theme draws `name` as the note's title and every other entry above the body — lists as chips, booleans in the reader's words, dates as written — with a `[[wikilink]]` in a value drawn as a link the host resolved. A theme whose slot draws nothing keeps a note's body alone, as MemorySmith's page does (#29).
+- The playground picks the theme and the scheme in its sidebar and its address, among the default theme and three example themes that live only there: `sepia`, properties alone; `docs`, its own CSS; and `terminal`, slots with icons from `lucide-react`; each draws the note's title and properties its own way, `terminal` as the YAML it is (#28, #29).
 
 ### Changed
 
+- `NoteBody` no longer leaves the frontmatter off the page: decision 4 of #1 is superseded for it by ADR-004, and a host that already draws properties gives a theme whose `properties` slot draws nothing (#29).
 - The root of a note carries the class `markdown-theme-<name>` beside `markdown`, and a callout written with a fold marker carries it as `data-fold` (#28).
 
 ## [0.1.2] - 2026-10-13

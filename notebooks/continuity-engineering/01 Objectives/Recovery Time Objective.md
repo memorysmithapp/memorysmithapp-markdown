@@ -6,6 +6,7 @@ type: objective
 maturity: evergreen
 reviewed: true
 scope: payments
+runbooks: ["[[Failing over the payments database]]"]
 source: Continuity policy 4.2
 author: Continuity Engineering
 created: 2026-01-12

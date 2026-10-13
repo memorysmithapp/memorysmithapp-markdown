@@ -16,6 +16,7 @@ export {
   type FootnotesSlotProps,
   type HeadingSlotProps,
   type InlineCodeSlotProps,
+  type PropertiesSlotProps,
   type Scheme,
   type TableSlotProps,
   type TaskBoxSlotProps,
@@ -38,4 +39,5 @@ export {
   type SplitDocument,
 } from './markdown.js';
 export { ordinalAt, taskBoxes, taskCheckedAt, toggleTaskAt } from './tasklist.js';
+export { readProperties, type NoteProperties, type PropertyEntry, type PropertyShape } from './properties.js';
 export { DELEGATED_TO_THE_BASE_PARSER, unclassified } from './delegated.js';

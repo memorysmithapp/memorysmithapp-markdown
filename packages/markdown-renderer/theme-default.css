@@ -106,6 +106,17 @@
   --ms-table-hover-bg: var(--markdown-table-hover-bg, var(--ms-code-bg));
   --ms-embed-rule: var(--markdown-embed-rule, var(--ms-accent));
 
+  /* The frontmatter, drawn above the body: the name as the note's title, the
+     rest as properties. The title has MemorySmith's page title's measure. */
+  --ms-title-size: var(--markdown-title-size, 1.802em);
+  --ms-title-weight: var(--markdown-title-weight, 700);
+  --ms-title-color: var(--markdown-title-color, currentcolor);
+  --ms-properties-bg: var(--markdown-properties-bg, transparent);
+  --ms-properties-border: var(--markdown-properties-border, var(--ms-border));
+  --ms-properties-key-color: var(--markdown-properties-key-color, var(--ms-text-soft));
+  --ms-chip-bg: var(--markdown-chip-bg, var(--ms-code-bg));
+  --ms-chip-color: var(--markdown-chip-color, var(--ms-text));
+
   /* The line icons a callout wears, as masks rather than images: one file per
      shape, tinted at use by whatever colour the element already carries. They
      are the Lucide set the reference theme draws with; a theme names its own
@@ -427,6 +438,58 @@
   margin-block: calc(var(--ms-p-spacing) * 2);
   border: 0;
   border-top: 2px solid var(--ms-border);
+}
+
+/* ── The frontmatter ───────────────────────────────────────────────────────
+   What the author wrote about the note, above what they wrote in it: the name
+   as the title, and each property by the shape of its value — a list as
+   chips, a boolean in the reader's words, a date as written. */
+.markdown .note-properties {
+  margin: 0 0 1.5rem;
+}
+.markdown .note-title {
+  margin: 0 0 1rem;
+  font-family: var(--ms-font-heading);
+  font-size: var(--ms-title-size);
+  font-weight: var(--ms-title-weight);
+  line-height: var(--ms-line-height-tight);
+  color: var(--ms-title-color);
+}
+.markdown .properties {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ms-properties-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-properties-bg);
+  font-size: 0.875em;
+  line-height: var(--ms-line-height-tight);
+}
+.markdown .property {
+  display: contents;
+}
+.markdown .property dt {
+  color: var(--ms-properties-key-color);
+}
+.markdown .property dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.markdown .property-chip {
+  display: inline-block;
+  margin: 0 0.3rem 0.25rem 0;
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: var(--ms-chip-bg);
+  color: var(--ms-chip-color);
+}
+.markdown .property-boolean[data-value='true']::before {
+  content: '✓ ';
+}
+.markdown .property-boolean[data-value='false']::before {
+  content: '✗ ';
 }
 
 /* ── Callouts ───────────────────────────────────────────────────────────────

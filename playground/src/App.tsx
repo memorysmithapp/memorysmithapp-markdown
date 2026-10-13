@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type Theme } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useState } from 'react';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
@@ -99,14 +99,23 @@ export function App() {
     [view.notebook],
   );
 
+  // The note alone, as MemorySmith's reading surface draws it: MemorySmith shows the title and the
+  // properties around the body, so the comparison's page hides what the theme draws of them.
+  const theme = useMemo<Theme>(
+    () =>
+      view.bare
+        ? { ...view.theme.theme, components: { ...view.theme.theme.components, properties: () => null } }
+        : view.theme.theme,
+    [view.bare, view.theme],
+  );
+
   const body = (
     <article className="pane">
-      {!view.bare && <h1 className="note-title">{view.note.name ?? view.note.path.split('/').at(-1)?.replace(/\.md$/, '')}</h1>}
       <NoteBody
         key={key}
         markdown={markdown}
         {...host}
-        theme={view.theme.theme}
+        theme={theme}
         scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         writable

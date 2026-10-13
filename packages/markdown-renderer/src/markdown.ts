@@ -29,8 +29,8 @@ export function toUnixNewlines(raw: string): string {
 }
 
 /**
- * Where the body of a note starts: after its frontmatter, which a host shows as properties and
- * not as prose. The cut is the one MemorySmith's reading page makes, so the ordinals of the task
+ * Where the body of a note starts: after its frontmatter, which the theme draws apart from the
+ * body (`readProperties`). The cut is the one MemorySmith's reading page makes, so the ordinals of the task
  * boxes below it are counted over the whole note, as the host stores it.
  */
 export function bodyStart(text: string): number {
@@ -51,8 +51,9 @@ function unquote(value: string): string {
 
 /**
  * The frontmatter block, read the way MemorySmith's reading page reads it to show a note's
- * properties. The package does not draw it — `NoteBody` starts after it — and exports this so a
- * host that draws the properties reads the same values MemorySmith does.
+ * properties, its lists joined by commas. The renderer draws the frontmatter from
+ * `readProperties`, which keeps each item and each shape apart; this stays for a host that reads
+ * the values MemorySmith does.
  */
 export function splitFrontmatter(input: string): SplitDocument {
   const raw = toUnixNewlines(input);

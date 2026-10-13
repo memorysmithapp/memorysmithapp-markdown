@@ -19,6 +19,9 @@ const shared: ThemeProperties = {
   radius: '3px',
   quoteBorderWidth: '3px',
   tableCellPadding: '6px 12px',
+  // The frontmatter, still drawn by the default theme: a larger title, the properties on a card.
+  titleSize: '2.4em',
+  titleWeight: '600',
 };
 
 export const sepia = defineTheme({
@@ -40,6 +43,12 @@ export const sepia = defineTheme({
       tableHeaderRule: '2px solid #c9a46a',
       tableHoverBg: '#efe5cf',
       embedRule: '#c9a46a',
+      titleColor: '#2c2117',
+      propertiesBg: '#fbf6ea',
+      propertiesBorder: '#e2d6bc',
+      propertiesKeyColor: '#9a4b16',
+      chipBg: '#efe1c2',
+      chipColor: '#5a4a37',
       calloutInfo: '120, 76, 30',
       calloutIdea: '86, 98, 40',
       calloutDone: '72, 104, 46',
@@ -64,6 +73,12 @@ export const sepia = defineTheme({
       tableHeaderRule: '2px solid #8c6a3c',
       tableHoverBg: '#2a231a',
       embedRule: '#8c6a3c',
+      titleColor: '#f4ead6',
+      propertiesBg: '#2a231a',
+      propertiesBorder: '#43382a',
+      propertiesKeyColor: '#e2a15f',
+      chipBg: '#43382a',
+      chipColor: '#eadfca',
       calloutInfo: '226, 161, 95',
       calloutIdea: '190, 196, 110',
       calloutDone: '160, 200, 120',

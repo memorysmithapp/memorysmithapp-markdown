@@ -3,7 +3,12 @@
 // with their hashes, a code frame with a prompt line, and wikilinks marked with an arrow. Each
 // slot is handed the notation already read; it decides how it looks and nothing else.
 
-import { defineTheme, type CalloutSlotProps, type CodeBlockSlotProps } from '@memorysmithapp/markdown-renderer';
+import {
+  defineTheme,
+  type CalloutSlotProps,
+  type CodeBlockSlotProps,
+  type PropertiesSlotProps,
+} from '@memorysmithapp/markdown-renderer';
 import {
   CircleCheck,
   CircleHelp,
@@ -75,6 +80,49 @@ function CodeBlock({ language, children, copy }: CodeBlockSlotProps) {
   );
 }
 
+/**
+ * The frontmatter as the YAML it is, after a prompt: the name is no title here, only its own line.
+ * Each value goes through `value`, so a wikilink in it is still a link the host resolved.
+ */
+function Properties({ name, entries, value }: PropertiesSlotProps) {
+  if (name === null && entries.length === 0) return null;
+  return (
+    <div className="term-front">
+      <div className="term-front-prompt">$ head -n {entries.length + (name === null ? 2 : 3)} note.md</div>
+      <pre>
+        {'---\n'}
+        {name !== null && (
+          <>
+            <span className="term-key">name</span>: <span className="term-name">{name}</span>
+            {'\n'}
+          </>
+        )}
+        {entries.map((entry) => (
+          <span key={entry.key}>
+            <span className="term-key">{entry.key}</span>:{' '}
+            {entry.shape === 'list' ? (
+              <>
+                [
+                {entry.values.map((item, index) => (
+                  <span key={index}>
+                    {index > 0 && ', '}
+                    {value(item)}
+                  </span>
+                ))}
+                ]
+              </>
+            ) : (
+              value(entry.values[0] ?? '')
+            )}
+            {'\n'}
+          </span>
+        ))}
+        {'---'}
+      </pre>
+    </div>
+  );
+}
+
 export const terminal = defineTheme({
   name: 'terminal',
   schemes: ['dark'],
@@ -111,6 +159,7 @@ export const terminal = defineTheme({
   icons: ICONS,
   components: {
     callout: Callout,
+    properties: Properties,
     codeBlock: CodeBlock,
     heading: ({ level, children }) => {
       const Tag = `h${level}` as const;

@@ -22,6 +22,7 @@
  */
 
 import type { ReactNode } from 'react';
+import type { PropertyEntry } from './properties.js';
 
 export type Scheme = 'light' | 'dark';
 
@@ -113,6 +114,15 @@ export interface ThemeProperties {
   readonly tableHoverBg?: string;
   // Embeds.
   readonly embedRule?: string;
+  // The note's title and properties, as the default theme draws its frontmatter.
+  readonly titleSize?: string;
+  readonly titleWeight?: string;
+  readonly titleColor?: string;
+  readonly propertiesBg?: string;
+  readonly propertiesBorder?: string;
+  readonly propertiesKeyColor?: string;
+  readonly chipBg?: string;
+  readonly chipColor?: string;
 }
 
 /** The names of `ThemeProperties`, in the order the documentation lists them. */
@@ -132,6 +142,8 @@ export const THEME_PROPERTIES = Object.keys({
   quoteBorderColor: 1, quoteBorderWidth: 1, quoteColor: 1,
   tableBorder: 1, tableCellPadding: 1, tableHeaderBg: 1, tableHeaderRule: 1, tableStripeBg: 1, tableHoverBg: 1,
   embedRule: 1,
+  titleSize: 1, titleWeight: 1, titleColor: 1,
+  propertiesBg: 1, propertiesBorder: 1, propertiesKeyColor: 1, chipBg: 1, chipColor: 1,
 } satisfies Record<keyof ThemeProperties, 1>) as (keyof ThemeProperties)[];
 
 /** `textSoft` → `--markdown-text-soft`, `h1Size` → `--markdown-h1-size`. */
@@ -248,6 +260,23 @@ export interface DiagramSlotProps {
   readonly children: ReactNode;
 }
 
+/**
+ * A note's frontmatter (§6), read: what the theme draws above the body, or does not. The default
+ * theme draws `name` as the title and each entry by its shape.
+ */
+export interface PropertiesSlotProps {
+  /** `name:` when it is a single text value, else `null` (§6.5). */
+  readonly name: string | null;
+  /** Every other entry, in the order written, each with its shape (§6.3). */
+  readonly entries: readonly PropertyEntry[];
+  /**
+   * Draws a value as the note means it: each wikilink in it as a link the host resolved — the
+   * note, the choice or the pending marker — and the rest as text. It is the only way to those
+   * links: a slot decides how a value looks, never where its links go.
+   */
+  readonly value: (text: string) => ReactNode;
+}
+
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */
 export interface ThemeComponents {
   readonly callout: (props: CalloutSlotProps) => ReactNode;
@@ -262,12 +291,13 @@ export interface ThemeComponents {
   readonly taskBox: (props: TaskBoxSlotProps) => ReactNode;
   readonly wikilink: (props: WikilinkSlotProps) => ReactNode;
   readonly diagram: (props: DiagramSlotProps) => ReactNode;
+  readonly properties: (props: PropertiesSlotProps) => ReactNode;
 }
 
 /** The names of the slots, in the order the documentation lists them. */
 export const THEME_SLOTS = Object.keys({
   callout: 1, calloutIcon: 1, table: 1, codeBlock: 1, inlineCode: 1, heading: 1, blockquote: 1,
-  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1,
+  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1,
 } satisfies Record<keyof ThemeComponents, 1>) as (keyof ThemeComponents)[];
 
 export interface Theme {

@@ -6,6 +6,7 @@ tipo: medida
 maturity: evergreen
 reviewed: true
 regiao: Serra Gaúcha
+casta: "[[Cabernet Sauvignon]]"
 autor: Enologia
 created: 2026-02-11
 updated: 2026-03-30

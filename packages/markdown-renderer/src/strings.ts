@@ -8,6 +8,11 @@
 export interface NoteStrings {
   /** The title of an untitled callout, by kind (`note`, `warning`, …). */
   readonly callouts: Readonly<Record<string, string>>;
+  /** The accessible name of the properties a note's frontmatter declares. */
+  readonly properties: string;
+  /** How a boolean property reads, true and false. */
+  readonly yes: string;
+  readonly no: string;
   /** The heading of the footnotes gathered at the end of a note. */
   readonly footnotes: string;
   /** The label of the way back from a footnote to its reference, counted from 1. */
@@ -84,6 +89,9 @@ const CALLOUTS: Readonly<Record<string, string>> = {
 /** The words MemorySmith shows in English, used for every word a host does not give. */
 export const ENGLISH: NoteStrings = {
   callouts: CALLOUTS,
+  properties: 'Properties',
+  yes: 'Yes',
+  no: 'No',
   footnotes: 'Notes',
   footnoteBack: (number) => `Back to reference ${number}`,
   pendingLink: 'Pending link: the target note does not exist yet.',

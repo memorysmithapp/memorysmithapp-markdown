@@ -135,7 +135,7 @@ function Attachment({ name, width, height }: { name: string; width: number | nul
   return <>{host.renderAttachment({ name, width, height })}</>;
 }
 
-function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
+export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
   const host = useHost();
   const wikilinkSlot = useSlot('wikilink');
   if (href?.startsWith('attachment:')) {
