@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `NoteBody` draws a footnote whose reference and definition an embed separates: a note an embed cuts numbers its footnotes once, in the order of the note, with ids that never repeat, and draws their one section at its end, below its last embed too, where MemorySmith's reading page draws the reference as its characters; a way back reaches a reference in another run (#20).
 - `.gitignore` ignores the tarballs `pnpm pack` leaves in a package during the first publish, so they cannot be committed by accident (#21).
 
+### Changed
+
+- `SDLC.md` §10 says that the first publish needs two-factor authentication on the owner's npm account, and that a version the workflow publishes is staged until the owner approves it on npmjs.com, with the trusted publisher's settings as configured (#22).
+
 ## [0.1.0] - 2026-10-12
 
 ### Added
