@@ -2,6 +2,7 @@
 // Run from the root: `pnpm test`.
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -175,6 +176,17 @@ describe('4. relative links and anchors resolve', () => {
   test('reads a footnote definition as prose, not as a link definition', () => {
     const root = repository({ 'docs/notes.md': 'A claim.[^1]\n\n[^1]: 43,200 minutes, by the contract.\n' });
     assert.deepEqual(checkLinks(root), []);
+  });
+
+  test('reads only what git tracks or would track, never what .gitignore keeps out', () => {
+    const root = repository({
+      '.gitignore': 'checkout/\n',
+      'checkout/docs/guide.md': 'A [broken](missing.md) link of another repository.\n',
+    });
+    execFileSync('git', ['init', '--quiet'], { cwd: root });
+    assert.deepEqual(checkLinks(root), []);
+    writeFileSync(join(root, 'untracked.md'), 'A [broken](missing.md) link not yet added.\n');
+    assert.match(checkLinks(root)[0], /^untracked\.md:1: "missing\.md" points at a file that does not exist/);
   });
 
   test('builds anchors the way GitHub does', () => {

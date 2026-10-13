@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-13
+
+### Fixed
+
+- `SDLC.md` §10 says the trusted publishers allow `npm publish`, as the workflow needs: without that permission npm refuses the workflow's publish instead of staging it, which is what the release of v0.1.1 met; the section also says a new trusted publisher expires unless it publishes within two days (#22).
+- `pnpm run quality` reads only the Markdown files git tracks or would track, so it passes locally after `pnpm --filter playground compare` has left MemorySmith's checkout in the tree, instead of reading that checkout's documents as this repository's (#23).
+
 ## [0.1.1] - 2026-10-13
 
 ### Fixed
@@ -47,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/releases/tag/v0.1.0
