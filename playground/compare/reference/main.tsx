@@ -15,6 +15,9 @@ import { queryKeys } from '../src/shared/api/query-keys';
 import { NotebookIdProvider } from '../src/shared/components/notebook-id';
 import { WritableContent } from '../src/shared/components/WritableContent';
 import { usePreferences } from '../src/shared/store/preferences';
+import { noteNameOf, splitFrontmatter } from '../src/shared/api/markdown';
+import { orderedProperties, propertyLabel, propertyType, PropertyValue } from '../src/shared/components/PropertyValue';
+import i18n from '../src/i18n';
 import { fileAt, notebookIdOf } from './backend';
 
 const query = new URLSearchParams(window.location.search);
@@ -31,6 +34,13 @@ await source.getNotebookStructure(notebookId);
 await source.getNotebookNames(notebookId);
 await source.getNotebookFiles(notebookId);
 
+// What `NotePage` reads from the API to draw the frame, read here from the same bytes by
+// MemorySmith's own helpers: the name, and the properties in its order.
+const t = i18n.t.bind(i18n);
+const name = noteNameOf(file.markdown);
+const { frontmatter, lists } = splitFrontmatter(file.markdown);
+const properties = orderedProperties(Object.entries(frontmatter).filter(([, value]) => value !== ''));
+
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={new QueryClient()}>
@@ -41,6 +51,24 @@ createRoot(root).render(
               as the note, as the playground's is. */}
           <div>
             <article className="content-pane">
+              {/* The frame of MemorySmith's note page above the body, as `NotePage` draws it:
+                  the name, always, and the properties block. */}
+              <h1 className={name === null ? 'note-unnamed' : undefined}>{name ?? t('note.unnamed')}</h1>
+              {properties.length > 0 && (
+                <details className="properties-box" open>
+                  <summary>{t('note.properties')}</summary>
+                  <div className="metadata-container">
+                    {properties.map(([key, value]) => (
+                      <div className="metadata-property" data-property-type={propertyType(value, lists.has(key))} key={key}>
+                        <span className="metadata-property-key">{propertyLabel(key, t)}</span>
+                        <span className="metadata-property-value">
+                          <PropertyValue value={value} list={lists.has(key)} notebookId={notebookId} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
               <WritableContent
                 raw={file.markdown}
                 notebookId={notebookId}

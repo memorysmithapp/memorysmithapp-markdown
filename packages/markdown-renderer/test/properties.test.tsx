@@ -29,13 +29,14 @@ describe('reading the frontmatter', () => {
           '  - first',
           "  - 'second'",
           'blank:',
+          'none: []',
         ].join('\n'),
       ),
     );
     expect(entries).toEqual([
       { key: 'created', shape: 'date', values: ['2026-09-03'] },
-      { key: 'stamped', shape: 'date', values: ['2026-09-03'] },
-      { key: 'reviewed', shape: 'boolean', values: ['true'] },
+      { key: 'stamped', shape: 'date', values: ['2026-09-03T10:00:00Z'] },
+      { key: 'reviewed', shape: 'boolean', values: ['Yes'] },
       { key: 'draft', shape: 'boolean', values: ['false'] },
       { key: 'maturity', shape: 'text', values: ['evergreen'] },
       { key: 'summary', shape: 'prose', values: ['a sentence that runs well past forty characters'] },
@@ -43,6 +44,7 @@ describe('reading the frontmatter', () => {
       { key: 'one', shape: 'list', values: ['only'] },
       { key: 'steps', shape: 'list', values: ['first', 'second'] },
       { key: 'blank', shape: 'empty', values: [] },
+      { key: 'none', shape: 'empty', values: [] },
     ]);
   });
 
@@ -70,24 +72,32 @@ describe('reading the frontmatter', () => {
 
 describe('the default theme', () => {
   const NOTE = front(
-    ['name: Índice de Polifenóis', 'tags: [medida, analise]', 'reviewed: true', 'updated: 2026-03-30', 'tipo: medida'].join('\n'),
+    ['name: Índice de Polifenóis', 'tipo: medida', 'tags: [medida, analise]', 'reviewed: true', 'updated: 2026-03-30', 'aliases: [IPT]', 'vazio: []'].join('\n'),
   );
 
-  it('draws the name as the title and each entry by its shape, above the body', () => {
+  it("draws the name as the title, and the properties as MemorySmith's page does, above the body", () => {
     const out = html(NOTE);
-    expect(out).toContain('<header class="note-properties"><h1 class="note-title">Índice de Polifenóis</h1>');
-    expect(out).toContain('<dl class="properties" aria-label="Properties">');
+    expect(out).toContain('<h1 class="note-title">Índice de Polifenóis</h1><details class="properties-box" open=""><summary>Properties</summary>');
+    // The reserved keys first, in the order of the specification, then the rest as written; an empty one is not drawn.
+    const keys = [...out.matchAll(/<span class="metadata-property-key">([^<]+)<\/span>/g)].map((match) => match[1]);
+    expect(keys).toEqual(['aliases', 'tags', 'tipo', 'reviewed', 'updated']);
     expect(out).toContain(
-      '<div class="property" data-shape="list"><dt>tags</dt><dd><span class="property-chip">medida</span><span class="property-chip">analise</span></dd></div>',
+      '<div class="metadata-property" data-property-type="list"><span class="metadata-property-key">tags</span><span class="metadata-property-value"><span class="prop-tags"><span class="prop-tag">medida</span><span class="prop-tag">analise</span></span></span></div>',
     );
-    expect(out).toContain('<dd><span class="property-boolean" data-value="true">Yes</span></dd>');
-    expect(out).toContain('<dd><time dateTime="2026-03-30">2026-03-30</time></dd>');
-    expect(out).toContain('<dt>tipo</dt><dd>medida</dd>');
-    expect(out.indexOf('</header>')).toBeLessThan(out.indexOf('The body.'));
+    expect(out).toContain('data-property-type="checkbox"><span class="metadata-property-key">reviewed</span><span class="metadata-property-value"><span title="true">Yes</span>');
+    expect(out).toContain('data-property-type="date"><span class="metadata-property-key">updated</span><span class="metadata-property-value"><time dateTime="2026-03-30" title="2026-03-30">Mar 30, 2026</time>');
+    expect(out.indexOf('</details>')).toBeLessThan(out.indexOf('The body.'));
   });
 
-  it('says a boolean in the reader’s words', () => {
-    expect(html(front('reviewed: false'), { strings: { no: 'Não' } })).toContain('data-value="false">Não</span>');
+  it("writes a boolean in the reader's words and a date in the reader's locale", () => {
+    const out = html(front('reviewed: no\nupdated: 2026-03-30'), { strings: { no: 'Não', locale: 'pt-BR' } });
+    expect(out).toContain('<span title="no">Não</span>');
+    expect(out).toContain('<time dateTime="2026-03-30" title="2026-03-30">30 de mar. de 2026</time>');
+  });
+
+  it('names a note with no name as unnamed, as MemorySmith does', () => {
+    expect(html('Just a body.')).toContain('<h1 class="note-title note-unnamed">Unnamed note</h1>');
+    expect(html('Just a body.')).not.toContain('properties-box');
   });
 
   it('draws a value carrying markup as its text', () => {
@@ -96,15 +106,17 @@ describe('the default theme', () => {
     expect(out).toContain('&lt;script&gt;');
   });
 
-  it('draws a wikilink in a value as a link where the host resolved it, or as pending', () => {
-    const out = html(front('autor: "[[Ana]]"\nfontes: ["[[Livro|o livro]]", "[[Nada]]"]'), notebook({ Ana: '', Livro: '' }));
-    expect(out).toContain('<dt>autor</dt><dd><a class="wikilink" href="/notes/Ana">Ana</a></dd>');
-    expect(out).toContain('<span class="property-chip"><a class="wikilink" href="/notes/Livro">o livro</a></span>');
-    expect(out).toMatch(/<span class="property-chip"><span class="wikilink-pending"[^>]*>Nada<\/span><\/span>/);
-  });
-
-  it('draws nothing for a note with no frontmatter', () => {
-    expect(html('Just a body.')).not.toContain('note-properties');
+  it('draws a wikilink, a Markdown link and a bare address in a value as links', () => {
+    const out = html(
+      front('autor: "[[Ana]]"\nfontes: ["[[Livro|o livro]]", "[[Nada]]"]\nsite: "[a política](https://example.org/p)"\nurl: https://example.org/x\nmau: "[x](javascript:alert(1))"'),
+      notebook({ Ana: '', Livro: '' }),
+    );
+    expect(out).toContain('<span class="metadata-property-value"><a class="wikilink" href="/notes/Ana">Ana</a></span>');
+    expect(out).toContain('<span class="prop-tag"><a class="wikilink" href="/notes/Livro">o livro</a></span>');
+    expect(out).toMatch(/<span class="prop-tag"><span class="wikilink-pending"[^>]*>Nada<\/span><\/span>/);
+    expect(out).toContain('<a href="https://example.org/p" target="_blank" rel="noreferrer">a política</a>');
+    expect(out).toContain('<a href="https://example.org/x" target="_blank" rel="noreferrer">https://example.org/x</a>');
+    expect(out).not.toContain('href="javascript:');
   });
 });
 

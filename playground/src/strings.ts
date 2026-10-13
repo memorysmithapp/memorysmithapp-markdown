@@ -34,6 +34,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     cite: 'Citação',
   },
   properties: 'Propriedades',
+  locale: 'pt-BR',
   yes: 'Sim',
   no: 'Não',
   footnotes: 'Notas',

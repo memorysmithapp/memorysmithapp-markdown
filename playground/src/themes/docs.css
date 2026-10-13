@@ -87,35 +87,48 @@
   padding: 0.5rem 1rem;
 }
 
-/* The frontmatter, restyled by CSS alone: the name is a page heading on a rule, and the properties
-   a bordered table under it, with tags as square badges. */
+/* The frontmatter, restyled by CSS alone: the name is a page heading on a rule, the properties a
+   bordered table with no fold, and tags square badges. */
 .markdown-theme-docs .note-title {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--docs-line);
+  font-family: var(--markdown-font-sans);
   font-size: 2.25em;
   font-weight: 600;
+  letter-spacing: 0;
 }
-.markdown-theme-docs .properties {
-  gap: 0;
+.markdown-theme-docs .properties-box {
   padding: 0;
-  border-radius: 6px;
-  background: none;
+  border-bottom: 0;
 }
-.markdown-theme-docs .property :is(dt, dd) {
+.markdown-theme-docs .properties-box summary {
+  display: none;
+}
+.markdown-theme-docs .metadata-container {
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--docs-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.markdown-theme-docs .metadata-property :is(.metadata-property-key, .metadata-property-value) {
   padding: 6px 12px;
   border-bottom: 1px solid var(--docs-line);
 }
-.markdown-theme-docs .property:last-child :is(dt, dd) {
+.markdown-theme-docs .metadata-property:last-child :is(.metadata-property-key, .metadata-property-value) {
   border-bottom: 0;
 }
-.markdown-theme-docs .property dt {
+.markdown-theme-docs .metadata-property-key {
   background: var(--docs-fill);
   font-weight: 600;
   color: var(--docs-text);
 }
-.markdown-theme-docs .property-chip {
-  border-radius: 4px;
+.markdown-theme-docs .metadata-property-key::before {
+  display: none;
+}
+.markdown-theme-docs .prop-tag {
   border: 1px solid var(--docs-line);
+  border-radius: 4px;
   background: var(--docs-fill);
-  font-size: 0.85em;
+  font-family: var(--markdown-font-sans);
 }

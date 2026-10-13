@@ -106,16 +106,26 @@
   --ms-table-hover-bg: var(--markdown-table-hover-bg, var(--ms-code-bg));
   --ms-embed-rule: var(--markdown-embed-rule, var(--ms-accent));
 
-  /* The frontmatter, drawn above the body: the name as the note's title, the
-     rest as properties. The title has MemorySmith's page title's measure. */
-  --ms-title-size: var(--markdown-title-size, 1.802em);
+  /* The frontmatter, drawn above the body as MemorySmith's note page draws it:
+     the name as the title, in the face and at the size of a first heading, and
+     the properties in a block that folds, under a rule. */
+  --ms-title-font: var(--markdown-title-font, var(--ms-font-heading));
+  --ms-title-size: var(--markdown-title-size, var(--ms-h1-size));
   --ms-title-weight: var(--markdown-title-weight, 700);
   --ms-title-color: var(--markdown-title-color, currentcolor);
-  --ms-properties-bg: var(--markdown-properties-bg, transparent);
-  --ms-properties-border: var(--markdown-properties-border, var(--ms-border));
+  --ms-properties-rule: var(--markdown-properties-rule, 1px solid var(--ms-border));
+  --ms-properties-label-font: var(--markdown-properties-label-font, var(--ms-font-display));
+  --ms-properties-label-color: var(--markdown-properties-label-color, var(--ms-text-soft));
   --ms-properties-key-color: var(--markdown-properties-key-color, var(--ms-text-soft));
-  --ms-chip-bg: var(--markdown-chip-bg, var(--ms-code-bg));
+  --ms-chip-font: var(--markdown-chip-font, var(--ms-font-display));
+  --ms-chip-bg: var(--markdown-chip-bg, var(--ms-border));
   --ms-chip-color: var(--markdown-chip-color, var(--ms-text));
+  /* The icon of a property's key, by the shape of its value: the Lucide set
+     MemorySmith's page draws them with. */
+  --ms-icon-property-text: var(--markdown-icon-property-text, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 12H3'/%3E%3Cpath d='M17 18H3'/%3E%3Cpath d='M21 6H3'/%3E%3C/svg%3E"));
+  --ms-icon-property-list: var(--markdown-icon-property-list, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13'/%3E%3Cpath d='M8 12h13'/%3E%3Cpath d='M8 18h13'/%3E%3Cpath d='M3 6h.01'/%3E%3Cpath d='M3 12h.01'/%3E%3Cpath d='M3 18h.01'/%3E%3C/svg%3E"));
+  --ms-icon-property-date: var(--markdown-icon-property-date, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E"));
+  --ms-icon-property-boolean: var(--markdown-icon-property-boolean, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"));
 
   /* The line icons a callout wears, as masks rather than images: one file per
      shape, tinted at use by whatever colour the element already carries. They
@@ -162,6 +172,8 @@
   --ms-callout-stop: var(--markdown-callout-stop, 248, 113, 113);
   --ms-callout-aside: var(--markdown-callout-aside, 167, 139, 250);
   --ms-callout-quote: var(--markdown-callout-quote, 147, 160, 186);
+  /* MemorySmith's track: the paper itself is the fill of a chip in the dark. */
+  --ms-chip-bg: var(--markdown-chip-bg, #1c2640);
 }
 
 /* ── What the page around a note gave it ────────────────────────────────────
@@ -441,55 +453,104 @@
 }
 
 /* ── The frontmatter ───────────────────────────────────────────────────────
-   What the author wrote about the note, above what they wrote in it: the name
-   as the title, and each property by the shape of its value — a list as
-   chips, a boolean in the reader's words, a date as written. */
-.markdown .note-properties {
-  margin: 0 0 1.5rem;
-}
+   As MemorySmith's note page draws it (*observed* at 4b67c7e): the name as the
+   title, and the properties not in a card but in the flow of the page, under
+   the title and above the prose, parted from it by a single rule. The block
+   opens by default and folds under its summary. Each key wears a line icon by
+   the shape of its value; a list is chips, neutral and never blue, which
+   would read as a link. */
 .markdown .note-title {
-  margin: 0 0 1rem;
-  font-family: var(--ms-font-heading);
+  margin: 0 0 0.6rem;
+  font-family: var(--ms-title-font);
   font-size: var(--ms-title-size);
   font-weight: var(--ms-title-weight);
   line-height: var(--ms-line-height-tight);
+  letter-spacing: normal;
   color: var(--ms-title-color);
 }
-.markdown .properties {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 0.35rem 1.25rem;
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--ms-properties-border);
-  border-radius: var(--ms-radius);
-  background: var(--ms-properties-bg);
-  font-size: 0.875em;
-  line-height: var(--ms-line-height-tight);
+.markdown .properties-box {
+  margin: 0 0 1.5rem;
+  padding: 0 0 0.85rem;
+  border-bottom: var(--ms-properties-rule);
 }
-.markdown .property {
+.markdown .properties-box summary {
+  cursor: pointer;
+  font-family: var(--ms-properties-label-font);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ms-properties-label-color);
+}
+.markdown .metadata-container {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  gap: 0.15rem 1rem;
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.markdown .metadata-property {
   display: contents;
 }
-.markdown .property dt {
+.markdown .metadata-property-key {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   color: var(--ms-properties-key-color);
-}
-.markdown .property dd {
-  margin: 0;
   overflow-wrap: anywhere;
 }
-.markdown .property-chip {
-  display: inline-block;
-  margin: 0 0.3rem 0.25rem 0;
-  padding: 0.05rem 0.55rem;
-  border-radius: 999px;
+.markdown .metadata-property-key::before {
+  content: '';
+  flex: 0 0 auto;
+  align-self: center;
+  width: 0.95em;
+  height: 0.95em;
+  background-color: currentcolor;
+  -webkit-mask: var(--property-icon, var(--ms-icon-property-text)) center / contain no-repeat;
+  mask: var(--property-icon, var(--ms-icon-property-text)) center / contain no-repeat;
+}
+.markdown .metadata-property[data-property-type='list'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-list);
+}
+.markdown .metadata-property[data-property-type='date'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-date);
+}
+.markdown .metadata-property[data-property-type='checkbox'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-boolean);
+}
+.markdown .metadata-property-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.markdown .prop-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.markdown .prop-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 5px;
   background: var(--ms-chip-bg);
   color: var(--ms-chip-color);
+  font-size: 0.72rem;
+  font-family: var(--ms-chip-font);
+  font-weight: 500;
+  white-space: nowrap;
 }
-.markdown .property-boolean[data-value='true']::before {
-  content: '✓ ';
-}
-.markdown .property-boolean[data-value='false']::before {
-  content: '✗ ';
+/* A notebook held in one hand has no room for two columns, so the key takes its
+   own line and the value follows under it. */
+@media (max-width: 560px) {
+  .markdown .metadata-container {
+    grid-template-columns: 1fr;
+    gap: 0 0;
+  }
+  .markdown .metadata-property-value {
+    margin-bottom: 0.45rem;
+  }
 }
 
 /* ── Callouts ───────────────────────────────────────────────────────────────

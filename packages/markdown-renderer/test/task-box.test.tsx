@@ -81,8 +81,8 @@ describe('the boxes keep their place around the rest of the surface', () => {
     const html = render(`---\nmaturity: evergreen\n---\n\n${CHECKLIST}`);
 
     expect((html.match(/type="checkbox"/g) ?? []).length).toBe(2);
-    expect(html).toContain('<dt>maturity</dt><dd>evergreen</dd>');
-    expect(html.slice(html.indexOf('</header>'))).not.toContain('maturity');
+    expect(html).toContain('<span class="metadata-property-key">maturity</span><span class="metadata-property-value">evergreen</span>');
+    expect(html.slice(html.indexOf('</details>'))).not.toContain('maturity');
   });
 
   it('does not read a box written inside a code fence', () => {

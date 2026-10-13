@@ -25,7 +25,7 @@ export interface PropertyEntry {
   readonly shape: PropertyShape;
   /**
    * The value as written, one layer of quotes stripped: one item, or each item of a list. A
-   * boolean's is `true` or `false`, and a date's the `YYYY-MM-DD` it starts with.
+   * theme reads a boolean or a date from it, and shows what was typed where it shows the bytes.
    */
   readonly values: readonly string[];
 }
@@ -98,10 +98,8 @@ function isDate(value: string): boolean {
 function scalarEntry(key: string, raw: string): PropertyEntry {
   const value = unquote(raw);
   if (value.length === 0) return { key, shape: 'empty', values: [] };
-  if (isDate(value)) return { key, shape: 'date', values: [value.slice(0, 10)] };
-  if (BOOLEAN.test(value)) {
-    return { key, shape: 'boolean', values: [/^(true|yes)$/i.test(value) ? 'true' : 'false'] };
-  }
+  if (isDate(value)) return { key, shape: 'date', values: [value] };
+  if (BOOLEAN.test(value)) return { key, shape: 'boolean', values: [value] };
   return { key, shape: value.length > CATEGORY_CEILING ? 'prose' : 'text', values: [value] };
 }
 
@@ -144,10 +142,29 @@ export function readProperties(markdown: string): NoteProperties {
       name = value.length > 0 ? value : null;
       continue;
     }
-    read.push(items === null ? scalarEntry(key, raw) : { key, shape: 'list', values: items });
+    // A list written with no item, `[]`, is an empty value, never a list (§6.3).
+    read.push(
+      items === null
+        ? scalarEntry(key, raw)
+        : items.length === 0
+          ? { key, shape: 'empty', values: [] }
+          : { key, shape: 'list', values: items },
+    );
   }
   return { name, entries: read };
 }
 
-/** A wikilink inside a value, with what it shows. */
-export const VALUE_WIKILINK = /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g;
+/**
+ * What a value may carry that is a link: a wikilink, a Markdown link to the web, or a bare web
+ * address — as MemorySmith's properties read it, and nothing else of Markdown.
+ */
+export const VALUE_LINK =
+  /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|(https?:\/\/[^\s,]+)/g;
+
+/** Whether a boolean value reads true: `true` or `yes`, in any case. */
+export function isTrue(value: string): boolean {
+  return /^(true|yes)$/i.test(value.trim());
+}
+
+/** The reserved keys a theme draws as properties (§6.4): `name` is the title, not a property. */
+export const DRAWN_RESERVED_KEYS: readonly string[] = ['aliases', 'tags'];

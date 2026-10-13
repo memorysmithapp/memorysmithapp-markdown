@@ -20,8 +20,11 @@ const shared: ThemeProperties = {
   quoteBorderWidth: '3px',
   tableCellPadding: '6px 12px',
   // The frontmatter, still drawn by the default theme: a larger title, the properties on a card.
+  titleFont: "'Source Serif 4', Georgia, serif",
   titleSize: '2.4em',
   titleWeight: '600',
+  propertiesLabelFont: "'Source Serif 4', Georgia, serif",
+  chipFont: "'Source Serif 4', Georgia, serif",
 };
 
 export const sepia = defineTheme({
@@ -44,8 +47,8 @@ export const sepia = defineTheme({
       tableHoverBg: '#efe5cf',
       embedRule: '#c9a46a',
       titleColor: '#2c2117',
-      propertiesBg: '#fbf6ea',
-      propertiesBorder: '#e2d6bc',
+      propertiesRule: '2px solid #c9a46a',
+      propertiesLabelColor: '#9a4b16',
       propertiesKeyColor: '#9a4b16',
       chipBg: '#efe1c2',
       chipColor: '#5a4a37',
@@ -74,8 +77,8 @@ export const sepia = defineTheme({
       tableHoverBg: '#2a231a',
       embedRule: '#8c6a3c',
       titleColor: '#f4ead6',
-      propertiesBg: '#2a231a',
-      propertiesBorder: '#43382a',
+      propertiesRule: '2px solid #8c6a3c',
+      propertiesLabelColor: '#e2a15f',
       propertiesKeyColor: '#e2a15f',
       chipBg: '#43382a',
       chipColor: '#eadfca',

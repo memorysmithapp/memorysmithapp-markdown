@@ -115,14 +115,22 @@ export interface ThemeProperties {
   // Embeds.
   readonly embedRule?: string;
   // The note's title and properties, as the default theme draws its frontmatter.
+  readonly titleFont?: string;
   readonly titleSize?: string;
   readonly titleWeight?: string;
   readonly titleColor?: string;
-  readonly propertiesBg?: string;
-  readonly propertiesBorder?: string;
+  readonly propertiesRule?: string;
+  readonly propertiesLabelFont?: string;
+  readonly propertiesLabelColor?: string;
   readonly propertiesKeyColor?: string;
+  // The icon of a property's key by the shape of its value, as a CSS image used as a mask.
+  readonly iconPropertyText?: string;
+  readonly iconPropertyList?: string;
+  readonly iconPropertyDate?: string;
+  readonly iconPropertyBoolean?: string;
   readonly chipBg?: string;
   readonly chipColor?: string;
+  readonly chipFont?: string;
 }
 
 /** The names of `ThemeProperties`, in the order the documentation lists them. */
@@ -142,8 +150,10 @@ export const THEME_PROPERTIES = Object.keys({
   quoteBorderColor: 1, quoteBorderWidth: 1, quoteColor: 1,
   tableBorder: 1, tableCellPadding: 1, tableHeaderBg: 1, tableHeaderRule: 1, tableStripeBg: 1, tableHoverBg: 1,
   embedRule: 1,
-  titleSize: 1, titleWeight: 1, titleColor: 1,
-  propertiesBg: 1, propertiesBorder: 1, propertiesKeyColor: 1, chipBg: 1, chipColor: 1,
+  titleFont: 1, titleSize: 1, titleWeight: 1, titleColor: 1,
+  propertiesRule: 1, propertiesLabelFont: 1, propertiesLabelColor: 1, propertiesKeyColor: 1,
+  iconPropertyText: 1, iconPropertyList: 1, iconPropertyDate: 1, iconPropertyBoolean: 1,
+  chipBg: 1, chipColor: 1, chipFont: 1,
 } satisfies Record<keyof ThemeProperties, 1>) as (keyof ThemeProperties)[];
 
 /** `textSoft` → `--markdown-text-soft`, `h1Size` → `--markdown-h1-size`. */

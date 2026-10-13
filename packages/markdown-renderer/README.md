@@ -66,7 +66,7 @@ const acme = defineTheme({
 - **Your CSS** is scoped by `.markdown-theme-<name>`, and reaches the note and nothing else.
 - **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
 
-The frontmatter is the note's too. The default theme draws `name` as the title and the other entries as properties, by the shape of each value, with a `[[wikilink]]` in a value drawn as a link. A theme decides otherwise through the `properties` slot, which may draw nothing, as a host that shows properties elsewhere does:
+The frontmatter is the note's too. The default theme draws it as MemorySmith does: `name` as the title, and the other entries in a block that folds, each key with the icon of its value's shape, lists as chips and dates in `strings.locale`, with a `[[wikilink]]`, a Markdown link or a web address in a value drawn as a link. A theme decides otherwise through the `properties` slot, which may draw nothing, as a host that shows properties elsewhere does:
 
 ```tsx
 const mine = defineTheme({ name: 'mine', components: { properties: () => null } });
