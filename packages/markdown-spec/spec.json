@@ -463,5 +463,115 @@
       "effect": "The reference is a link to a note gathered at the end of the note, numbered by the order of first reference, with a link back; following either moves within the note. Display only: no edge, no attribute, no index entry, and the definition is never a link reference definition.",
       "spec": "7.12, 3.8"
     }
+  ],
+  "notices": [
+    {
+      "code": "fence-unclosed",
+      "severity": "notice",
+      "spec": "3.7",
+      "effect": "A fence that is never closed runs to the end of its block, and everything after it is code."
+    },
+    {
+      "code": "math-unclosed",
+      "severity": "notice",
+      "spec": "7.8",
+      "effect": "A $$ block that is never closed runs to the end of its block, and everything after it is a formula."
+    },
+    {
+      "code": "formula-invalid",
+      "severity": "notice",
+      "spec": "7.8",
+      "effect": "A formula that cannot be typeset is shown as its source."
+    },
+    {
+      "code": "diagram-invalid",
+      "severity": "notice",
+      "spec": "7.2",
+      "effect": "A mermaid block its diagram language cannot read is shown as a code block, or as the diagram language's own error."
+    },
+    {
+      "code": "frontmatter-unclosed",
+      "severity": "notice",
+      "spec": "6.1",
+      "effect": "A --- on the first line with no --- closing it is no frontmatter: the note has no properties and no name, and the lines are body text."
+    },
+    {
+      "code": "name-missing",
+      "severity": "notice",
+      "spec": "6.5",
+      "effect": "The note has no name: it is unnamed, and a link reaches it only through an alias."
+    },
+    {
+      "code": "name-unusable",
+      "severity": "notice",
+      "spec": "6.5",
+      "effect": "A name of a shape other than a single text value leaves the note unnamed."
+    },
+    {
+      "code": "reserved-not-a-list",
+      "severity": "notice",
+      "spec": "6.4",
+      "effect": "aliases or tags written as a single value rather than a list degrade to an ordinary attribute."
+    },
+    {
+      "code": "aliases-missing",
+      "severity": "hint",
+      "spec": "6.4",
+      "effect": "The note has no aliases: only its name catches a link."
+    },
+    {
+      "code": "tags-missing",
+      "severity": "hint",
+      "spec": "6.4",
+      "effect": "The note has no tags: it has no subjects to be filtered by."
+    },
+    {
+      "code": "heading-first-level",
+      "severity": "notice",
+      "spec": "3.3",
+      "effect": "The first heading of the body is not level one."
+    },
+    {
+      "code": "heading-skipped-level",
+      "severity": "notice",
+      "spec": "3.3",
+      "effect": "A heading goes down more than one level from the heading before it."
+    },
+    {
+      "code": "footnote-undefined",
+      "severity": "notice",
+      "spec": "7.12",
+      "effect": "A reference with no definition is drawn as its characters, brackets and all."
+    },
+    {
+      "code": "footnote-unreferenced",
+      "severity": "notice",
+      "spec": "7.12",
+      "effect": "A definition nothing references is not drawn."
+    },
+    {
+      "code": "raw-html",
+      "severity": "notice",
+      "spec": "7.9",
+      "effect": "Raw HTML is drawn as text, tags and all."
+    },
+    {
+      "code": "strikethrough-single-tilde",
+      "severity": "notice",
+      "spec": "4.3",
+      "effect": "One tilde on each side strikes nothing, and the tildes stay on the page."
+    },
+    {
+      "code": "link-pending",
+      "severity": "hint",
+      "spec": "7.4",
+      "effect": "A wikilink no note answers is drawn as pending."
+    },
+    {
+      "code": "embed-pending",
+      "severity": "hint",
+      "spec": "7.3",
+      "effect": "An embed no note and no kept file answers is drawn as a pending link, not as content."
+    }
   ]
 }

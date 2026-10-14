@@ -9,10 +9,7 @@ import {
 } from 'react';
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import ReactMarkdown from 'react-markdown';
-import type { PluggableList } from 'unified';
 import rehypeKatex from 'rehype-katex';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
 import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
 import { highlightLanguage, highlightTree } from './highlight.js';
@@ -21,8 +18,7 @@ import { readDimensions, readImageAlt } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
-import { remarkCallouts } from './remark-callouts.js';
-import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
+import { readingPlugins } from './reading.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import { ordinalAt } from './tasklist.js';
@@ -382,34 +378,6 @@ function TaskItem({
 function dropBox(children: ReactNode): ReactNode {
   if (!Array.isArray(children)) return children;
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
-}
-
-/**
- * The remark plugins of the reading surface, in their order. `planFootnotes` reads a note
- * through the same list, so it counts the references this surface draws and no other.
- */
-export function readingPlugins(titleOf: (kind: string) => string | undefined): PluggableList {
-  return [
-    /**
-     * `singleTilde: false` is a decision and not a default.
-     *
-     * GFM specifies strikethrough as `~~x~~`; GitHub also accepts a
-     * single tilde, outside its own specification. Here that extension
-     * actively misrenders a notation the specification leaves out:
-     * somebody writing `H~2~O` for a subscript would get `H` struck-out
-     * `2` `O`, which is a worse answer than nothing. With it off the
-     * characters stay on the page, and the author can see they got what
-     * the specification says they get, which is nothing.
-     */
-    [remarkGfm, { singleTilde: false }],
-    [remarkCallouts, { titleOf }],
-    remarkHighlight,
-    remarkComments,
-    remarkBlockIds,
-    remarkMath,
-    // After remark-math, and it gives back what was never a formula.
-    remarkMathDollarRule,
-  ];
 }
 
 export function Markdown({ children, source, onToggleTask, writable = false, footnotes }: MarkdownProps) {

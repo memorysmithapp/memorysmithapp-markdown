@@ -42,6 +42,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./diagnose": {
+      "types": "./dist/diagnose.d.ts",
+      "default": "./dist/diagnose.js"
+    },
     "./styles.css": "./styles.css",
     "./structure.css": "./structure.css",
     "./theme-default.css": "./theme-default.css"

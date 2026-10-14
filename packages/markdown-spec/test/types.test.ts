@@ -95,6 +95,23 @@ describe('the types of spec.json', () => {
   });
 });
 
+describe('the types of a notice', () => {
+  it('admit every notice, one by one', () => {
+    const notices = specJson.notices.map((notice: { code: string }) => ({ label: notice.code, value: notice }));
+    expect(compileEach('NoticeDeclaration', notices)).toEqual([]);
+  });
+
+  it('refuse a severity outside the two the schema allows', () => {
+    const schema = JSON.parse(readFileSync(join(PACKAGE, 'schema', 'spec.schema.json'), 'utf8'));
+    expect(schema.properties.notices.items.properties.severity.enum).toEqual(['notice', 'hint']);
+    expect(compile('NoticeDeclaration', { ...specJson.notices[0], severity: 'error' })).not.toEqual([]);
+  });
+
+  it('refuse a case notice without its line', () => {
+    expect(compile('ConformanceNotice', { code: 'raw-html' })).not.toEqual([]);
+  });
+});
+
 describe('the types of a conformance case', () => {
   it('admit the whole suite', () => {
     expect(compile('ConformanceSuite', suiteJson)).toEqual([]);

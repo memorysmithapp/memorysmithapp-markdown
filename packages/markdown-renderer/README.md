@@ -74,6 +74,24 @@ const mine = defineTheme({ name: 'mine', components: { properties: () => null } 
 
 Import `structure.css` instead of `styles.css` for a theme that draws everything itself. A theme names faces; your page loads them.
 
+## Diagnose
+
+Every note is valid, and nothing here refuses one. What `diagnose` tells a host is where the page will not show what was most likely typed, and what the note lacks that the specification reserves a place for: the notices of [`SPEC.md` §7.13](https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/packages/markdown-spec/SPEC.md#713-notices). It imports no React and needs no DOM, so it runs in an editor, on a server, or in a tool that writes a note.
+
+```ts
+import { diagnose } from '@memorysmithapp/markdown-renderer/diagnose';
+
+const notices = await diagnose(note, {
+  resolve: (name) => addressOfTheOneNoteNamed(name), // or reaches; leave both out and no link is pending
+  keeps: (name) => notebookKeepsAFile(name),
+});
+// [{ code: 'heading-skipped-level', severity: 'notice', section: '3.3',
+//    message: 'This heading skips a level below the heading before it.',
+//    line: 12, column: 1, endLine: 12, endColumn: 14 }, …]
+```
+
+A `notice` says the page will differ from the text — a fence never closed, a formula KaTeX cannot typeset, a diagram Mermaid cannot read, raw HTML, a footnote with no definition or no reference, a single-tilde strikethrough, a frontmatter never closed, a `name` that leaves the note unnamed or none at all, `aliases` or `tags` that are not a list, a body that does not start at `#` or skips a level. A `hint` says nothing is drawn wrong: no `aliases`, no `tags`, a link or an embed no note answers yet. Lines and columns count from 1 over the whole note, frontmatter included, and the `message` is English; a host words it in its own language from the `code`, which is stable. Mermaid is loaded only for a note that holds a diagram, and `diagrams: false` skips it.
+
 The host contract, the stylesheet's properties, the slots and the decisions behind them are in the repository's [`ARCHITECTURE.md`](https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/ARCHITECTURE.md).
 
 ## Licence

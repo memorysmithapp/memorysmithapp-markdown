@@ -1090,6 +1090,244 @@
           "anchor": null
         }
       ]
+    },
+    {
+      "id": "notice/a-whole-note-raises-nothing",
+      "notation": "heading-atx",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n## Section\n\nText with ==marked== words, $x^2$ and a note[^a].\n\n[^a]: The source.\n",
+      "notices": []
+    },
+    {
+      "id": "notice/fence-unclosed",
+      "notation": "code-fenced",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```js\nconst a = 1;\n\nThis paragraph is code now.\n",
+      "notices": [
+        { "code": "fence-unclosed", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/fence-closed-raises-nothing",
+      "notation": "code-fenced",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```js\nconst a = 1;\n```\n",
+      "notices": []
+    },
+    {
+      "id": "notice/math-unclosed",
+      "notation": "math-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n$$\nx^2\n\nThis paragraph is a formula now.\n",
+      "notices": [
+        { "code": "math-unclosed", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/formula-invalid",
+      "notation": "math-inline",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nThe ratio $\\frac{1}{$ is unfinished.\n",
+      "notices": [
+        { "code": "formula-invalid", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/diagram-invalid",
+      "notation": "mermaid",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```mermaid\ngraph TD\n  A -->\n```\n",
+      "notices": [
+        { "code": "diagram-invalid", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/diagram-valid-raises-nothing",
+      "notation": "mermaid",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```mermaid\ngraph TD\n  A --> B\n```\n",
+      "notices": []
+    },
+    {
+      "id": "notice/frontmatter-unclosed",
+      "notation": "frontmatter-name",
+      "markdown": "---\nname: Note\n\n# Title\n",
+      "notices": [
+        { "code": "frontmatter-unclosed", "line": 1 },
+        { "code": "name-missing", "line": 1 },
+        { "code": "aliases-missing", "line": 1 },
+        { "code": "tags-missing", "line": 1 }
+      ]
+    },
+    {
+      "id": "notice/no-frontmatter",
+      "notation": "frontmatter-name",
+      "markdown": "# Title\n\nText.\n",
+      "notices": [
+        { "code": "name-missing", "line": 1 },
+        { "code": "aliases-missing", "line": 1 },
+        { "code": "tags-missing", "line": 1 }
+      ]
+    },
+    {
+      "id": "notice/name-missing",
+      "notation": "frontmatter-name",
+      "markdown": "---\naliases: [note]\ntags: [example]\n---\n# Title\n",
+      "notices": [
+        { "code": "name-missing", "line": 1 }
+      ]
+    },
+    {
+      "id": "notice/name-unusable",
+      "notation": "frontmatter-name",
+      "markdown": "---\nname: [One, Two]\naliases: [note]\ntags: [example]\n---\n# Title\n",
+      "notices": [
+        { "code": "name-unusable", "line": 2 }
+      ]
+    },
+    {
+      "id": "notice/reserved-not-a-list",
+      "notation": "frontmatter-tags",
+      "markdown": "---\nname: Note\naliases: note\ntags: example\n---\n# Title\n",
+      "notices": [
+        { "code": "reserved-not-a-list", "line": 3 },
+        { "code": "reserved-not-a-list", "line": 4 }
+      ]
+    },
+    {
+      "id": "notice/aliases-and-tags-missing",
+      "notation": "frontmatter-aliases",
+      "markdown": "---\nname: Note\nstatus: draft\n---\n# Title\n",
+      "notices": [
+        { "code": "aliases-missing", "line": 1 },
+        { "code": "tags-missing", "line": 1 }
+      ]
+    },
+    {
+      "id": "notice/an-empty-value-is-absent",
+      "notation": "frontmatter-tags",
+      "markdown": "---\nname: Note\naliases: [note]\ntags:\n---\n# Title\n",
+      "notices": [
+        { "code": "tags-missing", "line": 4 }
+      ]
+    },
+    {
+      "id": "notice/heading-first-level",
+      "notation": "heading-atx",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n## Section\n\nText.\n",
+      "notices": [
+        { "code": "heading-first-level", "line": 6 }
+      ]
+    },
+    {
+      "id": "notice/heading-skipped-level",
+      "notation": "heading-atx",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# One\n\n### Three\n\n## Two\n\n# One again\n\n## Two again\n",
+      "notices": [
+        { "code": "heading-skipped-level", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/heading-setext-counts",
+      "notation": "heading-setext",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\nTitle\n=====\n\nSection\n-------\n",
+      "notices": []
+    },
+    {
+      "id": "notice/heading-inside-a-block-or-code-does-not-count",
+      "notation": "heading-atx",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n> ## Quoted\n\n```markdown\n### Example\n```\n\n# Title\n",
+      "notices": []
+    },
+    {
+      "id": "notice/footnote-undefined",
+      "notation": "footnote",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nA claim[^source].\n",
+      "notices": [
+        { "code": "footnote-undefined", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/footnote-unreferenced",
+      "notation": "footnote",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nA claim.\n\n[^source]: The source.\n",
+      "notices": [
+        { "code": "footnote-unreferenced", "line": 10 }
+      ]
+    },
+    {
+      "id": "notice/raw-html",
+      "notation": "raw-html",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nRead <b>this</b> first.\n",
+      "notices": [
+        { "code": "raw-html", "line": 8 },
+        { "code": "raw-html", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/raw-html-in-code-raises-nothing",
+      "notation": "raw-html",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nWrite `<b>` for bold.\n",
+      "notices": []
+    },
+    {
+      "id": "notice/strikethrough-single-tilde",
+      "notation": "strikethrough",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nWater is H~2~O, about ~5 litres, and ~~gone~~.\n",
+      "notices": [
+        { "code": "strikethrough-single-tilde", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/a-comment-raises-nothing",
+      "notation": "comment",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nKept for later. %% a claim[^x] about H~2~O %%\n",
+      "notices": []
+    },
+    {
+      "id": "notice/link-pending",
+      "notation": "pending-link-display",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nSee [[Present]] and [[Absent]].\n",
+      "notebook": {
+        "notes": ["---\nname: Present\n---\n"]
+      },
+      "resolution": [
+        {
+          "target": "Present",
+          "kind": "note",
+          "edges": 1
+        },
+        {
+          "target": "Absent",
+          "kind": "pending",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "link-pending", "line": 8 }
+      ]
+    },
+    {
+      "id": "notice/embed-pending",
+      "notation": "transclusion",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n![[Present]]\n\n![[photo.png]]\n\n![[Missing]]\n",
+      "notebook": {
+        "notes": ["---\nname: Present\n---\n"],
+        "attachments": ["photo.png"]
+      },
+      "resolution": [
+        {
+          "target": "Present",
+          "kind": "note",
+          "edges": 1
+        },
+        {
+          "target": "photo.png",
+          "kind": "attachment",
+          "edges": 0
+        },
+        {
+          "target": "Missing",
+          "kind": "pending",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "embed-pending", "line": 12 }
+      ]
     }
   ]
 }

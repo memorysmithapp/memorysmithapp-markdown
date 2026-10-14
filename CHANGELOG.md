@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `diagnose`, at `@memorysmithapp/markdown-renderer/diagnose`: a host hands it a note and gets the notices of it — where the page will not show what was typed, and what the note lacks — each with a stable code, a severity (`notice` or `hint`), the section of the specification behind it and its place as lines and columns. It never refuses a note, reads it through the same parser and plugins as `NoteBody`, runs with no DOM and no React, reports pending links only against the notebook the host describes, and loads Mermaid only for a note with a diagram (#35).
+- The specification declares the notices an implementation may report (`SPEC.md` §7.13): eighteen codes, in `SPEC.md` and in `spec.json` as `notices`, each raised by a conformance case, which may now list the notices its input raises; the checker holds the table, the data and the suite together (#35).
+- The headings of a body form an outline that SHOULD start at level one and descend one level at a time (`SPEC.md` §3.3); the name of a note is not a level of it, and an outline that breaks this is a notice, never an error (#35).
+
 ## [0.2.0] - 2026-10-13
 
 ### Added

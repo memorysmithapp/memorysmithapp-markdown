@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
-import { Markdown, readingPlugins } from './Markdown.js';
+import { Markdown } from './Markdown.js';
+import { readingPlugins } from './reading.js';
 import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
