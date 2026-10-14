@@ -2,8 +2,8 @@
  * The notices of a note (§7.13): where what is drawn will not be what was most likely typed.
  *
  * There is no invalid note (§6.4), so nothing here accepts or refuses: it reads a note the way the
- * reading surface reads it — the same frontmatter cut, the same parser and the same remark plugins
- * (`reading.ts`) — and reports, by a stable code, the places where the page will differ from the
+ * reading surface reads it — the same frontmatter cut, its comments taken out (`hideComments`), the
+ * same parser and the same remark plugins (`reading.ts`) — and reports, by a stable code, the places where the page will differ from the
  * text, or where the note lacks something the specification reserves a place for. A notice never
  * blocks a save and never changes a byte.
  *
@@ -16,7 +16,7 @@ import katex from 'katex';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import type { NoteHost } from './host.js';
-import { bodyStart, codeRegions, insideCode, toUnixNewlines } from './markdown.js';
+import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type HiddenComments } from './markdown.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
 
@@ -105,8 +105,6 @@ interface Node {
   position?: { start: Point; end: Point };
 }
 
-/** A comment as the reading surface hides it: inside one run of text (`remark-ring.ts`). */
-const COMMENT = /%%[\s\S]*?%%/g;
 /** A footnote reference left as text, which is one with no definition (§7.12). */
 const UNDEFINED_REFERENCE = /\[\^[^\]\s]+\]/g;
 /** A run between single tildes, which GFM as read here leaves as characters (§4.3). */
@@ -159,7 +157,9 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const split = bodyStart(text);
   frontmatter(text, split, report);
 
-  const body = text.slice(split);
+  // A comment is never drawn, so nothing it holds raises a notice; positions are mapped back over it.
+  const hidden = hideComments(text.slice(split));
+  const body = hidden.text;
   const processor = unified().use(remarkParse).use(readingPlugins(() => undefined));
   const parsed = processor.parse(body) as Node;
   // The text as the parser found it, before a plugin cut a run of it and dropped its position.
@@ -168,7 +168,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const span = (node: Node): [number, number] | null => {
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
-    return start === undefined || end === undefined ? null : [split + start, split + end];
+    return start === undefined || end === undefined ? null : [split + hidden.original(start), split + hidden.original(end, true)];
   };
 
   const diagrams: { source: string; at: [number, number] }[] = [];
@@ -203,25 +203,25 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
 
   outline(tree, span, report);
 
-  // What stays characters on the page is found in the text the parser read, outside a comment.
+  // What stays characters on the page is found in the text the parser read.
   walk(read, (node) => {
     if (node.type !== 'text') return;
-    const at = span(node);
-    if (!at) return;
-    const source = text.slice(at[0], at[1]);
-    const comments = [...source.matchAll(COMMENT)].map((match): [number, number] => [match.index, match.index + match[0].length]);
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start === undefined || end === undefined) return;
+    const source = body.slice(start, end);
     for (const [pattern, code] of [
       [UNDEFINED_REFERENCE, 'footnote-undefined'],
       [SINGLE_TILDE, 'strikethrough-single-tilde'],
     ] as const) {
       for (const match of source.matchAll(pattern)) {
-        if (insideCode(comments, match.index)) continue;
-        report(code, at[0] + match.index, at[0] + match.index + match[0].length);
+        const from = start + match.index;
+        report(code, split + hidden.original(from), split + hidden.original(from + match[0].length, true));
       }
     }
   });
 
-  pending(body, split, options, report);
+  pending(hidden, split, options, report);
 
   if (diagrams.length > 0 && options.diagrams !== false) {
     const mermaid = (await import('mermaid')).default;
@@ -339,7 +339,8 @@ function outline(tree: Node, span: (node: Node) => [number, number] | null, repo
  * a note, and an embed a note or a kept file (§5.2, §5.8). Read on the body outside code, as
  * `resolveWikilinks` reads it.
  */
-function pending(body: string, split: number, options: DiagnoseOptions, report: Report): void {
+function pending(hidden: HiddenComments, split: number, options: DiagnoseOptions, report: Report): void {
+  const body = hidden.text;
   const { resolve, reaches, keeps = () => false } = options;
   if (!resolve && !reaches) return;
   const answered = (name: string): boolean =>
@@ -352,6 +353,7 @@ function pending(body: string, split: number, options: DiagnoseOptions, report: 
     if (!name) continue;
     const embed = match[1] !== undefined;
     if (answered(name) || (embed && keeps(name))) continue;
-    report(embed ? 'embed-pending' : 'link-pending', split + match.index, split + match.index + match[0].length, name);
+    const end = match.index + match[0].length;
+    report(embed ? 'embed-pending' : 'link-pending', split + hidden.original(match.index), split + hidden.original(end, true), name);
   }
 }

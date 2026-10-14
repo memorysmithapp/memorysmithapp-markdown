@@ -1274,7 +1274,7 @@
     {
       "id": "notice/a-comment-raises-nothing",
       "notation": "comment",
-      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nKept for later. %% a claim[^x] about H~2~O %%\n",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\nKept for later. %% a claim[^x] about H~2~O, <b>raw</b>, ### and\n\na second paragraph %%\n",
       "notices": []
     },
     {

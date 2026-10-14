@@ -12,7 +12,7 @@
  * document from it would hand the notebook a file nobody typed.
  */
 
-import { fenceRegions } from './markdown.js';
+import { commentRegions, fenceRegions } from './markdown.js';
 
 /**
  * A task item, as GFM defines it, at the start of a list item — after any
@@ -28,7 +28,7 @@ import { fenceRegions } from './markdown.js';
 const TASK = /^(?:[ \t]*>[ \t]?)*[ \t]*(?:[-*+]|\d+[.)])[ \t]+\[([ xX])\]/gm;
 
 /**
- * Blanks out fenced blocks while keeping every offset intact. A task item
+ * Blanks out fenced blocks and comments while keeping every offset intact. A task item
  * inside a fence is an example, not a box, and counting it would shift the
  * index and toggle a different item: the worst possible defect here, because
  * it is silent and lands in the wrong place.
@@ -40,7 +40,10 @@ const TASK = /^(?:[ \t]*>[ \t]?)*[ \t]*(?:[-*+]|\d+[.)])[ \t]+\[([ xX])\]/gm;
 function maskFences(text: string): string {
   let masked = '';
   let cursor = 0;
-  for (const [start, end] of fenceRegions(text)) {
+  // A comment is never drawn (§7.6), so a box inside one is no box, on either side of the count.
+  const hidden = [...fenceRegions(text), ...commentRegions(text)].sort((a, b) => a[0] - b[0]);
+  for (const [start, end] of hidden) {
+    if (start < cursor) continue;
     masked += text.slice(cursor, start) + text.slice(start, end).replace(/[^\n]/g, ' ');
     cursor = end;
   }

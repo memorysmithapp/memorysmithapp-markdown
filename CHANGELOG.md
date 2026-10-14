@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The specification declares the notices an implementation may report (`SPEC.md` §7.13): eighteen codes, in `SPEC.md` and in `spec.json` as `notices`, each raised by a conformance case, which may now list the notices its input raises; the checker holds the table, the data and the suite together (#35).
 - The headings of a body form an outline that SHOULD start at level one and descend one level at a time (`SPEC.md` §3.3); the name of a note is not a level of it, and an outline that breaks this is a notice, never an error (#35).
 
+### Fixed
+
+- A comment is hidden whatever it holds — inline markup, raw HTML, a wikilink, an embed, a footnote reference, blank lines and the blocks between them — where it used to be drawn whole, markers included, unless it sat inside one run of text; a comment on lines of its own leaves no empty paragraph, and a task box inside a comment is no box, so the boxes after it keep their ordinals. MemorySmith's reading page carries the defect, and the renderer now differs from it there (#36).
+
 ## [0.2.0] - 2026-10-13
 
 ### Added

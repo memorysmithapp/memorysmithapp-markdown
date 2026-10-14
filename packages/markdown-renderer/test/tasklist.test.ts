@@ -48,6 +48,17 @@ describe('finding the boxes', () => {
   });
 });
 
+describe('a box inside a comment', () => {
+  it('is no box, so the boxes after it keep their ordinals', () => {
+    // A comment is never drawn (§7.6); counting its box on the side the host writes and not on the
+    // side the page draws would tick the next box instead.
+    const commented = ['- [ ] first', '%%', '- [ ] a draft step', '%%', '- [ ] second'].join('\n');
+    expect(taskBoxes(commented)).toHaveLength(2);
+    expect(toggleTaskAt(commented, 1)).toContain('- [x] second');
+    expect(toggleTaskAt(commented, 1)).toContain('- [ ] a draft step');
+  });
+});
+
 describe('a box inside a block quote, which is where a callout keeps its checklist', () => {
   const quoted = ['- [ ] before', '', '> [!todo] Pending', '> - [ ] inside', '> > - [x] deeper', '', '- [ ] after'].join('\n');
 

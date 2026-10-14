@@ -98,17 +98,44 @@ describe('a comment', () => {
     expect(out).toContain('E segue.');
   });
 
-  it('leaves no text behind when it was the whole paragraph', () => {
-    // The paragraph element itself stays, empty, as on MemorySmith's reading
-    // page; the comment's words do not.
+  it('leaves nothing behind when it was the whole paragraph', () => {
+    // MemorySmith's reading page leaves an empty paragraph where the comment was.
     const out = html('Antes.\n\n%%só um comentário%%\n\nDepois.');
     expect(out).not.toContain('só um comentário');
-    expect(out).toContain('<p>Antes.</p>');
-    expect(out).toContain('<p>Depois.</p>');
+    expect(out).toMatch(/<p>Antes\.<\/p>\s*<p>Depois\.<\/p>/);
   });
 
-  it('is not read inside code', () => {
+  it('hides whatever it holds: markup, raw HTML, a link, an embed, a footnote reference', () => {
+    // MemorySmith's reading page hides a comment inside one run of text only, and drew all of these.
+    const out = html(
+      'A regra %%*rever*, <b>já</b>, [[Outra nota]], ![[Anexo]], [^n] e [x](https://example.org)%% vale.\n\n[^n]: Fonte.\n',
+      { resolve: () => '/notes/x' },
+    );
+    expect(out).not.toContain('%%');
+    expect(out).not.toContain('rever');
+    expect(out).not.toContain('já');
+    expect(out).not.toContain('Outra nota');
+    expect(out).not.toContain('Anexo');
+    expect(out).not.toContain('example.org');
+    expect(out).toContain('A regra  vale.');
+  });
+
+  it('hides blank lines and the blocks between its markers', () => {
+    const out = html('Antes.\n\n%%\n# Rascunho\n\n- um item\n\nOutro parágrafo.\n%%\n\nDepois.');
+    expect(out).not.toContain('Rascunho');
+    expect(out).not.toContain('um item');
+    expect(out).not.toContain('Outro parágrafo');
+    expect(out).toMatch(/<p>Antes\.<\/p>\s*<p>Depois\.<\/p>/);
+  });
+
+  it('on lines of its own inside a list, leaves the list tight', () => {
+    expect(html('- um\n%% nota %%\n- dois')).toContain('<li>um</li>');
+  });
+
+  it('is not read inside code, and a lone %% is text', () => {
     expect(html('Use `%%x%%` para comentar.')).toContain('<code>%%x%%</code>');
+    expect(html('```\n%% fica %%\n```')).toContain('%% fica %%');
+    expect(html('Taxa de 5%% ao mês.')).toContain('5%% ao mês');
   });
 });
 

@@ -68,6 +68,11 @@ describe('a notice', () => {
     });
   });
 
+  it('is placed in the note as written, past a comment it does not see', async () => {
+    const notices = await diagnose(`${NAMED}# Title\n\n%% <b>draft</b>\n\nstill hidden %% Read <i>this</i>.\n`);
+    expect(notices.map(({ code, line, column }) => `${code}@${line}:${column}`)).toEqual(['raw-html@10:22', 'raw-html@10:29']);
+  });
+
   it('reports no pending link when the host says nothing about the notebook', async () => {
     expect(await diagnose(`${NAMED}# Title\n\nSee [[Nowhere]] and ![[Nothing]].\n`)).toEqual([]);
   });

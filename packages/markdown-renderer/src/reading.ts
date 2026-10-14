@@ -5,7 +5,7 @@ import type { PluggableList } from 'unified';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { remarkCallouts } from './remark-callouts.js';
-import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
+import { remarkBlockIds, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
 
 /**
  * The remark plugins of the reading surface, in their order. `planFootnotes` reads a note
@@ -27,7 +27,6 @@ export function readingPlugins(titleOf: (kind: string) => string | undefined): P
     [remarkGfm, { singleTilde: false }],
     [remarkCallouts, { titleOf }],
     remarkHighlight,
-    remarkComments,
     remarkBlockIds,
     remarkMath,
     // After remark-math, and it gives back what was never a formula.
