@@ -499,6 +499,10 @@
   gap: 0.4rem;
   color: var(--ms-properties-key-color);
   overflow-wrap: anywhere;
+  /* Its own height, not its row's: stretched to a value that wraps, the key
+     centred its icon on the whole row while its text stayed on the first line.
+     MemorySmith's page has that defect; this surface does not carry it. */
+  align-self: start;
 }
 .markdown .metadata-property-key::before {
   content: '';

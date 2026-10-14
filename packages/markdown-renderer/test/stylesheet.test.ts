@@ -89,6 +89,11 @@ describe('the stylesheet', () => {
     for (const property of publicProperties) expect(architecture, property).toContain(`\`${property}\``);
   });
 
+  it("keeps a property key at its own height, so its icon sits on the key's first line", () => {
+    const rule = /\.markdown \.metadata-property-key \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
+    expect(rule).toContain('align-self: start;');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {
