@@ -1,6 +1,6 @@
 {
   "name": "@memorysmithapp/markdown-renderer",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A React component that draws a MemorySmith note exactly as MemorySmith's reading page does.",
   "keywords": [
     "markdown",
