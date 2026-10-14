@@ -250,7 +250,7 @@
 .markdown :is(h1, h2, h3, h4, h5, h6) {
   margin-block: var(--ms-heading-spacing) 0;
 }
-.markdown:not([data-theme]) > :first-child {
+.markdown:not([data-theme], .footnotes-run) > :first-child {
   margin-block-start: 0;
 }
 

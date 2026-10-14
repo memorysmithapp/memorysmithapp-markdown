@@ -419,7 +419,9 @@ export function Markdown({ children, source, onToggleTask, writable = false, foo
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
 
   return (
-    <div className="markdown">
+    // The pass that draws a cut note's footnotes continues the note rather than opening a run,
+    // so its section keeps the space a section takes at the end of a note.
+    <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
         remarkPlugins={readingPlugins(calloutTitle)}
         // Raw HTML is NOT enabled, and its absence is the point: no

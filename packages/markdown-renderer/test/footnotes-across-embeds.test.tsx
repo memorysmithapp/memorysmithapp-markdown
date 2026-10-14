@@ -88,6 +88,8 @@ describe('a footnote across an embed', () => {
     expect(embed).toBe(2);
     expect(section).toBe(3);
     expect(note.container.querySelectorAll('section[data-footnotes]')).toHaveLength(1);
+    // The pass continues the note, so the stylesheet keeps the section's space above it.
+    expect(children[section]!.classList.contains('footnotes-run')).toBe(true);
     note.unmount();
   });
 

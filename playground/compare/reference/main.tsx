@@ -49,7 +49,9 @@ createRoot(root).render(
           {/* The root of MemorySmith is a grid a window tall, which stretches
               its child: the wrapper takes the stretch, and the pane is as tall
               as the note, as the playground's is. */}
-          <div>
+          {/* `minWidth: 0` is MemorySmith's `.app-main > *`: without it a long line of code
+              widened the pane past a phone's screen, which the application never does. */}
+          <div style={{ minWidth: 0 }}>
             <article className="content-pane">
               {/* The frame of MemorySmith's note page above the body, as `NotePage` draws it:
                   the name, always, and the properties block. */}

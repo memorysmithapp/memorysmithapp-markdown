@@ -29,6 +29,15 @@ decisão tomada com pressa possa ser lida com calma no ano seguinte.
 | 17 fev | 22,0 | 55 | Chuva anunciada |
 | 24 fev | 22,3 | 58 | Antecipada, contra [[Vinificação em tinto]] |
 
+A caderneta do campo, copiada como foi anotada, sem colunas, porque quem anota
+no vinhedo não para para alinhar nada:[^caderneta]
+
+```
+24/02 06h10  quadra 3  22,3 brix  IPT 58  chuva às 15h
+24/02 06h40  quadra 5  22,0 brix  IPT 56  bagas murchas na face oeste
+24/02 07h05  decisão: colher 3 e 5 hoje, 7 amanhã cedo
+```
+
 Colhemos com IPT 58 e não com os 62 de
 [[Índice de Polifenóis Totais#^faixa-de-guarda]]. ^decisao-2026
 
@@ -39,7 +48,8 @@ endereço solto é link na página e nunca aresta no grafo.
 
 # O que deu errado
 
-A remontagem do dia 26 foi feita por calendário, e não pela curva. O passo 4 do
+A remontagem do dia 26 foi feita por calendário, e não pela curva,[^caderneta]
+como o passo 4 já mandava não fazer.[^passo4] O passo 4 do
 protocolo ganhou a frase que faltava por causa disso.
 
 A perda de estrutura estimada foi de $4\%$ sobre a média das três safras
@@ -62,3 +72,8 @@ $$P = 1 - \frac{IPT_{colheita}}{IPT_{alvo}}$$
   nome a nada: o nome de uma nota é o `name:` dela, e só.
 
 Relacionado: [[Cabernet Sauvignon#Na Serra Gaúcha]].
+
+[^caderneta]: A caderneta de campo da safra 2026, folhas 12 a 15, guardada com
+    os laudos do laboratório.
+[^passo4]: O passo 4 de [[Vinificação em tinto]] dizia "quando a curva
+    achatar" desde 2025; faltava dizer "e não quando o cronograma disser".

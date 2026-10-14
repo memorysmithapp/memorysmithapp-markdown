@@ -15,9 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The demonstration notebooks show code and footnotes where each would write them: `sql`, `bash`, `diff`, `yaml` and `json` in the payments runbook and objective, `python` and `yaml` in the red-wine protocol (the `yaml` inside a callout), a `promql` fence the renderer draws as typed, fences with no language, and several footnotes per note, one cited twice and a numeric label cited before a smaller one (#32).
 - The demonstration notes and the `TEMPLATE.md` of each folder start their body at a first-level heading, under the title `name:` gives, since a body may start at any level; the five notes that already started at `#` keep showing that a heading never names a note (#31).
 - `NoteBody` no longer leaves the frontmatter off the page: decision 4 of #1 is superseded for it by ADR-004, and a host that already draws properties gives a theme whose `properties` slot draws nothing (#29).
 - The root of a note carries the class `markdown-theme-<name>` beside `markdown`, and a callout written with a fold marker carries it as `data-fold` (#28).
+
+### Fixed
+
+- The footnotes of a note an embed cuts keep the space above them that the section of any note takes; drawn in a pass of their own, they lost it to the rule that takes the top margin off a run's first block (#32).
+- The comparison's reference page keeps MemorySmith's pane within a phone's width, as MemorySmith's application does, where a long line of code used to widen it (#32).
 
 ## [0.1.2] - 2026-10-13
 

@@ -42,6 +42,19 @@ up beats improving any of them.
 The budget for a month is $$B = (1 - A) \times 43200$$ minutes, and an RTO
 larger than $B$ means the objective is unreachable in a single incident.[^budget]
 
+The objective is stored where the monitor reads it, and that file, not this
+page, is what an alert compares against:
+
+```json
+{
+  "service": "payments",
+  "rto_minutes": 30,
+  "rpo_seconds": 30,
+  "measured_from": "detection",
+  "agreed_at": "2026-01-20"
+}
+```
+
 Anything ==agreed above four hours== needs a written waiver, because it stops
 being a technical target and becomes a commercial one.
 
