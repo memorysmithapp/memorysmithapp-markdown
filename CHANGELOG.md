@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Added
 
 - Themes: `defineTheme` and a `theme` prop that takes a theme a host writes in its own project, at three levels it may mix — properties written on the root as `--markdown-*`, now naming every value the stylesheet reads, metrics, headings, quotations, tables and callout icons included; its own CSS, scoped by the root class `markdown-theme-<name>`; and twelve slots, React components called with the notation already interpreted — with `scheme` choosing light or dark. MemorySmith's look is the theme `default`, and `theme="light"` and `theme="dark"` keep meaning it (#28).
@@ -73,7 +75,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/releases/tag/v0.1.0
