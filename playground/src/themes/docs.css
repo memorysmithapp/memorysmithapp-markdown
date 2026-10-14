@@ -1,0 +1,134 @@
+/* The `docs` example theme: everything here is under `.markdown-theme-docs`, the class the root
+   of a note drawn in this theme carries, so nothing reaches the page around it. */
+
+.markdown-theme-docs {
+  --docs-text: #1f2328;
+  --docs-soft: #59636e;
+  --docs-line: #d1d9e0;
+  --docs-fill: #f6f8fa;
+  --docs-accent: #0969da;
+  /* A theme's CSS may set the default theme's properties too: the paper and the ink. */
+  --markdown-bg: #ffffff;
+  --markdown-text: var(--docs-text);
+  --markdown-text-soft: var(--docs-soft);
+  --markdown-border: var(--docs-line);
+  --markdown-code-bg: var(--docs-fill);
+}
+.markdown-theme-docs[data-theme='dark'] {
+  --docs-text: #e6edf3;
+  --docs-soft: #9198a1;
+  --docs-line: #3d444d;
+  --docs-fill: #151b23;
+  --docs-accent: #4493f8;
+  --markdown-bg: #0d1117;
+}
+
+.markdown-theme-docs a {
+  color: var(--docs-accent);
+}
+
+/* Headings stand on a rule, the way documentation sections do. */
+.markdown-theme-docs :is(h1, h2):not(.footnotes-label) {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--docs-line);
+  color: var(--docs-text);
+}
+.markdown-theme-docs h1 {
+  font-size: 2em;
+}
+.markdown-theme-docs h2 {
+  font-size: 1.5em;
+}
+
+/* Tables: a filled header, zebra rows, no outer heavy rule. */
+.markdown-theme-docs table {
+  display: table;
+  width: 100%;
+}
+.markdown-theme-docs :is(th, td) {
+  padding: 6px 13px;
+  border: 1px solid var(--docs-line);
+}
+.markdown-theme-docs th {
+  background: var(--docs-fill);
+  border-bottom: 1px solid var(--docs-line);
+}
+.markdown-theme-docs tbody tr:nth-child(even) {
+  background: var(--docs-fill);
+}
+
+/* Code: a filled span, and a block without a border. */
+.markdown-theme-docs :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  background: var(--docs-fill);
+  color: var(--docs-text);
+}
+.markdown-theme-docs .code-block {
+  border: 0;
+  border-radius: 6px;
+  background: var(--docs-fill);
+}
+
+/* Quotations and embeds in the soft ink, ruled in the line colour. */
+.markdown-theme-docs blockquote {
+  border-inline-start: 0.25em solid var(--docs-line);
+  color: var(--docs-soft);
+}
+.markdown-theme-docs .embed {
+  border-inline-start-color: var(--docs-line);
+}
+
+/* Callouts as admonitions: a rule on the left in the callout's colour, a plain field. */
+.markdown-theme-docs .callout {
+  background: none;
+  border-radius: 0;
+  border-inline-start: 0.25em solid rgb(var(--callout-color));
+  padding: 0.5rem 1rem;
+}
+
+/* The frontmatter, restyled by CSS alone: the name is a page heading on a rule, the properties a
+   bordered table with no fold, and tags square badges. */
+.markdown-theme-docs .note-title {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--docs-line);
+  font-family: var(--markdown-font-sans);
+  font-size: 2.25em;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.markdown-theme-docs .properties-box {
+  padding: 0;
+  border-bottom: 0;
+}
+.markdown-theme-docs .properties-box summary {
+  display: none;
+}
+.markdown-theme-docs .metadata-container {
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--docs-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.markdown-theme-docs .metadata-property :is(.metadata-property-key, .metadata-property-value) {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--docs-line);
+}
+.markdown-theme-docs .metadata-property:last-child :is(.metadata-property-key, .metadata-property-value) {
+  border-bottom: 0;
+}
+.markdown-theme-docs .metadata-property-key {
+  background: var(--docs-fill);
+  font-weight: 600;
+  color: var(--docs-text);
+}
+.markdown-theme-docs .metadata-property-key::before {
+  display: none;
+}
+.markdown-theme-docs .prop-tag {
+  border: 1px solid var(--docs-line);
+  border-radius: 4px;
+  background: var(--docs-fill);
+  font-family: var(--markdown-font-sans);
+}

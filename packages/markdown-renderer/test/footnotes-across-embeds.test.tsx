@@ -84,9 +84,12 @@ describe('a footnote across an embed', () => {
     const children = [...note.container.querySelector(':scope > .markdown')!.children];
     const section = children.findIndex((child) => child.querySelector('section[data-footnotes]'));
     const embed = children.findIndex((child) => child.matches('figure.embed'));
-    expect(embed).toBe(1);
-    expect(section).toBe(2);
+    // After the title the default theme draws: the run, the embed, then the section.
+    expect(embed).toBe(2);
+    expect(section).toBe(3);
     expect(note.container.querySelectorAll('section[data-footnotes]')).toHaveLength(1);
+    // The pass continues the note, so the stylesheet keeps the section's space above it.
+    expect(children[section]!.classList.contains('footnotes-run')).toBe(true);
     note.unmount();
   });
 

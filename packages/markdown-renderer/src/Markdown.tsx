@@ -1,7 +1,6 @@
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import {
   isValidElement,
-  useRef,
   type AnchorHTMLAttributes,
   type HTMLAttributes,
   type ImgHTMLAttributes,
@@ -25,6 +24,7 @@ import { MermaidDiagram } from './MermaidDiagram.js';
 import { remarkCallouts } from './remark-callouts.js';
 import { remarkBlockIds, remarkComments, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
+import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import { ordinalAt } from './tasklist.js';
 
 /**
@@ -135,8 +135,9 @@ function Attachment({ name, width, height }: { name: string; width: number | nul
   return <>{host.renderAttachment({ name, width, height })}</>;
 }
 
-function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
+export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
   const host = useHost();
+  const wikilinkSlot = useSlot('wikilink');
   if (href?.startsWith('attachment:')) {
     /**
      * The address carries the dimension the pipe declared, after the encoded
@@ -156,11 +157,12 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
     return <Attachment name={name} width={measured?.width ?? null} height={measured?.height ?? null} />;
   }
   if (href?.startsWith('pending:')) {
-    return (
+    const pending = (label: ReactNode) => (
       <span className="wikilink-pending" title={host.strings.pendingLink}>
-        {children}
+        {label}
       </span>
     );
+    return wikilinkSlot ? drawSlot(wikilinkSlot, { pending: true, children, link: pending }) : pending(children);
   }
   // Refused by `followable`: the text stays on the page and stops being
   // something to click. An author sees they got nothing, which is the same
@@ -174,9 +176,16 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
   }
   // A target no single note answers by name opens its choice in place.
   const choice = choiceTargetOf(href);
-  if (choice !== null) return <LinkChoice target={choice}>{children}</LinkChoice>;
+  if (choice !== null) {
+    const link = (label: ReactNode) => <LinkChoice target={choice}>{label}</LinkChoice>;
+    if (!wikilinkSlot) return link(children);
+    return drawSlot(wikilinkSlot, { pending: host.reaches(choice) === 0, children, link });
+  }
   // An address of the host's own: its router draws it.
-  if (href.startsWith('/')) return <>{host.renderLink({ href, className: 'wikilink', children })}</>;
+  if (href.startsWith('/')) {
+    const link = (label: ReactNode) => <>{host.renderLink({ href, className: 'wikilink', children: label })}</>;
+    return wikilinkSlot ? drawSlot(wikilinkSlot, { pending: false, children, link }) : link(children);
+  }
   if (href.startsWith('#')) {
     return (
       <InPageAnchor href={href} {...rest}>
@@ -210,10 +219,13 @@ function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<Ancho
  * highlighter would otherwise breach it.
  */
 function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HTMLAttributes<HTMLElement>>) {
-  const { theme } = useHost();
+  const { scheme } = useHost();
+  const inBlock = useInBlock();
+  const inlineSlot = useSlot('inlineCode');
   if (className?.includes('language-mermaid')) {
-    return <MermaidDiagram code={String(children).trim()} theme={theme} />;
+    return <MermaidDiagram code={String(children).trim()} scheme={scheme} />;
   }
+  if (!inBlock && inlineSlot) return drawSlot(inlineSlot, { children });
 
   const language = highlightLanguage(className);
   if (language !== null) {
@@ -250,26 +262,38 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
  */
 function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPreElement>>) {
   const { strings } = useHost();
-  const ref = useRef<HTMLPreElement>(null);
+  const slot = useSlot('codeBlock');
   const code = (node as HastElement | undefined)?.children?.find((child) => child.tagName === 'code');
   const classes = code?.properties?.['className'];
   if (Array.isArray(classes) && classes.includes('language-mermaid')) {
     return <pre {...rest}>{children}</pre>;
   }
 
+  // The bytes as typed: the text of the fence, less the newline before its closing line.
+  const typed = textOf(code).replace(/\n$/, '');
+  const copy = <CopyButton className="code-copy" label={strings.copy} done={strings.copied} text={() => typed} />;
+  if (slot) {
+    const language = Array.isArray(classes)
+      ? (classes.map(String).find((name) => name.startsWith('language-'))?.slice('language-'.length) ?? null)
+      : null;
+    return <InBlock.Provider value>{drawSlot(slot, { language, code: typed, children, copy })}</InBlock.Provider>;
+  }
   return (
     <div className="code-block">
-      <pre ref={ref} {...rest}>
-        {children}
-      </pre>
-      <CopyButton
-        className="code-copy"
-        label={strings.copy}
-        done={strings.copied}
-        text={() => (ref.current?.querySelector('code')?.textContent ?? '').replace(/\n$/, '')}
-      />
+      <InBlock.Provider value>
+        <pre {...rest}>{children}</pre>
+      </InBlock.Provider>
+      {copy}
     </div>
   );
+}
+
+/** The text of a hast element, which for a fence is the code as typed. */
+function textOf(node: HastElement | undefined): string {
+  if (!node) return '';
+  const text = (node as { value?: unknown }).value;
+  if (typeof text === 'string') return text;
+  return (node.children ?? []).map(textOf).join('');
 }
 
 /** The hast element react-markdown hands a component, as much as is used. */
@@ -315,6 +339,7 @@ function TaskItem({
   toggleTask: ((ordinal: number) => void) | undefined;
   writable: boolean;
 }) {
+  const boxSlot = useSlot('taskBox');
   const element = node as HastElement | undefined;
   const checked = taskState(element);
   if (checked === null) {
@@ -328,12 +353,19 @@ function TaskItem({
   const offset = element?.position?.start?.offset;
   const ordinal = offset === undefined ? -1 : ordinalAt(source, offset);
   const enabled = writable && toggleTask !== undefined && ordinal >= 0;
+  const toggle = (): void => {
+    if (enabled) toggleTask(ordinal);
+  };
 
   return (
     // Our class comes LAST, because the one react-markdown passes in is on
     // `className` and spreading it after would silently take the item back.
     <li {...rest} className={`${className ?? ''} task-item`.trim()}>
-      <input type="checkbox" checked={checked} disabled={!enabled} onChange={() => enabled && toggleTask(ordinal)} />
+      {boxSlot ? (
+        drawSlot(boxSlot, { checked, enabled, toggle })
+      ) : (
+        <input type="checkbox" checked={checked} disabled={!enabled} onChange={toggle} />
+      )}
       {/* The box GFM already rendered is dropped: it is `disabled`, it answers
           to nothing, and two boxes in one item is worse than none. */}
       {dropBox(children)}
@@ -387,7 +419,9 @@ export function Markdown({ children, source, onToggleTask, writable = false, foo
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
 
   return (
-    <div className="markdown">
+    // The pass that draws a cut note's footnotes continues the note rather than opening a run,
+    // so its section keeps the space a section takes at the end of a note.
+    <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
         remarkPlugins={readingPlugins(calloutTitle)}
         // Raw HTML is NOT enabled, and its absence is the point: no
@@ -422,6 +456,11 @@ export function Markdown({ children, source, onToggleTask, writable = false, foo
           code: MarkdownCode,
           pre: MarkdownPre,
           img: MarkdownImage,
+          div: MarkdownDiv,
+          table: MarkdownTable,
+          blockquote: MarkdownBlockquote,
+          section: MarkdownSection,
+          ...headings,
           li: (props: LiProps) => (
             <TaskItem {...props} source={source ?? text} toggleTask={onToggleTask} writable={writable} />
           ),

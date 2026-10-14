@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
+### Added
+
+- Themes: `defineTheme` and a `theme` prop that takes a theme a host writes in its own project, at three levels it may mix — properties written on the root as `--markdown-*`, now naming every value the stylesheet reads, metrics, headings, quotations, tables and callout icons included; its own CSS, scoped by the root class `markdown-theme-<name>`; and twelve slots, React components called with the notation already interpreted — with `scheme` choosing light or dark. MemorySmith's look is the theme `default`, and `theme="light"` and `theme="dark"` keep meaning it (#28).
+- The stylesheet is `structure.css`, what every theme needs, and `theme-default.css`, MemorySmith's look; `styles.css` is the two together, as before (#28).
+- A note's frontmatter is drawn, as the theme decides: `NoteBody` reads it by the shapes of the specification (`readProperties`) and hands it to the theme's `properties` slot; the default theme draws `name` as the note's title and every other entry above the body — lists as chips, booleans in the reader's words, dates as written — with a `[[wikilink]]` in a value drawn as a link the host resolved. A theme whose slot draws nothing keeps a note's body alone, as MemorySmith's page does (#29). The default theme draws it as MemorySmith's note page does — the title always, *Unnamed note* when there is none, and a block that folds under *Properties*, with no card, the reserved keys first, an icon per key by the shape of its value, MemorySmith's chips, dates in the reader's locale (`strings.locale`), and Markdown links and web addresses in values as links, with each key's icon on the key's first line when its value wraps, where MemorySmith's page centres it on the row (#34) — and the comparison with MemorySmith now covers the title and the properties and finds them identical (#30).
+- The playground picks the theme and the scheme in its sidebar and its address, among the default theme and three example themes that live only there: `sepia`, properties alone; `docs`, its own CSS; and `terminal`, slots with icons from `lucide-react`; each draws the note's title and properties its own way, `terminal` as the YAML it is (#28, #29).
+
+### Changed
+
+- The demonstration notebooks show code and footnotes where each would write them: `sql`, `bash`, `diff`, `yaml` and `json` in the payments runbook and objective, `python` and `yaml` in the red-wine protocol (the `yaml` inside a callout), a `promql` fence the renderer draws as typed, fences with no language, and several footnotes per note, one cited twice and a numeric label cited before a smaller one (#32).
+- The demonstration notes and the `TEMPLATE.md` of each folder start their body at a first-level heading, under the title `name:` gives, since a body may start at any level; the five notes that already started at `#` keep showing that a heading never names a note (#31).
+- `NoteBody` no longer leaves the frontmatter off the page: decision 4 of #1 is superseded for it by ADR-004, and a host that already draws properties gives a theme whose `properties` slot draws nothing (#29).
+- The root of a note carries the class `markdown-theme-<name>` beside `markdown`, and a callout written with a fold marker carries it as `data-fold` (#28).
+
+### Fixed
+
+- The footnotes of a note an embed cuts keep the space above them that the section of any note takes; drawn in a pass of their own, they lost it to the rule that takes the top margin off a run's first block (#32).
+- The comparison's reference page keeps MemorySmith's pane within a phone's width, as MemorySmith's application does, where a long line of code used to widen it (#32).
+
 ## [0.1.2] - 2026-10-13
 
 ### Fixed
@@ -54,7 +75,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/releases/tag/v0.1.0

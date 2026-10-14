@@ -21,7 +21,7 @@ tardia é o problema e não a virtude.
 > A colheita cai em fevereiro, que é o mês de chuva. O protocolo de
 > [[Vinificação em tinto]] existe por causa disso.
 
-## O que medir
+# O que medir
 
 O indicador que decide a data é o [[Índice de Polifenóis Totais|IPT]], lido
 semanalmente a partir do véraison. A leitura e o cálculo estão em
@@ -30,7 +30,7 @@ semanalmente a partir do véraison. A leitura e o cálculo estão em
 O açúcar sozinho engana: uma leitura de $22$ °Brix com IPT baixo é uma uva
 madura por fora e verde por dentro. ^brix-engana
 
-## Na Serra Gaúcha
+# Na Serra Gaúcha
 
 O que a safra de 2026 mostrou está em
 [a caderneta da safra](../Safras/Safra 2026 · Serra Gaúcha.md), e a ficha
@@ -44,7 +44,7 @@ o vinho de guarda do vinho de mesa.
 %% Rever depois da safra 2027: dois blocos do Vale dos Vinhedos vieram com
 IPT 15% maior e nenhuma mudança de manejo explica. %%
 
-## O que não é lido aqui
+# O que não é lido aqui
 
 - Escrever #tinta no meio do texto parece arquivar esta nota em algum lugar.
   Não arquiva: é texto comum. O assunto mora em `tags:` acima, e assunto que

@@ -1,9 +1,10 @@
 import { useEffect, useId, useState } from 'react';
+import { drawSlot, useSlot } from './slots.js';
 
 interface MermaidDiagramProps {
   readonly code: string;
-  /** The theme the host draws in, which picks Mermaid's own. */
-  readonly theme: 'light' | 'dark';
+  /** The scheme the note is drawn in, which picks Mermaid's own theme. */
+  readonly scheme: 'light' | 'dark';
 }
 
 /**
@@ -15,7 +16,7 @@ interface MermaidDiagramProps {
  * output, not note-derived HTML: Mermaid renders with its default `strict`
  * security level, which encodes the text of the diagram.
  */
-export function MermaidDiagram({ code, theme }: MermaidDiagramProps) {
+export function MermaidDiagram({ code, scheme }: MermaidDiagramProps) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [svg, setSvg] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -33,7 +34,7 @@ export function MermaidDiagram({ code, theme }: MermaidDiagramProps) {
         await document.fonts?.ready;
         mermaid.initialize({
           startOnLoad: false,
-          theme: theme === 'dark' ? 'dark' : 'neutral',
+          theme: scheme === 'dark' ? 'dark' : 'neutral',
           fontFamily: 'Inter, sans-serif',
           // SVG text labels measure reliably; HTML labels clip inside nodes
           // when the webfont metrics differ from the fallback.
@@ -62,15 +63,19 @@ export function MermaidDiagram({ code, theme }: MermaidDiagramProps) {
     return () => {
       alive = false;
     };
-  }, [code, id, theme]);
+  }, [code, id, scheme]);
 
-  if (failed) {
-    return (
+  const slot = useSlot('diagram');
+  const state = failed ? 'failed' : svg ? 'ready' : 'loading';
+  const drawn =
+    state === 'failed' ? (
       <pre>
         <code>{code}</code>
       </pre>
+    ) : state === 'ready' ? (
+      <div className="mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg ?? '' }} />
+    ) : (
+      <div className="mermaid-diagram mermaid-loading" />
     );
-  }
-  if (!svg) return <div className="mermaid-diagram mermaid-loading" />;
-  return <div className="mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />;
+  return slot ? drawSlot(slot, { source: code, state, children: drawn }) : drawn;
 }

@@ -1,0 +1,57 @@
+/*
+ * What every theme needs, whatever it looks like: the reading surface working
+ * before it is drawn in anybody's colours. A theme that draws everything
+ * itself imports this file alone; `styles.css` is this file and the default
+ * theme, `theme-default.css`, together.
+ *
+ * Every selector is under `.markdown`, so the package styles the note and
+ * never the page. Nothing here reads a colour, a face or a metric.
+ */
+
+.markdown,
+.markdown *,
+.markdown *::before,
+.markdown *::after {
+  box-sizing: border-box;
+}
+
+.markdown img {
+  max-width: 100%;
+}
+
+.markdown .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* The visible line went away; the word has to stay for whoever hears it. */
+.markdown .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* An icon a theme draws as an element takes the place of the one the
+   stylesheet draws as a mask, at the size of the title it sits in. */
+.markdown .callout-title.has-icon::before {
+  display: none;
+}
+.markdown .callout-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-top: 0.1em;
+}
+.markdown .callout-icon > svg {
+  width: 100%;
+  height: 100%;
+}

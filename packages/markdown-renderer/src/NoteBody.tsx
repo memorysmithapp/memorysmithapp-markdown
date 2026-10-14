@@ -3,7 +3,10 @@ import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
 import { Markdown, readingPlugins } from './Markdown.js';
 import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
+import { readProperties } from './properties.js';
+import { Properties } from './PropertiesBlock.js';
 import { taskBoxes } from './tasklist.js';
+import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './transclusion.js';
 import { wikilinkAddress } from './wikilink-address.js';
@@ -28,9 +31,10 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
     // Every member of the contract, so a host that passes the same functions keeps the same host.
     HOST_KEYS.map((key) => (host as NoteHost)[key]),
   );
-  // Frontmatter is shown as properties, not as prose, so the reading surface
-  // starts after it. Everything below counts task items from there.
+  // The frontmatter is drawn apart from the body, as the theme decides, so the
+  // runs start after it. Everything below counts task items from there.
   const split = bodyStart(markdown);
+  const properties = useMemo(() => readProperties(markdown), [markdown]);
   const body = markdown.slice(split);
 
   // The body is cut into runs of text and the embeds between them; each run
@@ -99,7 +103,13 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
     <HostProvider value={resolved}>
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
-      <div className="markdown" data-theme={resolved.theme}>
+      <div
+        className={`markdown markdown-theme-${resolved.theme.name}`}
+        data-theme={resolved.scheme}
+        style={rootStyle(resolved.theme, resolved.scheme)}
+      >
+        {/* The frontmatter is content: read here, drawn as the theme decides. */}
+        <Properties properties={properties} />
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
             return <Transclusion key={index} target={segment.target} anchor={segment.anchor} />;

@@ -77,11 +77,12 @@ describe('a box that cannot be written is disabled, and only then', () => {
 });
 
 describe('the boxes keep their place around the rest of the surface', () => {
-  it('counts past the frontmatter, which is shown as properties and not as prose', () => {
+  it('counts past the frontmatter, which is drawn as properties and not as prose', () => {
     const html = render(`---\nmaturity: evergreen\n---\n\n${CHECKLIST}`);
 
     expect((html.match(/type="checkbox"/g) ?? []).length).toBe(2);
-    expect(html).not.toContain('maturity');
+    expect(html).toContain('<span class="metadata-property-key">maturity</span><span class="metadata-property-value">evergreen</span>');
+    expect(html.slice(html.indexOf('</details>'))).not.toContain('maturity');
   });
 
   it('does not read a box written inside a code fence', () => {

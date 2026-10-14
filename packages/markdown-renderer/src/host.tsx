@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings } from './strings.js';
+import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 
 /**
  * The host contract: everything the renderer needs from the notebook a note lives in, given by
@@ -63,8 +64,17 @@ export interface NoteHost {
   readonly renderLink?: (link: LinkRequest) => ReactNode;
   /** The words the page shows, in the reader's language; each one left out is MemorySmith's English. */
   readonly strings?: Partial<NoteStrings>;
-  /** The theme the host draws in, which picks the theme of a Mermaid diagram. Defaults to `light`. */
-  readonly theme?: 'light' | 'dark';
+  /**
+   * How the note looks: a theme (`defineTheme`), or `light` or `dark`, which are the default
+   * theme — MemorySmith's look — in that scheme. Defaults to the default theme.
+   */
+  readonly theme?: Scheme | Theme;
+  /**
+   * The scheme a theme is drawn in, which also picks the theme of a Mermaid diagram. Defaults to
+   * the scheme `theme` names when it is `light` or `dark`, and to `light` otherwise; a theme of one
+   * scheme is drawn in it whatever is asked.
+   */
+  readonly scheme?: Scheme;
   /**
    * Whether a note that fetched images from other sites says so, naming them, under the body
    * (§7.10). Defaults to `true`: the specification forbids only silence. A host that discloses it
@@ -134,6 +144,7 @@ export const HOST_KEYS = Object.keys({
   renderLink: 1,
   strings: 1,
   theme: 1,
+  scheme: 1,
   remoteNotice: 1,
 } satisfies Record<keyof NoteHost, 1>) as (keyof NoteHost)[];
 
@@ -150,7 +161,10 @@ export interface ResolvedHost {
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
-  readonly theme: 'light' | 'dark';
+  /** The theme the note is drawn in. */
+  readonly theme: Theme;
+  /** The scheme it is drawn in. */
+  readonly scheme: Scheme;
 }
 
 const nothing = (): null => null;
@@ -160,6 +174,13 @@ const plainLink = ({ href, className, children }: LinkRequest): ReactNode => (
     {children}
   </a>
 );
+
+function themeOf(host: NoteHost): { theme: Theme; scheme: Scheme } {
+  const given = host.theme ?? DEFAULT_THEME;
+  const theme = typeof given === 'string' ? DEFAULT_THEME : given;
+  const asked = host.scheme ?? (typeof given === 'string' ? given : 'light');
+  return { theme, scheme: schemeOf(theme, asked) };
+}
 
 export function resolveHost(host: NoteHost): ResolvedHost {
   const resolve = host.resolve ?? nothing;
@@ -175,7 +196,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),
-    theme: host.theme ?? 'light',
+    ...themeOf(host),
   };
 }
 

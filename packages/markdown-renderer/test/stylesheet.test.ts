@@ -10,7 +10,11 @@ import { describe, expect, it } from 'vitest';
 import { html } from './render.js';
 
 const PACKAGE = resolve(__dirname, '..');
-const css = readFileSync(resolve(PACKAGE, 'styles.css'), 'utf8');
+// The default theme as `styles.css` assembles it: what every theme needs, then its look.
+const entry = readFileSync(resolve(PACKAGE, 'styles.css'), 'utf8');
+const css = [...entry.matchAll(/@import '\.\/([\w-]+\.css)';/g)]
+  .map((match) => readFileSync(resolve(PACKAGE, match[1]!), 'utf8'))
+  .join('\n');
 
 /** The selectors of every style rule, with at-rules opened and keyframes skipped. */
 function selectors(text: string): string[] {
@@ -57,6 +61,13 @@ function selectors(text: string): string[] {
 describe('the stylesheet', () => {
   const all = selectors(css);
 
+  it('is the structure and the default theme, in that order', () => {
+    expect([...entry.matchAll(/@import '\.\/([\w-]+\.css)';/g)].map((match) => match[1])).toEqual([
+      'structure.css',
+      'theme-default.css',
+    ]);
+  });
+
   it('has rules to check, so an empty parse cannot pass', () => {
     expect(all.length).toBeGreaterThan(100);
   });
@@ -78,6 +89,11 @@ describe('the stylesheet', () => {
     for (const property of publicProperties) expect(architecture, property).toContain(`\`${property}\``);
   });
 
+  it("keeps a property key at its own height, so its icon sits on the key's first line", () => {
+    const rule = /\.markdown \.metadata-property-key \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
+    expect(rule).toContain('align-self: start;');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {
@@ -88,7 +104,7 @@ describe('the stylesheet', () => {
 
 describe('the root of a note', () => {
   it('carries the theme the host draws in', () => {
-    expect(html('x')).toMatch(/^<div class="markdown" data-theme="light">/);
-    expect(html('x', { theme: 'dark' })).toMatch(/^<div class="markdown" data-theme="dark">/);
+    expect(html('x')).toMatch(/^<div class="markdown markdown-theme-default" data-theme="light">/);
+    expect(html('x', { theme: 'dark' })).toMatch(/^<div class="markdown markdown-theme-default" data-theme="dark">/);
   });
 });

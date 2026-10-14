@@ -10,6 +10,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { hostOf } from '../src/notebooks.js';
+import { schemesOf, THEMES } from '../src/themes/index.js';
 import { readNotebooks } from './notebook-files.js';
 
 vi.mock('mermaid', () => ({
@@ -66,6 +67,35 @@ describe.each(notebooks.map((notebook) => [notebook.slug, notebook] as const))('
       expect(container.querySelector('.skeleton-region'), 'an embed is still loading').toBeNull();
       expect(errors).toEqual([]);
       container.remove();
+    }
+  });
+});
+
+describe.each(THEMES.map((entry) => [entry.theme.name, entry] as const))('the theme %s', (name, entry) => {
+  it('draws every note of both notebooks in each of its schemes, with no error', async () => {
+    for (const notebook of notebooks) {
+      for (const note of notebook.notes) {
+        for (const scheme of schemesOf(entry)) {
+          errors.length = 0;
+          const container = await draw(
+            <NoteBody
+              markdown={note.markdown}
+              {...hostOf(notebook, (file) => `/assets/${file}`)}
+              theme={entry.theme}
+              scheme={scheme}
+              writable
+              onToggleTask={() => undefined}
+            />,
+          );
+          const root = container.querySelector(':scope > .markdown');
+          expect(root?.classList.contains(`markdown-theme-${name}`), note.path).toBe(true);
+          expect(root?.getAttribute('data-theme')).toBe(scheme);
+          expect(root?.textContent?.trim().length).toBeGreaterThan(0);
+          expect(container.querySelector('.embed-pending'), 'an embed is pending').toBeNull();
+          expect(errors, `${note.path} in ${scheme}`).toEqual([]);
+          container.remove();
+        }
+      }
     }
   });
 });

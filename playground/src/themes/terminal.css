@@ -1,0 +1,120 @@
+/* The `terminal` example theme's own CSS, for the elements its components draw. Everything is
+   under `.markdown-theme-terminal`. */
+
+.markdown-theme-terminal .term-hashes {
+  color: var(--markdown-text-soft);
+}
+
+.markdown-theme-terminal .term-callout {
+  margin-block: 1rem;
+  border: 1px solid rgb(var(--callout-color, 126, 231, 135));
+}
+.markdown-theme-terminal .term-callout header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px dashed currentcolor;
+  color: #0b0f0c;
+  background: #7ee787;
+  font-weight: 600;
+}
+.markdown-theme-terminal .term-callout[data-kind='warning'] header,
+.markdown-theme-terminal .term-callout[data-kind='caution'] header,
+.markdown-theme-terminal .term-callout[data-kind='question'] header {
+  background: #e3b341;
+}
+.markdown-theme-terminal .term-callout[data-kind='danger'] header,
+.markdown-theme-terminal .term-callout[data-kind='failure'] header,
+.markdown-theme-terminal .term-callout[data-kind='error'] header,
+.markdown-theme-terminal .term-callout[data-kind='bug'] header {
+  background: #ff7b72;
+}
+.markdown-theme-terminal .term-callout-icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+}
+.markdown-theme-terminal .term-callout-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.markdown-theme-terminal .term-callout-body {
+  padding: 0.25rem 0.75rem;
+}
+.markdown-theme-terminal .term-callout-body > :first-child {
+  margin-top: 0.5rem;
+}
+.markdown-theme-terminal .term-callout-body > :last-child {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-theme-terminal .term-code {
+  margin-block: 1rem;
+  border: 1px solid #1f3324;
+  background: #0f1611;
+}
+.markdown-theme-terminal .term-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border-bottom: 1px solid #1f3324;
+  color: #6fa77a;
+  font-size: 0.8rem;
+}
+.markdown-theme-terminal .term-code-bar .code-copy {
+  position: static;
+  color: #c8f7d0;
+  border-color: #1f3324;
+  background: #111812;
+}
+.markdown-theme-terminal .term-code pre {
+  margin: 0;
+}
+
+.markdown-theme-terminal .term-box {
+  margin-inline-end: 0.5em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #7ee787;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown-theme-terminal .term-box:disabled {
+  color: #4b6b52;
+  cursor: default;
+}
+
+/* A wikilink is an arrow and a name, never bold. */
+.markdown-theme-terminal .wikilink {
+  font-weight: 400;
+}
+
+/* The frontmatter, drawn by the theme's `properties` slot as YAML. */
+.markdown-theme-terminal .term-front {
+  margin: 0 0 1.5rem;
+  border: 1px solid #1f3324;
+  background: #0f1611;
+}
+.markdown-theme-terminal .term-front-prompt {
+  padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid #1f3324;
+  color: #6fa77a;
+  font-size: 0.8rem;
+}
+.markdown-theme-terminal .term-front pre {
+  margin: 0;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  font-family: var(--markdown-font-mono);
+  font-size: 0.875em;
+}
+.markdown-theme-terminal .term-key {
+  color: #79c0ff;
+}
+.markdown-theme-terminal .term-name {
+  color: #f0f6fc;
+  font-weight: 600;
+}

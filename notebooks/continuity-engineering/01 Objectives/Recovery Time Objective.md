@@ -6,6 +6,7 @@ type: objective
 maturity: evergreen
 reviewed: true
 scope: payments
+runbook: "[[Failing over the payments database]]"
 source: Continuity policy 4.2
 author: Continuity Engineering
 created: 2026-01-12
@@ -21,7 +22,7 @@ whoever owns the service, never proposed by whoever restores it.
 > Until the failover in [[Failing over the payments database]] has been run
 > against it, the number is a target and not a capability.
 
-## How it is stated
+# How it is stated
 
 Always in wall-clock minutes, from the moment of detection and not from the
 moment of decision. The gap between those two is where most of the budget goes,
@@ -31,7 +32,7 @@ The paired figure is [[Recovery Point Objective|the RPO]], and the two are set
 together: an aggressive RTO with a loose RPO restores a service quickly to a
 state nobody wants. ^rto-and-rpo
 
-## What it costs
+# What it costs
 
 Availability is what the objective buys, and it is arithmetic before it is
 engineering. For a service of $n$ independent components each with availability
@@ -41,13 +42,26 @@ up beats improving any of them.
 The budget for a month is $$B = (1 - A) \times 43200$$ minutes, and an RTO
 larger than $B$ means the objective is unreachable in a single incident.[^budget]
 
+The objective is stored where the monitor reads it, and that file, not this
+page, is what an alert compares against:
+
+```json
+{
+  "service": "payments",
+  "rto_minutes": 30,
+  "rpo_seconds": 30,
+  "measured_from": "detection",
+  "agreed_at": "2026-01-20"
+}
+```
+
 Anything ==agreed above four hours== needs a written waiver, because it stops
 being a technical target and becomes a commercial one.
 
 %% The 2027 policy revision moves this to two hours. Do not write it here
 until it is signed. %%
 
-## What is not read here
+# What is not read here
 
 - A subject written in the body as #continuity looks like it files this note
   somewhere. It does not: it is plain text. Subjects live in `tags:` above, and

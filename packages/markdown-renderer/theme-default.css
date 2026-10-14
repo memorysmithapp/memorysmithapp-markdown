@@ -1,0 +1,998 @@
+/*
+ * The default theme: MemorySmith's reading surface, every rule of MemorySmith's
+ * own stylesheet that draws the body of a note, and nothing else.
+ *
+ * Every selector is under `.markdown`, so the package styles the note and
+ * never the page. The root of a note — the `.markdown` element `NoteBody`
+ * draws, which carries `data-theme` with the scheme — is where the values are
+ * set, from the public custom properties `--markdown-*`. A theme's
+ * `properties` are written there by the renderer, and a host may set them on
+ * the root or on any ancestor too; each one left unset takes MemorySmith's
+ * value, in the light or the dark scheme. Every value a rule here reads is one
+ * of them, metrics included, so a theme of properties alone needs no CSS.
+ *
+ * `structure.css` holds what every theme needs whatever it looks like;
+ * `styles.css` is the two together.
+ *
+ * The faces are Inter (400, 600) and Space Grotesk (500, 700), which the host
+ * loads; KaTeX's own stylesheet, `katex/dist/katex.min.css`, is the host's to
+ * import beside this one.
+ */
+
+/* ── The values, at the root of a note ──────────────────────────────────────
+   Brand tokens from the MemorySmith.app brand book. Palette: Azul cofre
+   #0F56D7 (structure) · Laranja sinal #FF8A2B (capture) · Verde nó #16A34A
+   (connection) · Tinta #0E1526 (text) · Fundo escuro #0B1220 (dark mode) ·
+   Papel #EDEFEC (background). The dark theme draws in the light tones of the
+   version "Cor escuro". */
+.markdown[data-theme] {
+  --ms-bg: var(--markdown-bg, #edefec);
+  --ms-surface: var(--markdown-surface, #ffffff);
+  --ms-border: var(--markdown-border, #dce0da);
+  --ms-text: var(--markdown-text, #0e1526);
+  --ms-text-soft: var(--markdown-text-soft, #545d73);
+  --ms-accent: var(--markdown-accent, #0f56d7);
+  --ms-pending: var(--markdown-pending, #a6ab9f);
+  --ms-code-bg: var(--markdown-code-bg, #f4f5f2);
+  /* Muted, as the default theme sets inline code: the soft text of the
+     surface. Inline code has no fill, so it sits on the paper or on the tint
+     of a callout, and the soft text holds 4.86:1 on the palest of those. */
+  --ms-code-color: var(--markdown-code-color, var(--ms-text-soft));
+  /* Syntax tokens, drawn from the brand palette rather than from a theme
+     somebody else shipped: the blue of structure for what a language reserves,
+     the green of connection for a literal value, and the orange of capture for
+     the one thing an eye should catch in a block, which is a string. A comment
+     is the soft text of the surface. All four are checked against the code
+     background for 4.5:1, because a token nobody can read is decoration. */
+  --ms-token-keyword: var(--markdown-token-keyword, #0f56d7);
+  --ms-token-string: var(--markdown-token-string, #b4541a);
+  --ms-token-number: var(--markdown-token-number, #157a3a);
+  --ms-token-comment: var(--markdown-token-comment, #646c7f);
+  --ms-token-punctuation: var(--markdown-token-punctuation, #4e566b);
+  /* The callout hues, as RGB triplets so a tint can be laid at any alpha. They
+     are semantic and not decorative: blue informs, green confirms, amber
+     warns, red stops. They start from the brand's own, and each is taken down
+     in lightness, at its own hue and saturation, until the title clears 4.5:1
+     against the tinted field it sits on. */
+  --ms-callout-info: var(--markdown-callout-info, 15, 86, 215);
+  --ms-callout-idea: var(--markdown-callout-idea, 14, 109, 102);
+  --ms-callout-done: var(--markdown-callout-done, 15, 111, 51);
+  --ms-callout-warn: var(--markdown-callout-warn, 158, 71, 0);
+  --ms-callout-stop: var(--markdown-callout-stop, 180, 35, 24);
+  --ms-callout-aside: var(--markdown-callout-aside, 109, 40, 217);
+  --ms-callout-quote: var(--markdown-callout-quote, 84, 93, 115);
+  --ms-font-sans: var(--markdown-font-sans, 'Inter', 'Segoe UI', system-ui, sans-serif);
+  --ms-font-display: var(--markdown-font-display, 'Space Grotesk', 'Segoe UI', system-ui, sans-serif);
+  --ms-font-mono: var(--markdown-font-mono, ui-monospace, 'Cascadia Code', Consolas, monospace);
+  --ms-radius: var(--markdown-radius, 8px);
+  --ms-radius-large: var(--markdown-radius-large, 12px);
+
+  --ms-font-heading: var(--markdown-font-heading, var(--ms-font-sans));
+
+  /* The metrics of the reading surface: the default theme of the desktop vault
+     editors. 700px of text is its readable line length. */
+  --ms-font-size: var(--markdown-font-size, 1rem);
+  --ms-p-spacing: var(--markdown-paragraph-spacing, 1rem);
+  --ms-heading-spacing: var(--markdown-heading-spacing, calc(var(--ms-p-spacing) * 2.5));
+  --ms-list-indent: var(--markdown-list-indent, 2em);
+  --ms-list-spacing: var(--markdown-list-spacing, 0.075em);
+  --ms-line-height-normal: var(--markdown-line-height, 1.5);
+  --ms-line-height-tight: var(--markdown-line-height-tight, 1.3);
+  --ms-root-line-height: var(--markdown-root-line-height, 1.45);
+  --ms-heading-weight: var(--markdown-heading-weight, 600);
+  --ms-heading-color: var(--markdown-heading-color, currentcolor);
+  --ms-h1-size: var(--markdown-h1-size, 1.802em);
+  --ms-h2-size: var(--markdown-h2-size, 1.602em);
+  --ms-h3-size: var(--markdown-h3-size, 1.424em);
+  --ms-h4-size: var(--markdown-h4-size, 1.266em);
+  --ms-h5-size: var(--markdown-h5-size, 1.125em);
+  --ms-h6-size: var(--markdown-h6-size, 1em);
+  --ms-h1-weight: var(--markdown-h1-weight, 700);
+  --ms-h6-color: var(--markdown-h6-color, var(--ms-text-soft));
+
+  /* Code, quotations, tables and embeds, each from the palette above unless a
+     theme names its own. */
+  --ms-code-border: var(--markdown-code-border, var(--ms-border));
+  --ms-inline-code-bg: var(--markdown-inline-code-bg, transparent);
+  --ms-inline-code-padding: var(--markdown-inline-code-padding, 0);
+  --ms-quote-border-color: var(--markdown-quote-border-color, var(--ms-border));
+  --ms-quote-border-width: var(--markdown-quote-border-width, 2px);
+  --ms-quote-color: var(--markdown-quote-color, currentcolor);
+  --ms-table-border: var(--markdown-table-border, var(--ms-border));
+  --ms-table-cell-padding: var(--markdown-table-cell-padding, 4px 8px);
+  --ms-table-header-bg: var(--markdown-table-header-bg, transparent);
+  --ms-table-header-rule: var(--markdown-table-header-rule, 2px solid var(--ms-text-soft));
+  --ms-table-stripe-bg: var(--markdown-table-stripe-bg, transparent);
+  --ms-table-hover-bg: var(--markdown-table-hover-bg, var(--ms-code-bg));
+  --ms-embed-rule: var(--markdown-embed-rule, var(--ms-accent));
+
+  /* The frontmatter, drawn above the body as MemorySmith's note page draws it:
+     the name as the title, in the face and at the size of a first heading, and
+     the properties in a block that folds, under a rule. */
+  --ms-title-font: var(--markdown-title-font, var(--ms-font-heading));
+  --ms-title-size: var(--markdown-title-size, var(--ms-h1-size));
+  --ms-title-weight: var(--markdown-title-weight, 700);
+  --ms-title-color: var(--markdown-title-color, currentcolor);
+  --ms-properties-rule: var(--markdown-properties-rule, 1px solid var(--ms-border));
+  --ms-properties-label-font: var(--markdown-properties-label-font, var(--ms-font-display));
+  --ms-properties-label-color: var(--markdown-properties-label-color, var(--ms-text-soft));
+  --ms-properties-key-color: var(--markdown-properties-key-color, var(--ms-text-soft));
+  --ms-chip-font: var(--markdown-chip-font, var(--ms-font-display));
+  --ms-chip-bg: var(--markdown-chip-bg, var(--ms-border));
+  --ms-chip-color: var(--markdown-chip-color, var(--ms-text));
+  /* The icon of a property's key, by the shape of its value: the Lucide set
+     MemorySmith's page draws them with. */
+  --ms-icon-property-text: var(--markdown-icon-property-text, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 12H3'/%3E%3Cpath d='M17 18H3'/%3E%3Cpath d='M21 6H3'/%3E%3C/svg%3E"));
+  --ms-icon-property-list: var(--markdown-icon-property-list, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13'/%3E%3Cpath d='M8 12h13'/%3E%3Cpath d='M8 18h13'/%3E%3Cpath d='M3 6h.01'/%3E%3Cpath d='M3 12h.01'/%3E%3Cpath d='M3 18h.01'/%3E%3C/svg%3E"));
+  --ms-icon-property-date: var(--markdown-icon-property-date, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E"));
+  --ms-icon-property-boolean: var(--markdown-icon-property-boolean, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"));
+
+  /* The line icons a callout wears, as masks rather than images: one file per
+     shape, tinted at use by whatever colour the element already carries. They
+     are the Lucide set the reference theme draws with; a theme names its own
+     per family, as the icon properties, or draws them as elements. */
+  --ms-icon-pencil: var(--markdown-icon-note, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E"));
+  --ms-icon-info: var(--markdown-icon-info, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E"));
+  --ms-icon-clipboard: var(--markdown-icon-summary, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='2' width='8' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M8 11h8'/%3E%3Cpath d='M8 16h6'/%3E%3C/svg%3E"));
+  --ms-icon-flame: var(--markdown-icon-tip, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5Z'/%3E%3C/svg%3E"));
+  --ms-icon-check: var(--markdown-icon-success, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E"));
+  --ms-icon-question: var(--markdown-icon-question, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E"));
+  --ms-icon-alert: var(--markdown-icon-warning, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E"));
+  --ms-icon-cross: var(--markdown-icon-failure, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E"));
+  --ms-icon-zap: var(--markdown-icon-danger, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14Z'/%3E%3C/svg%3E"));
+  --ms-icon-list: var(--markdown-icon-example, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13'/%3E%3Cpath d='M8 12h13'/%3E%3Cpath d='M8 18h13'/%3E%3Cpath d='M3 6h.01'/%3E%3Cpath d='M3 12h.01'/%3E%3Cpath d='M3 18h.01'/%3E%3C/svg%3E"));
+  --ms-icon-quote: var(--markdown-icon-quote, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 21c3 0 7-1 7-8V5c0-1.25-.76-2.02-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .01-1 1.03V20c0 1 0 1 1 1Z'/%3E%3Cpath d='M15 21c3 0 7-1 7-8V5c0-1.25-.76-2.02-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1Z'/%3E%3C/svg%3E"));
+
+  /* The note is drawn on the paper, in the text face, as MemorySmith's page
+     draws it. */
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font-family: var(--ms-font-sans);
+}
+
+/* Dark: brand "Fundo escuro" #0B1220, Papel as text. */
+.markdown[data-theme='dark'] {
+  --ms-bg: var(--markdown-bg, #0b1220);
+  --ms-surface: var(--markdown-surface, #111a2c);
+  --ms-border: var(--markdown-border, #24304a);
+  --ms-text: var(--markdown-text, #edefec);
+  --ms-text-soft: var(--markdown-text-soft, #93a0ba);
+  --ms-accent: var(--markdown-accent, #4c8dff);
+  --ms-pending: var(--markdown-pending, #5d6880);
+  --ms-code-bg: var(--markdown-code-bg, #0e1728);
+  --ms-token-keyword: var(--markdown-token-keyword, #4c8dff);
+  --ms-token-string: var(--markdown-token-string, #f0a05a);
+  --ms-token-number: var(--markdown-token-number, #4fc07f);
+  --ms-token-comment: var(--markdown-token-comment, #7c89a3);
+  --ms-token-punctuation: var(--markdown-token-punctuation, #93a0ba);
+  --ms-callout-info: var(--markdown-callout-info, 76, 141, 255);
+  --ms-callout-idea: var(--markdown-callout-idea, 45, 212, 191);
+  --ms-callout-done: var(--markdown-callout-done, 74, 222, 128);
+  --ms-callout-warn: var(--markdown-callout-warn, 251, 191, 36);
+  --ms-callout-stop: var(--markdown-callout-stop, 248, 113, 113);
+  --ms-callout-aside: var(--markdown-callout-aside, 167, 139, 250);
+  --ms-callout-quote: var(--markdown-callout-quote, 147, 160, 186);
+  /* MemorySmith's track: the paper itself is the fill of a chip in the dark. */
+  --ms-chip-bg: var(--markdown-chip-bg, #1c2640);
+}
+
+/* ── What the page around a note gave it ────────────────────────────────────
+   On MemorySmith's page these came from the document; here they are scoped to
+   the note.
+
+   The root of a note is where MemorySmith's page had the document: the runs of
+   text are each a `.markdown` inside it, and an embed, a pending embed and the
+   notice of remote images sit beside them, outside any `.markdown`, under the
+   body's line height and with a paragraph's own margins. The root draws them
+   the same, which the rules on `.markdown[data-theme]` below are for. */
+.markdown[data-theme] {
+  line-height: var(--ms-root-line-height);
+  overflow-wrap: normal;
+}
+.markdown[data-theme] > p,
+.markdown .embed-body > p.embed-missing {
+  margin-block: 1em;
+}
+.markdown a {
+  color: var(--ms-accent);
+  text-decoration: none;
+}
+.markdown a:hover {
+  text-decoration: underline;
+}
+
+/* ── The reading surface ────────────────────────────────────────────────────
+   A note is read here the way the notebook that wrote it is read, so the
+   rendered Markdown follows the metrics of the default theme of the desktop
+   vault editors: its heading scale, its paragraph and list spacing, its quiet
+   blockquote, its code and table treatment and its callouts. What it does NOT
+   take is the palette: every colour comes from the brand book, wired into the
+   role the theme gives it. Headings are set in the text face, because what is
+   drawn here is the notebook's content, not the product's chrome. */
+.markdown {
+  font-size: var(--ms-font-size);
+  line-height: var(--ms-line-height-normal);
+  overflow-wrap: break-word;
+}
+
+.markdown :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--ms-font-heading);
+  font-weight: var(--ms-heading-weight);
+  color: var(--ms-heading-color);
+  line-height: var(--ms-line-height-tight);
+  letter-spacing: normal;
+  border: 0;
+  padding: 0;
+}
+.markdown h1 {
+  font-size: var(--ms-h1-size);
+  font-weight: var(--ms-h1-weight);
+}
+.markdown h2 {
+  font-size: var(--ms-h2-size);
+}
+.markdown h3 {
+  font-size: var(--ms-h3-size);
+}
+.markdown h4 {
+  font-size: var(--ms-h4-size);
+}
+.markdown h5 {
+  font-size: var(--ms-h5-size);
+}
+.markdown h6 {
+  font-size: var(--ms-h6-size);
+  color: var(--ms-h6-color);
+}
+
+/* The rhythm is prose's own: a heading stands two and a half paragraphs clear
+   of what came before and sits right on top of what follows. */
+.markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: var(--ms-heading-spacing) 0;
+}
+.markdown:not([data-theme], .footnotes-run) > :first-child {
+  margin-block-start: 0;
+}
+
+.markdown p {
+  margin-block: var(--ms-p-spacing);
+}
+.markdown ul,
+.markdown ol {
+  margin-block: var(--ms-p-spacing);
+  padding-inline-start: var(--ms-list-indent);
+}
+.markdown li {
+  margin-block: var(--ms-list-spacing);
+}
+/* A list inside a list, and a paragraph inside an item, are the same breath. */
+.markdown li > p,
+.markdown li :is(ul, ol) {
+  margin-block: 0;
+}
+.markdown li[class~='task-list-item'] {
+  list-style: none;
+}
+.markdown ul[class~='contains-task-list'] {
+  padding-inline-start: 0.4em;
+}
+.markdown input[type='checkbox'] {
+  margin-inline-end: 0.45em;
+  accent-color: var(--ms-accent);
+}
+
+/* A blockquote is a quotation and nothing more: a hairline and an indent, no
+   tint, no rounding, no italic. */
+.markdown blockquote {
+  margin: var(--ms-p-spacing) 0;
+  padding: 0 0 0 1.5em;
+  border: 0;
+  border-inline-start: var(--ms-quote-border-width) solid var(--ms-quote-border-color);
+  border-radius: 0;
+  background: none;
+  font-style: normal;
+  color: var(--ms-quote-color);
+}
+
+/* Footnotes (§7.12): the reference is a small raised number, and the notes are
+   gathered at the end of the note under a hairline, smaller and softer than the
+   text they serve. The label is a heading a reader sees, in their language. */
+.markdown sup:has(> a[data-footnote-ref]) {
+  line-height: 0;
+}
+.markdown a[data-footnote-ref] {
+  padding-inline: 0.1em;
+  font-size: 0.8em;
+  text-decoration: none;
+}
+.markdown section.footnotes {
+  margin-top: 2.5em;
+  padding-top: 0.75em;
+  border-top: 1px solid var(--ms-border);
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+.markdown .footnotes-label {
+  margin: 0 0 0.5em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ms-text-soft);
+}
+.markdown section.footnotes li p {
+  margin-block: 0.25em;
+}
+.markdown a.data-footnote-backref {
+  margin-inline-start: 0.35em;
+  text-decoration: none;
+}
+
+/* Inline code is told apart by its face and its colour, and nothing else: in
+   a sentence a fill only spots the paragraph. */
+.markdown code {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  color: var(--ms-code-color);
+  background: var(--ms-inline-code-bg);
+  padding: var(--ms-inline-code-padding);
+}
+/* A fenced block needs an edge, because the face alone does not say where it
+   starts and ends: a frame around a `pre` that scrolls and never wraps, and
+   the Copy button in its corner, which stays put while the content scrolls
+   under it. */
+.markdown .code-block {
+  position: relative;
+  margin-block: var(--ms-p-spacing);
+  border: 1px solid var(--ms-code-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-code-bg);
+}
+.markdown pre {
+  margin-block: var(--ms-p-spacing);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-size: 0.875em;
+  line-height: 1.45;
+}
+.markdown .code-block > pre {
+  margin: 0;
+  /* Room for the button, so the first line is never under it. */
+  padding-right: 6.5rem;
+}
+.markdown pre code {
+  background: none;
+  color: var(--ms-text);
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* The button that copies a block: MemorySmith's small button, on the surface. */
+.markdown .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  padding: 0 0.95rem;
+  border: 1px solid transparent;
+  border-radius: var(--ms-radius);
+  background: none;
+  font-family: var(--ms-font-display);
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.markdown .button.is-small {
+  min-height: 32px;
+  padding: 0 11px;
+  font-size: 0.78rem;
+}
+/* A button does not inherit the colour of its text, so the verb says its own. */
+.markdown .copy-action {
+  color: var(--ms-text);
+}
+.markdown .code-copy {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+}
+
+.markdown table {
+  margin-block: var(--ms-p-spacing);
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  line-height: var(--ms-line-height-tight);
+}
+.markdown :is(th, td) {
+  border: 1px solid var(--ms-table-border);
+  padding: var(--ms-table-cell-padding);
+  text-align: start;
+}
+/* The header is told apart by the type and by a heavier rule, and not by a
+   fill; the only tint a table has is the row under the pointer. */
+.markdown th {
+  font-weight: 600;
+  color: var(--ms-text);
+  border-bottom: var(--ms-table-header-rule);
+  background: var(--ms-table-header-bg);
+}
+.markdown tbody tr:nth-child(even) {
+  background: var(--ms-table-stripe-bg);
+}
+.markdown tbody tr:hover {
+  background: var(--ms-table-hover-bg);
+}
+/* Inside a callout the rules are drawn in the colour of the callout: the
+   neutral border is almost the colour of the tint a callout lays under it. */
+.markdown .callout :is(th, td) {
+  border-color: rgba(var(--callout-color), 0.35);
+}
+.markdown .callout th {
+  border-bottom-color: rgba(var(--callout-color), 0.7);
+}
+.markdown .callout tbody tr:hover {
+  background: rgba(var(--callout-color), 0.08);
+}
+
+.markdown hr {
+  margin-block: calc(var(--ms-p-spacing) * 2);
+  border: 0;
+  border-top: 2px solid var(--ms-border);
+}
+
+/* ── The frontmatter ───────────────────────────────────────────────────────
+   As MemorySmith's note page draws it (*observed* at 4b67c7e): the name as the
+   title, and the properties not in a card but in the flow of the page, under
+   the title and above the prose, parted from it by a single rule. The block
+   opens by default and folds under its summary. Each key wears a line icon by
+   the shape of its value; a list is chips, neutral and never blue, which
+   would read as a link. */
+.markdown .note-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--ms-title-font);
+  font-size: var(--ms-title-size);
+  font-weight: var(--ms-title-weight);
+  line-height: var(--ms-line-height-tight);
+  letter-spacing: normal;
+  color: var(--ms-title-color);
+}
+.markdown .properties-box {
+  margin: 0 0 1.5rem;
+  padding: 0 0 0.85rem;
+  border-bottom: var(--ms-properties-rule);
+}
+.markdown .properties-box summary {
+  cursor: pointer;
+  font-family: var(--ms-properties-label-font);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ms-properties-label-color);
+}
+.markdown .metadata-container {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  gap: 0.15rem 1rem;
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.markdown .metadata-property {
+  display: contents;
+}
+.markdown .metadata-property-key {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--ms-properties-key-color);
+  overflow-wrap: anywhere;
+  /* Its own height, not its row's: stretched to a value that wraps, the key
+     centred its icon on the whole row while its text stayed on the first line.
+     MemorySmith's page has that defect; this surface does not carry it. */
+  align-self: start;
+}
+.markdown .metadata-property-key::before {
+  content: '';
+  flex: 0 0 auto;
+  align-self: center;
+  width: 0.95em;
+  height: 0.95em;
+  background-color: currentcolor;
+  -webkit-mask: var(--property-icon, var(--ms-icon-property-text)) center / contain no-repeat;
+  mask: var(--property-icon, var(--ms-icon-property-text)) center / contain no-repeat;
+}
+.markdown .metadata-property[data-property-type='list'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-list);
+}
+.markdown .metadata-property[data-property-type='date'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-date);
+}
+.markdown .metadata-property[data-property-type='checkbox'] .metadata-property-key {
+  --property-icon: var(--ms-icon-property-boolean);
+}
+.markdown .metadata-property-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.markdown .prop-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.markdown .prop-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--ms-chip-bg);
+  color: var(--ms-chip-color);
+  font-size: 0.72rem;
+  font-family: var(--ms-chip-font);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* A notebook held in one hand has no room for two columns, so the key takes its
+   own line and the value follows under it. */
+@media (max-width: 560px) {
+  .markdown .metadata-container {
+    grid-template-columns: 1fr;
+    gap: 0 0;
+  }
+  .markdown .metadata-property-value {
+    margin-bottom: 0.45rem;
+  }
+}
+
+/* ── Callouts ───────────────────────────────────────────────────────────────
+   The element the notebook meant when it wrote `> [!warning]`, drawn the way
+   the default theme draws it: a tinted field, a coloured title and a line
+   icon, which is a mask so it takes the colour of the callout. */
+.markdown .callout {
+  --callout-color: var(--ms-callout-info);
+  --callout-icon: var(--ms-icon-pencil);
+  margin-block: var(--ms-p-spacing);
+  padding: 0.75rem 0.9rem 0.75rem 1.1rem;
+  border-radius: var(--ms-radius);
+  background: rgba(var(--callout-color), 0.1);
+  overflow-x: auto;
+}
+.markdown .callout-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  color: rgb(var(--callout-color));
+  font-weight: 600;
+  line-height: var(--ms-line-height-tight);
+}
+.markdown .callout-title::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.1em;
+  height: 1.1em;
+  margin-top: 0.1em;
+  background-color: currentcolor;
+  -webkit-mask: var(--callout-icon) center / contain no-repeat;
+  mask: var(--callout-icon) center / contain no-repeat;
+}
+/* The body opens under the title and closes flush with the field. */
+.markdown .callout > :not(.callout-title) {
+  margin-block: 0.4rem 0;
+}
+.markdown .callout > :last-child {
+  margin-block-end: 0;
+}
+/* A quotation inside a callout borrows the callout's own colour for its rule,
+   which is what keeps a nested quote from reading as a second callout. */
+.markdown .callout blockquote {
+  border-inline-start-color: rgba(var(--callout-color), 0.4);
+}
+/* A block of code keeps a tint of the callout's colour, and takes its edge in
+   the tone of a quotation there. */
+.markdown .callout .code-block {
+  background: rgba(var(--callout-color), 0.1);
+  border-color: rgba(var(--callout-color), 0.4);
+}
+
+.markdown .callout:is([data-callout='note']) {
+  --callout-color: var(--ms-callout-info);
+  --callout-icon: var(--ms-icon-pencil);
+}
+.markdown .callout:is([data-callout='info'], [data-callout='todo']) {
+  --callout-color: var(--ms-callout-info);
+  --callout-icon: var(--ms-icon-info);
+}
+.markdown .callout:is([data-callout='abstract'], [data-callout='summary'], [data-callout='tldr']) {
+  --callout-color: var(--ms-callout-idea);
+  --callout-icon: var(--ms-icon-clipboard);
+}
+.markdown .callout:is([data-callout='tip'], [data-callout='hint'], [data-callout='important']) {
+  --callout-color: var(--ms-callout-idea);
+  --callout-icon: var(--ms-icon-flame);
+}
+.markdown .callout:is([data-callout='success'], [data-callout='check'], [data-callout='done']) {
+  --callout-color: var(--ms-callout-done);
+  --callout-icon: var(--ms-icon-check);
+}
+.markdown .callout:is([data-callout='question'], [data-callout='help'], [data-callout='faq']) {
+  --callout-color: var(--ms-callout-warn);
+  --callout-icon: var(--ms-icon-question);
+}
+.markdown .callout:is([data-callout='warning'], [data-callout='caution'], [data-callout='attention']) {
+  --callout-color: var(--ms-callout-warn);
+  --callout-icon: var(--ms-icon-alert);
+}
+.markdown .callout:is([data-callout='failure'], [data-callout='fail'], [data-callout='missing']) {
+  --callout-color: var(--ms-callout-stop);
+  --callout-icon: var(--ms-icon-cross);
+}
+.markdown .callout:is([data-callout='danger'], [data-callout='error'], [data-callout='bug']) {
+  --callout-color: var(--ms-callout-stop);
+  --callout-icon: var(--ms-icon-zap);
+}
+.markdown .callout:is([data-callout='example']) {
+  --callout-color: var(--ms-callout-aside);
+  --callout-icon: var(--ms-icon-list);
+}
+.markdown .callout:is([data-callout='quote'], [data-callout='cite']) {
+  --callout-color: var(--ms-callout-quote);
+  --callout-icon: var(--ms-icon-quote);
+}
+
+/* ── Diagrams ─────────────────────────────────────────────────────────────── */
+.markdown .mermaid-diagram {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.markdown .mermaid-loading {
+  min-height: 3rem;
+}
+.markdown pre:has(> .mermaid-diagram) {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* ── Links ────────────────────────────────────────────────────────────────── */
+.markdown .wikilink {
+  font-weight: 600;
+}
+.markdown .wikilink-pending {
+  color: var(--ms-pending);
+  border-bottom: 1px dashed var(--ms-pending);
+  cursor: pointer;
+}
+
+/* The choice a link to several notes opens. A dialog opened with showModal()
+   lives in the top layer, which no ancestor clips and no stacking context
+   reaches; it is still under `.markdown` in the document, so it takes the
+   note's values. */
+.markdown .link-choice-dialog {
+  border: 0;
+  padding: 0;
+  background: none;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  color: var(--ms-text);
+}
+.markdown .link-choice-dialog::backdrop {
+  background: rgb(14 21 38 / 0.45);
+}
+.markdown .link-choice-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(85vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--ms-surface);
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius-large);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.28);
+}
+.markdown .link-choice-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.5rem;
+}
+.markdown .link-choice-header h2 {
+  margin: 0;
+  font-family: var(--ms-font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.markdown .link-choice-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--ms-text-soft);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+.markdown .link-choice-close:hover {
+  color: var(--ms-text);
+}
+.markdown .link-choice-body {
+  overflow-y: auto;
+  padding: 0 1rem;
+}
+.markdown .link-choice-explanation {
+  margin: 0 0 0.75rem;
+  color: var(--ms-text-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.markdown .link-choice-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.markdown .link-choice-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  /* A comfortable target on a phone, where this is a sheet under a thumb. */
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  color: var(--ms-text);
+  text-decoration: none;
+  /* The trail of a deep folder wraps instead of being cut. */
+  overflow-wrap: anywhere;
+}
+.markdown .link-choice-option:hover,
+.markdown .link-choice-option:focus-visible {
+  background: var(--ms-border);
+  outline: none;
+}
+.markdown .link-choice-option.is-placeholder {
+  min-height: 3.25rem;
+  background: var(--ms-border);
+  opacity: 0.45;
+}
+/* What the folder holding this note is for, under the path: the one line on
+   the row that says which of two notes of one name was meant. */
+.markdown .link-choice-about {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ms-text-soft);
+}
+.markdown .link-choice-lead {
+  font-family: var(--ms-font-display);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.markdown .link-choice-under {
+  color: var(--ms-text-soft);
+  font-size: 0.82rem;
+}
+.markdown .link-choice-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1rem 1rem;
+}
+.markdown .link-choice-cancel {
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: none;
+  color: var(--ms-text);
+  font-family: var(--ms-font-display);
+  font-size: 0.9rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  cursor: pointer;
+}
+.markdown .link-choice-cancel:hover {
+  background: var(--ms-border);
+}
+
+/* A file of the notebook the notebook does not keep: not an error, said the
+   way a pending link is, in the monospace a file name is given. */
+.markdown .attachment-missing {
+  font-family: ui-monospace, monospace;
+  font-size: 0.92em;
+  color: var(--ms-text-soft);
+  border-bottom: 1px dashed var(--ms-text-soft);
+  cursor: help;
+}
+/* An address this surface does not follow. The text is the author's and stays
+   exactly as they wrote it; what it loses is the affordance. The dotted rule
+   is the only sign, and the title says why. */
+.markdown .link-refused {
+  border-bottom: 1px dotted var(--ms-text-soft);
+  cursor: help;
+}
+
+/* ── Embeds ─────────────────────────────────────────────────────────────────
+   A passage brought from another note is the SAME passage: same paper, same
+   spacing, same tints. What an embed has to say is a rule down the side, in
+   the blue of structure, and the note it came from named underneath. */
+.markdown .embed {
+  margin: 1.2rem 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 2px solid var(--ms-embed-rule);
+}
+.markdown .embed-body > .markdown > :first-child {
+  margin-top: 0;
+}
+.markdown .embed-body > .markdown > :last-child {
+  margin-bottom: 0.35rem;
+}
+.markdown .embed-source {
+  font-size: 0.82rem;
+  color: var(--ms-text-soft);
+  padding: 0;
+}
+.markdown .embed-source a {
+  color: var(--ms-text-soft);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--ms-text-soft);
+}
+.markdown .embed-missing,
+.markdown .embed-pending {
+  color: var(--ms-text-soft);
+  font-size: 0.9rem;
+}
+
+/* ── Highlighted code ───────────────────────────────────────────────────────
+   Prism token classes, mapped onto the palette. Every token not named here
+   inherits the code colour, which is what a block looked like before
+   highlighting existed. */
+.markdown .token.comment,
+.markdown .token.prolog,
+.markdown .token.doctype,
+.markdown .token.cdata {
+  color: var(--ms-token-comment);
+  font-style: italic;
+}
+.markdown .token.punctuation,
+.markdown .token.operator {
+  color: var(--ms-token-punctuation);
+}
+.markdown .token.keyword,
+.markdown .token.atrule,
+.markdown .token.rule,
+.markdown .token.important,
+.markdown .token.tag,
+.markdown .token.selector {
+  color: var(--ms-token-keyword);
+}
+.markdown .token.string,
+.markdown .token.char,
+.markdown .token.attr-value,
+.markdown .token.regex {
+  color: var(--ms-token-string);
+}
+.markdown .token.number,
+.markdown .token.boolean,
+.markdown .token.constant,
+.markdown .token.symbol,
+.markdown .token.inserted {
+  color: var(--ms-token-number);
+}
+.markdown .token.property,
+.markdown .token.attr-name,
+.markdown .token.function,
+.markdown .token.class-name,
+.markdown .token.variable {
+  color: var(--ms-code-color);
+  font-weight: 500;
+}
+/* A diff is the one grammar whose meaning is the line and not the token. */
+.markdown .token.deleted {
+  color: var(--ms-token-string);
+}
+
+/* What this note asked the browser to fetch (§7.10). A disclosure and not a
+   warning: it reads as a footnote of the note, in the soft text. */
+.markdown[data-theme] > .remote-notice {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ms-border);
+  color: var(--ms-text-soft);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* A task box that can be ticked. Disabled is the default. */
+.markdown li.task-item {
+  list-style: none;
+  margin-left: -1.2rem;
+}
+.markdown li.task-item input[type='checkbox'] {
+  margin-right: 0.5rem;
+  accent-color: var(--ms-accent);
+}
+.markdown li.task-item input[type='checkbox']:not(:disabled) {
+  cursor: pointer;
+}
+
+/* ── Skeletons ──────────────────────────────────────────────────────────────
+   The shape of an embed that is coming, in the position it will occupy. */
+.markdown .skeleton {
+  display: block;
+  border-radius: 4px;
+  background-color: rgba(128, 128, 128, 0.16);
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.22) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: markdown-skeleton-sheen 1.4s ease-in-out infinite;
+}
+@keyframes markdown-skeleton-sheen {
+  from {
+    background-position: -120% 0;
+  }
+  to {
+    background-position: 220% 0;
+  }
+}
+.markdown .skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.markdown .skeleton-region {
+  display: block;
+}
+
+
+/* ── At phone width ─────────────────────────────────────────────────────── */
+@media (max-width: 40rem) {
+  /* Copy keeps its icon, and the word is in its label. */
+  .markdown .copy-action-label {
+    display: none;
+  }
+  .markdown .code-block > pre {
+    padding-right: 3rem;
+  }
+}
+@media (max-width: 600px) {
+  /* The choice rises from the bottom, within reach of a thumb. */
+  .markdown .link-choice-card {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-height: 85vh;
+    border-radius: 14px 14px 0 0;
+    border-bottom: 0;
+  }
+  .markdown .link-choice-footer .link-choice-cancel {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The placeholder still holds the frame; only the sheen stops. */
+  .markdown .skeleton {
+    animation: none;
+    background-image: none;
+  }
+}
