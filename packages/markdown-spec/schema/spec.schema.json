@@ -3,7 +3,7 @@
   "title": "MemorySmith Markdown Specification",
   "description": "The machine-readable half of the specification: every notation it declares, with its observable effect. It carries no version: the specification follows the version of the product.",
   "type": "object",
-  "required": ["spec", "sources", "notations"],
+  "required": ["spec", "sources", "notations", "notices"],
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
@@ -60,6 +60,34 @@
           "spec": {
             "type": "string",
             "description": "The section or sections of SPEC.md that govern it."
+          }
+        }
+      }
+    },
+    "notices": {
+      "type": "array",
+      "description": "The notices an implementation may report about a note (SPEC.md 7.13): never an error, always a place where what is drawn is not what was most likely typed.",
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "spec", "effect"],
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "Stable identifier. Never renamed and never reused."
+          },
+          "severity": {
+            "enum": ["notice", "hint"],
+            "description": "notice: the page will differ from what was typed. hint: nothing is drawn wrong, and the note lacks something the specification reserves a place for."
+          },
+          "spec": {
+            "type": "string",
+            "description": "The section of SPEC.md that decides what happens there."
+          },
+          "effect": {
+            "type": "string",
+            "description": "What a reader gets. Written for whoever writes a note, not for the code."
           }
         }
       }

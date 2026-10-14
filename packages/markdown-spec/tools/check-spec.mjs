@@ -141,7 +141,16 @@ validate(spec, schema, 'spec.json');
 // ---------------------------------------------------------------------------
 
 const notations = spec.notations ?? [];
+const notices = spec.notices ?? [];
 const cases = conformance.cases ?? [];
+
+// A notice is a code an implementation reports under (§7.13): stable, declared once, and raised
+// by at least one case, or nothing proves two implementations mean the same thing by it.
+const declaredNotices = new Set();
+for (const notice of notices) {
+  if (declaredNotices.has(notice.code)) fail('spec.json', `declares the notice "${notice.code}" twice`);
+  declaredNotices.add(notice.code);
+}
 
 // Identifiers are stable: never renamed, never reused. Duplicates break that promise
 // before anybody has a chance to rely on it.
@@ -174,12 +183,25 @@ for (const testCase of cases) {
     !('links' in testCase) &&
     !('facets' in testCase) &&
     !('name' in testCase) &&
-    !('resolution' in testCase)
+    !('resolution' in testCase) &&
+    !('notices' in testCase)
   ) {
     fail(
       'tests/conformance.json',
-      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, so it asserts nothing`,
+      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, nor notices, so it asserts nothing`,
     );
+  }
+
+  for (const notice of testCase.notices ?? []) {
+    if (!declaredNotices.has(notice.code)) {
+      fail(
+        'tests/conformance.json',
+        `the case "${testCase.id}" raises the notice "${notice.code}", which spec.json does not declare`,
+      );
+    }
+    if (!Number.isInteger(notice.line) || notice.line < 1) {
+      fail('tests/conformance.json', `the case "${testCase.id}" places the notice "${notice.code}" on a line that is not a whole number from 1`);
+    }
   }
 
   // A resolution is a claim about a notebook, and a notebook is only there to be resolved
@@ -269,6 +291,13 @@ for (const entry of notations) {
   }
 }
 
+const raised = new Set(cases.flatMap((testCase) => (testCase.notices ?? []).map((notice) => notice.code)));
+for (const notice of notices) {
+  if (!raised.has(notice.code)) {
+    fail('tests/conformance.json', `has no case raising the notice "${notice.code}". A notice without a case is not part of the specification`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Every section reference resolves to a real heading of the document.
 // ---------------------------------------------------------------------------
@@ -287,6 +316,25 @@ for (const entry of notations) {
       );
     }
   }
+}
+
+// The table of §7.13 and the notices of spec.json are the same list, row for row.
+const documented = new Map(
+  [...specText.matchAll(/^\| `([a-z0-9-]+)` \| (notice|hint) \| §([0-9.]+) \|/gm)].map((match) => [match[1], { severity: match[2], spec: match[3] }]),
+);
+for (const notice of notices) {
+  if (!headings.has(notice.spec)) {
+    fail('spec.json', `the notice "${notice.code}" points at the specification § ${notice.spec}, which has no heading`);
+  }
+  const row = documented.get(notice.code);
+  if (!row) {
+    fail('SPEC.md', `does not list the notice "${notice.code}" that spec.json declares`);
+  } else if (row.severity !== notice.severity || row.spec !== notice.spec) {
+    fail('SPEC.md', `lists the notice "${notice.code}" as ${row.severity} under § ${row.spec}, and spec.json as ${notice.severity} under § ${notice.spec}`);
+  }
+}
+for (const code of documented.keys()) {
+  if (!declaredNotices.has(code)) fail('spec.json', `does not declare the notice "${code}" that SPEC.md lists`);
 }
 
 // The document points at itself constantly — a form is stated where an author meets it and
@@ -337,7 +385,7 @@ function report() {
   if (errors.length === 0) {
     const surface = notations.filter((entry) => entry.reader === 'reading-surface').length;
     console.log(
-      `The specification is consistent: ${notations.length} notations (${notations.length - surface} an indexer decides, ${surface} rendering), ${cases.length} conformance cases.`,
+      `The specification is consistent: ${notations.length} notations (${notations.length - surface} an indexer decides, ${surface} rendering), ${notices.length} notices, ${cases.length} conformance cases.`,
     );
     process.exit(0);
   }

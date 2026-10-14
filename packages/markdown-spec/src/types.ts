@@ -36,6 +36,20 @@ export interface Notation {
   readonly spec?: string;
 }
 
+/** How much a notice weighs: `notice`, the page differs from what was typed; `hint`, nothing is drawn wrong. */
+export type NoticeSeverity = 'notice' | 'hint';
+
+/** One notice an implementation may report about a note (`SPEC.md` §7.13). Never an error. */
+export interface NoticeDeclaration {
+  /** Stable identifier: never renamed and never reused. */
+  readonly code: string;
+  readonly severity: NoticeSeverity;
+  /** The section of `SPEC.md` that decides what happens there. */
+  readonly spec: string;
+  /** What a reader gets, written for whoever writes a note. */
+  readonly effect: string;
+}
+
 /** `spec.json`: the machine-readable half of the specification. */
 export interface Spec {
   readonly $schema?: string;
@@ -47,6 +61,7 @@ export interface Spec {
   readonly url?: string;
   readonly sources: readonly SpecSource[];
   readonly notations: readonly Notation[];
+  readonly notices: readonly NoticeDeclaration[];
 }
 
 /** One edge a conforming indexer extracts: the name it addresses, and the anchor, if any. */
@@ -73,6 +88,12 @@ export interface ConformanceResolution {
   readonly edges: number;
 }
 
+/** One notice a case raises: its code and the line it starts on, counted from 1 over the whole document. */
+export interface ConformanceNotice {
+  readonly code: string;
+  readonly line: number;
+}
+
 /** The notes and attachments that exist while a case runs. */
 export interface ConformanceNotebook {
   /** Whole Markdown documents; a fixture never declares its own name outside its document. */
@@ -96,6 +117,11 @@ interface CaseBase {
   readonly links?: readonly ConformanceLink[];
   /** The attributes produced. Absent asserts nothing; `{}` asserts there are none. */
   readonly facets?: Readonly<Record<string, ConformanceFacet>>;
+  /**
+   * Every notice the input raises (`SPEC.md` §7.13), hints included, in any order. Absent asserts
+   * nothing; `[]` asserts there are none.
+   */
+  readonly notices?: readonly ConformanceNotice[];
 }
 
 /**

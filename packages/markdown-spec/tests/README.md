@@ -25,6 +25,7 @@ The executable half. A specification is a claim; this is the part that can be ch
 | `facets` | The attributes a conforming Indexer produces, as `name → { kind, values }`. Absent means the case makes no claim about attributes |
 | `notebook` | The notes and attachments that exist while this case runs: `notes` is a list of whole Markdown documents, `attachments` a list of names. Absent means the case makes no claim that depends on a notebook |
 | `resolution` | What each target resolves to once the notebook is there: `target`, `kind` (`note`, `attachment` or `pending`) and `edges`. Requires `notebook`, and `notebook` requires it |
+| `notices` | Every notice the input raises (`SPEC.md` §7.13), hints included, each as its `code` and the `line` it starts on, counted from 1 over the whole document. Compared as a multiset, in any order. The two pending codes are raised against the case's `notebook`. Absent means the case makes no claim about notices |
 
 An expectation of `[]` or `{}` is a claim, and a strong one: it says the input produces **nothing**. Those cases carry as much of the specification as the positive ones, because the failure they prevent — a notation that quietly does nothing while somebody believes in it — is the failure a specification exists to prevent.
 
@@ -51,4 +52,4 @@ Rules a runner has to follow:
 
 ## Coverage
 
-Every entry of `spec.json` whose `reader` is `links` or `frontmatter` has at least one case here. Entries whose reader is `reading-surface` are rendering, and are verified by the implementation against its own renderer: what a callout looks like is not something a JSON file can assert.
+Every entry of `spec.json` whose `reader` is `links` or `frontmatter` has at least one case here, and so does every notice `spec.json` declares. Entries whose reader is `reading-surface` are rendering, and are verified by the implementation against its own renderer: what a callout looks like is not something a JSON file can assert.

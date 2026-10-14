@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useHost, type EmbeddedNote } from './host.js';
 import { Markdown } from './Markdown.js';
 import { drawSlot, useSlot } from './slots.js';
-import { bodyStart, resolveWikilinks } from './markdown.js';
+import { bodyStart, hideComments, resolveWikilinks } from './markdown.js';
 import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './transclusion.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
@@ -79,7 +79,7 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
   }
 
   const { note } = loaded;
-  const whole = note.markdown.slice(bodyStart(note.markdown));
+  const whole = hideComments(note.markdown.slice(bodyStart(note.markdown))).text;
   // The caption names the note the content came from, and a note may have no
   // name.
   const sourceLabel = note.name ?? strings.unnamedNote;

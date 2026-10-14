@@ -101,6 +101,47 @@ describe('check-spec', () => {
     expect(check(root).ok).toBe(false);
   });
 
+  it('fails on a notice no case raises', () => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases = suite.cases.filter((testCase: { notices?: { code: string }[] }) =>
+        !(testCase.notices ?? []).some((notice) => notice.code === 'raw-html'),
+      );
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/has no case raising the notice "raw-html"/);
+  });
+
+  it('fails on a case raising a notice spec.json does not declare', () => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({ id: 'notice/invented', notation: 'raw-html', markdown: 'x', notices: [{ code: 'no-such-notice', line: 1 }] });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/raises the notice "no-such-notice", which spec.json does not declare/);
+  });
+
+  it('fails when the table of notices in SPEC.md and spec.json disagree', () => {
+    const root = copy();
+    editJson(root, 'spec.json', (spec) => {
+      spec.notices.find((notice: { code: string }) => notice.code === 'tags-missing').severity = 'notice';
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/lists the notice "tags-missing" as hint under § 6\.4, and spec.json as notice under § 6\.4/);
+  });
+
+  it('fails when SPEC.md lists a notice spec.json does not declare', () => {
+    const root = copy();
+    const path = join(root, 'SPEC.md');
+    writeFileSync(path, readFileSync(path, 'utf8').replace('| `raw-html` |', '| `raw-html` | notice | §7.9 | x |\n| `html-raw` |'));
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/does not declare the notice "html-raw" that SPEC\.md lists/);
+  });
+
   it('refuses a schema keyword it does not implement', () => {
     const root = copy();
     editJson(root, 'schema/spec.schema.json', (schema) => {

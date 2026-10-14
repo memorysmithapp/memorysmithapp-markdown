@@ -282,6 +282,63 @@ export function insideTable(regions: Array<[number, number]>, at: number): boole
   return regions.some(([start, end]) => at >= start && at < end);
 }
 
+/**
+ * The comments of a text (§7.6), as half-open ranges: from a `%%` outside code to the next `%%`
+ * outside code, across inline markup and blank lines alike. A `%%` with no partner opens nothing.
+ *
+ * A comment that is all of its lines takes the line break after it too, so a comment written on
+ * lines of its own leaves no empty line behind to loosen a list or split a paragraph.
+ *
+ * MemorySmith's reading page hides a comment inside one run of text only, so one that holds a
+ * link, a tag, emphasis or a blank line reaches the page whole; this is found on the text, before
+ * anything is parsed, so nothing a comment holds is ever read.
+ */
+export function commentRegions(text: string): Array<[number, number]> {
+  const code = codeRegions(text);
+  const markers = [...text.matchAll(/%%/g)].map((match) => match.index).filter((at) => !insideCode(code, at));
+  const regions: Array<[number, number]> = [];
+  for (let index = 0; index + 1 < markers.length; index += 2) {
+    let start = markers[index]!;
+    let end = markers[index + 1]! + 2;
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = text.indexOf('\n', end) === -1 ? text.length : text.indexOf('\n', end);
+    if (/^[ \t]*$/.test(text.slice(lineStart, start)) && /^[ \t]*$/.test(text.slice(end, lineEnd))) {
+      start = lineStart;
+      end = lineEnd === text.length ? lineEnd : lineEnd + 1;
+    }
+    regions.push([start, end]);
+  }
+  return regions;
+}
+
+/** A text with its comments taken out, and where an offset into it falls in the text it came from. */
+export interface HiddenComments {
+  readonly text: string;
+  /** The offset in the original text of an offset into `text`; an `end` stays before a comment it meets. */
+  readonly original: (offset: number, end?: boolean) => number;
+}
+
+/** The text a reader is shown: its comments taken out (§7.6). The note itself is never changed. */
+export function hideComments(text: string): HiddenComments {
+  const regions = commentRegions(text);
+  if (regions.length === 0) return { text, original: (offset) => offset };
+  let shown = '';
+  let cursor = 0;
+  // Where each comment was, in the shown text, and how much of the original it took.
+  const cuts: { at: number; length: number }[] = [];
+  for (const [start, end] of regions) {
+    shown += text.slice(cursor, start);
+    cuts.push({ at: shown.length, length: end - start });
+    cursor = end;
+  }
+  shown += text.slice(cursor);
+  return {
+    text: shown,
+    original: (offset, end = false) =>
+      offset + cuts.filter((cut) => (end ? cut.at < offset : cut.at <= offset)).reduce((total, cut) => total + cut.length, 0),
+  };
+}
+
 /** Runs a rewrite over everything except code, which is copied through. */
 export function outsideCode(body: string, rewrite: (text: string) => string): string {
   let out = '';

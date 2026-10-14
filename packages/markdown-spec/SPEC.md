@@ -136,6 +136,8 @@ Level two
 
 Headings are what an anchor points at: `[[Target note#Section]]` names a heading of the target, and §5.2 keeps it for display without letting it change which note is resolved. **A heading never names a note**, at any level: a note is named by the `name:` of its frontmatter and by nothing else (§5.3).
 
+**The headings of a body form an outline, and it SHOULD be whole**: the first heading of the body is level one, and a heading goes down at most one level from the heading before it — `#` then `###` with no `##` between skips a level. Going back up any number of levels ends sections and is never a skip. Only the headings at the top level of the body count, outside code: a heading inside a quote, a callout or a list is part of that block, and an embedded note has an outline of its own. The name of a note is not a level of it — it names the artifact, and how a Reader presents it is the Reader's choice — so the body's `#` is the first level whatever is drawn above it. An outline that breaks this is a notice (§7.13), never an error: the note opens and draws as written.
+
 A `#` that is not opening a heading is not a subject either: `#procurement` in the middle of a line is plain text, because nothing in this document describes it (§8).
 
 ### 3.4 Thematic breaks
@@ -804,6 +806,37 @@ footnote around it.
 
 ---
 
+### 7.13 Notices
+
+Every note is valid: this specification never validates content (§6.4) and never rejects a note. What an implementation MAY do is tell whoever writes a note where what is drawn will not be what was most likely typed. That is a **notice**: a stable code, a severity, the place in the note, and the section that decides what happens there. A notice MUST NOT be an error, MUST NOT stop a note from being saved or opened, and MUST NOT change the bytes of the note.
+
+A notice is placed by the line and column where it starts and ends, counted from 1 over the whole document, frontmatter included. Its **severity** is `notice` when the page will differ from what was typed, and `hint` when nothing is drawn wrong and the note merely lacks something the specification reserves a place for. An implementation that reports notices reports them under these codes, and MUST NOT report one under a code this table does not declare:
+
+| Code | Severity | Where | What a reader gets |
+|---|---|---|---|
+| `fence-unclosed` | notice | §3.7 | A fence that is never closed runs to the end of its block — the note, or the quote or list item it opened in — and everything after it is code |
+| `math-unclosed` | notice | §7.8 | A `$$` block that is never closed runs to the end of its block, and everything after it is a formula |
+| `formula-invalid` | notice | §7.8 | A formula that cannot be typeset is shown as its source |
+| `diagram-invalid` | notice | §7.2 | A `mermaid` block its diagram language cannot read is shown as a code block, or as the diagram language's own error |
+| `frontmatter-unclosed` | notice | §6.1 | A `---` on the first line with no `---` closing it is no frontmatter: the note has no properties and no name, and the lines are body text |
+| `name-missing` | notice | §6.5 | The note has no `name`: it is unnamed, and a link reaches it only through an alias |
+| `name-unusable` | notice | §6.5 | A `name` of a shape other than a single text value leaves the note unnamed |
+| `reserved-not-a-list` | notice | §6.4 | `aliases` or `tags` written as a single value rather than a list degrade to an ordinary attribute |
+| `aliases-missing` | hint | §6.4 | The note has no `aliases`: only its name catches a link |
+| `tags-missing` | hint | §6.4 | The note has no `tags`: it has no subjects to be filtered by |
+| `heading-first-level` | notice | §3.3 | The first heading of the body is not level one |
+| `heading-skipped-level` | notice | §3.3 | A heading goes down more than one level from the heading before it |
+| `footnote-undefined` | notice | §7.12 | A reference with no definition is drawn as its characters, brackets and all |
+| `footnote-unreferenced` | notice | §7.12 | A definition nothing references is not drawn |
+| `raw-html` | notice | §7.9 | Raw HTML is drawn as text, tags and all |
+| `strikethrough-single-tilde` | notice | §4.3 | One tilde on each side strikes nothing, and the tildes stay on the page |
+| `link-pending` | hint | §7.4 | A wikilink no note answers is drawn as pending |
+| `embed-pending` | hint | §7.3 | An embed no note and no kept file answers is drawn as a pending link, not as content |
+
+The two pending codes need the notebook: an implementation reports them only when it knows which notes and files exist, and a pending link is a note still to write, which is why it is a hint. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body.
+
+The table is data too: `spec.json` carries it as `notices`, and the conformance suite says which notices each of its inputs raises (§10).
+
 ## 8. Notation not described here
 
 §3 to §7 are the whole of the notation this specification accepts. **Anything not described
@@ -843,7 +876,7 @@ It exists so that a specification and an implementation cannot drift apart in pr
 
 [`tests/conformance.json`](tests/conformance.json) is the executable half of this document: each case is a Markdown input and the links and attributes a conforming Indexer produces from it. A case that exercises a rule about the rest of the notebook — §5.4, §5.5 and §5.8, where what a target becomes depends on what else exists — carries the notes and attachments it needs alongside the input. A case whose expectation is *nothing* — a link inside a code fence, an external destination — is as normative as any other.
 
-An implementation claiming the Indexer role SHOULD run the suite in its own continuous integration. See [`tests/README.md`](tests/README.md) for the format.
+A case MAY also carry the notices its input raises (§7.13), and an implementation that reports notices SHOULD produce exactly those. An implementation claiming the Indexer role SHOULD run the suite in its own continuous integration. See [`tests/README.md`](tests/README.md) for the format.
 
 The forms of §3 and §4 carry no cases here, and need none: CommonMark and GFM each ship a suite of their own, and an implementation demonstrates those forms by passing it. What this suite covers is the part nobody else tests, which is the same reason §5 to §7 exist.
 

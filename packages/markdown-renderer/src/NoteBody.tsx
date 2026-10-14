@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
-import { Markdown, readingPlugins } from './Markdown.js';
-import { bodyStart, remoteImageHosts, resolveWikilinks } from './markdown.js';
+import { Markdown } from './Markdown.js';
+import { readingPlugins } from './reading.js';
+import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
 import { taskBoxes } from './tasklist.js';
@@ -35,7 +36,8 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
   // runs start after it. Everything below counts task items from there.
   const split = bodyStart(markdown);
   const properties = useMemo(() => readProperties(markdown), [markdown]);
-  const body = markdown.slice(split);
+  // What a comment holds is never read (§7.6): it leaves before the embeds and the links are found.
+  const body = hideComments(markdown.slice(split)).text;
 
   // The body is cut into runs of text and the embeds between them; each run
   // is parsed on its own, as on MemorySmith's reading page.

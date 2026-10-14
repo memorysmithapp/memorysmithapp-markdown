@@ -1,17 +1,20 @@
 /**
  * The rest of the MemorySmith notation, on the reading surface: marked text,
- * comments, block identifiers (§7.5, §7.6, §7.7) and the dollar rule of
- * mathematics (§7.8).
+ * block identifiers (§7.5, §7.7) and the dollar rule of mathematics (§7.8).
  *
- * All three are remark plugins rather than passes over the string, for the
+ * They are remark plugins rather than passes over the string, for the
  * reason `remark-callouts.ts` already gives: a `==` inside a code fence is not
  * a highlight, and only the parser can tell the difference. Rewriting the text
  * before it is parsed is how a notation starts firing inside examples.
  *
+ * Comments (§7.6) are the one exception, and they are taken out before the
+ * parser by `hideComments` (`markdown.ts`), which finds code first: a comment
+ * may hold markup and blank lines, and once parsed it is spread over nodes no
+ * plugin on a run of text can see whole.
+ *
  * None of them touches the bytes. The reading surface is a rendering of the
  * note and never a rewriting of it, so what a host stores and returns is
- * unaffected by everything here — which is the whole of what makes
- * `%%comment%%` an asymmetry that has to be declared rather than a deletion.
+ * unaffected by everything here.
  */
 
 interface MdastNode {
@@ -51,31 +54,6 @@ export function remarkHighlight() {
           data: { hName: 'mark' },
           children: [{ type: 'text', value: inner }],
         }));
-      });
-    });
-}
-
-/**
- * `%%comment%%` leaves the page and stays in the file (§7.6).
- *
- * The asymmetry is the decision and it is declared, not discovered: the bytes
- * are untouched, so whatever returns the note returns the comment, and an
- * agent therefore sees what a person on the page does not. Text the
- * author did not want *read on the page* is still text the author wrote, and
- * deleting bytes to make a page tidier is not something this product does.
- */
-const COMMENT = /%%([\s\S]*?)%%/g;
-
-export function remarkComments() {
-  return (tree: MdastNode): void =>
-    walk(tree, (parent) => {
-      parent.children = (parent.children ?? []).flatMap((child) => {
-        if (!isText(child) || !child.value?.includes('%%')) return [child];
-        const stripped = child.value.replace(COMMENT, '');
-        // A text that was nothing but a comment leaves no empty text node
-        // behind. The paragraph that held it stays, empty, as it does on
-        // MemorySmith's reading page.
-        return stripped.length === 0 ? [] : [{ ...child, value: stripped }];
       });
     });
 }
