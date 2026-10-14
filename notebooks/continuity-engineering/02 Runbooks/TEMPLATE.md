@@ -18,12 +18,12 @@ One paragraph saying what this restores and when it is used.
 > [!caution] The precondition that people skip
 > Written before the steps, because that is where it gets read.
 
-## Before you start
+# Before you start
 
 - [ ] The condition that must hold
 - [ ] The person who is not you
 
-## The steps
+# The steps
 
 1. Numbered, one action each.
 2. Every step that needs judgement links the page with the criterion.

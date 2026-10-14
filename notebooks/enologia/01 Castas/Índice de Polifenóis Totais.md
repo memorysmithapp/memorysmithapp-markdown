@@ -20,7 +20,7 @@ a casca está pronta, e não apenas se o açúcar chegou.
 > Na maturação decide a data da colheita; na vinificação decide o tempo de
 > maceração de [[Vinificação em tinto#Maceração]].
 
-## Como se calcula
+# Como se calcula
 
 A absorbância a 280 nm, diluída 1:100, multiplicada por 100[^ribereau]:
 
@@ -36,11 +36,11 @@ flowchart LR
   L --> I[IPT]
 ```
 
-## Leitura da casta
+# Leitura da casta
 
 ![[Cabernet Sauvignon#^brix-engana]]
 
-## Ainda em aberto
+# Ainda em aberto
 
 A correlação com a safra fria nunca foi escrita: [[Correlação IPT e safra fria]]
 é uma página que ninguém redigiu, e o link diz isso em vez de fingir o

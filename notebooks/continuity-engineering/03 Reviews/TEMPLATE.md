@@ -15,12 +15,12 @@ exercised_at:
 
 What was exercised, against which runbook, and with whom.
 
-## Timeline
+# Timeline
 
 | Moment | Minutes | Note |
 | --- | --- | --- |
 
-## What went wrong
+# What went wrong
 
 The finding, and the change it produced. A review with no finding is a review
 that measured nothing.

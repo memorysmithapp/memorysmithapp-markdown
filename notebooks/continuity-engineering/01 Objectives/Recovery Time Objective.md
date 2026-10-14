@@ -22,7 +22,7 @@ whoever owns the service, never proposed by whoever restores it.
 > Until the failover in [[Failing over the payments database]] has been run
 > against it, the number is a target and not a capability.
 
-## How it is stated
+# How it is stated
 
 Always in wall-clock minutes, from the moment of detection and not from the
 moment of decision. The gap between those two is where most of the budget goes,
@@ -32,7 +32,7 @@ The paired figure is [[Recovery Point Objective|the RPO]], and the two are set
 together: an aggressive RTO with a loose RPO restores a service quickly to a
 state nobody wants. ^rto-and-rpo
 
-## What it costs
+# What it costs
 
 Availability is what the objective buys, and it is arithmetic before it is
 engineering. For a service of $n$ independent components each with availability
@@ -48,7 +48,7 @@ being a technical target and becomes a commercial one.
 %% The 2027 policy revision moves this to two hours. Do not write it here
 until it is signed. %%
 
-## What is not read here
+# What is not read here
 
 - A subject written in the body as #continuity looks like it files this note
   somewhere. It does not: it is plain text. Subjects live in `tags:` above, and

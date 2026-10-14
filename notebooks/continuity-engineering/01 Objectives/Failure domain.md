@@ -26,7 +26,7 @@ service says nothing until somebody says five minutes of *what failing*.
 > `Blast radius`, that link moves to it and this page stops receiving it: a
 > name always wins, and an alias only ever fills an empty.
 
-## What `author` and `co-author` say here
+# What `author` and `co-author` say here
 
 The frontmatter of this page states `author: Continuity Engineering` and
 `co-author: Claude`, and both are **statements this note makes about itself**.
@@ -36,7 +36,7 @@ wrote what and answers it separately, and the two are allowed to disagree.
 connector that executed the write — which is the convention this product
 teaches and never the value it writes.
 
-## The three domains we agreed
+# The three domains we agreed
 
 | Domain | What is inside it | Objective |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ The last row is the one worth reading twice: an account-wide failure has no
 objective because nobody has agreed one, and writing `4 h` there because the
 row above says so would be inventing a capability.
 
-## The diagram of the region case
+# The diagram of the region case
 
 ![Failure domains of one region|360x180](../assets/failure-domains.png)
 
@@ -58,7 +58,7 @@ is a reference to a file the notebook carries beside its notes. The `|360x180`
 after the name is the size it is drawn at, not an alias — a pipe means one
 thing after a note and another after an attachment.
 
-## Open
+# Open
 
 The account-wide figure waits on the same conversation as
 [[Warehouse recovery objective]], which is a page nobody has written.

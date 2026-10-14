@@ -22,7 +22,7 @@ it.
 > Everything in [[Recovery Time Objective]] is a target until a page like this
 > one carries a number.
 
-## Timeline
+# Timeline
 
 | Moment | Minutes | Note |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ alert that opens the timeline is written up at
 https://status.example.org/payments, outside this notebook: a bare address is a
 link on the page and never an edge in the graph.
 
-## What went wrong
+# What went wrong
 
 The freeze in step 1 was confirmed by looking at a graph, which is why it took
 two minutes. It now has its own check.
@@ -49,7 +49,7 @@ $$A = \frac{43200 - 14}{43200}$$
 
 which is $0.99968$ for the month, and inside the budget.
 
-## What we tried to write and could not
+# What we tried to write and could not
 
 - **A formula with a subscript.** `H~2~O` and `x^2^` are not notation here, so
   nothing happens to them: what is written stays on the page as those

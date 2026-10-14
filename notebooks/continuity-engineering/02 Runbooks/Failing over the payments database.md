@@ -21,14 +21,14 @@ morning.
 > A failover that nobody announced is indistinguishable from an outage, and
 > the second one is what people escalate.
 
-## Before you start
+# Before you start
 
 - [x] The incident is declared and the channel exists
 - [x] The primary is confirmed unreachable, not merely slow
 - [ ] The last replica lag is recorded, for [[Recovery Point Objective]]
 - [ ] Somebody who is not you is watching the clock
 
-## The steps
+# The steps
 
 1. Freeze writes at the edge.
 2. Promote the standby. See [[Exercise 2026-03 · Region loss#What went wrong]]
@@ -41,7 +41,7 @@ everything before it is detection and everything after it is confirmation.
 
 ![[Blast radius]]
 
-## Notes for whoever revises this
+# Notes for whoever revises this
 
 %% Steps 1 and 2 were one step until the March exercise showed the freeze
 needs its own confirmation. Do not merge them again. %%

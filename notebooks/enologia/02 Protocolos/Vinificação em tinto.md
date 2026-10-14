@@ -19,14 +19,14 @@ quem chega na safra sem ter feito a anterior.
 > Maceração decidida por calendário é a origem de metade dos tintos verdes
 > desta região.
 
-## Antes de começar
+# Antes de começar
 
 - [x] Leitura de [[Índice de Polifenóis Totais|IPT]] do dia registrada
 - [x] Tanque sanitizado e ficha aberta
 - [ ] Temperatura de entrada aferida em dois pontos
 - [ ] Alguém que não seja você conferindo a pesagem
 
-## Maceração
+# Maceração
 
 1. Desengace total, sem esmagamento.
 2. Maceração pré-fermentativa a frio por 48 h.
@@ -38,7 +38,7 @@ regra fixa.
 
 ![[Índice de Polifenóis Totais]]
 
-## Notas de revisão
+# Notas de revisão
 
 %% A maceração pré-fermentativa era de 24 h até 2025. A safra 2026 mostrou
 que 48 h muda o IPT final em 8 pontos. Não voltar sem repetir o teste. %%

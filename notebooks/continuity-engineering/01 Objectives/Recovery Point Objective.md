@@ -21,11 +21,11 @@ acceptable casualties.
 > Two services on one database cannot hold two different RPOs, however
 > differently their [[Recovery Time Objective|RTOs]] are written.
 
-## Read this first
+# Read this first
 
 ![[Recovery Time Objective#^rto-and-rpo]]
 
-## How it is measured
+# How it is measured
 
 From the last durable replica, not from the last successful write. The
 difference is the replication lag, and it is the number
@@ -41,7 +41,7 @@ flowchart LR
 
 The distance between `W` and `S` is the real RPO. ^measured-from
 
-## Open
+# Open
 
 The figure for the reporting warehouse has never been agreed. Until it is,
 [[Warehouse recovery objective]] is a page nobody has written, and the link

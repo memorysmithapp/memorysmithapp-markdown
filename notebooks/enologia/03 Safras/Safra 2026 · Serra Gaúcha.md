@@ -20,7 +20,7 @@ decisão tomada com pressa possa ser lida com calma no ano seguinte.
 > Tudo em [[Vinificação em tinto]] é intenção até uma página como esta trazer
 > um número.
 
-## Curva
+# Curva
 
 | Semana | °Brix | IPT | Nota |
 | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ número riscado é o que valia quando a safra começou. O boletim que anunciou a
 chuva está em https://boletim.example.org/serra-gaucha, fora deste caderno: um
 endereço solto é link na página e nunca aresta no grafo.
 
-## O que deu errado
+# O que deu errado
 
 A remontagem do dia 26 foi feita por calendário, e não pela curva. O passo 4 do
 protocolo ganhou a frase que faltava por causa disso.
@@ -47,7 +47,7 @@ anteriores, calculada como
 
 $$P = 1 - \frac{IPT_{colheita}}{IPT_{alvo}}$$
 
-## O que tentamos escrever e não deu
+# O que tentamos escrever e não deu
 
 - **Fórmula com subscrito.** `H~2~O` e `m^2^` não são notação aqui, então nada
   acontece com eles: ficam na página exatamente com esses caracteres. O perfil
