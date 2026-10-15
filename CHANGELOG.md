@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The demonstration notebooks show a callout title holding bold text, in the red-wine protocol and the March exercise, and a callout of a type outside A–Z, `[!atenção]`, in the protocol; the comparison with MemorySmith lists both notes as deliberate differences (#42, #43).
+
 ### Fixed
 
 - An empty fenced block is an empty block of code, with a language or without one, where one that named a language drew the word *undefined*; an empty block keeps the height of one line, so its *Copy* button sits inside it instead of over its edge (#38).
