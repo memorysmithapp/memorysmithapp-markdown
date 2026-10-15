@@ -172,6 +172,26 @@ function useKeptFile(name: string): KeptFile | null | undefined {
 }
 
 /**
+ * Opens a file kept as `data:` in a new tab as the `blob:` of its bytes: a browser navigates no tab
+ * to a `data:` address, so the link alone would do nothing (#79). Any other address is the link's.
+ */
+function openInTab(event: MouseEvent<HTMLAnchorElement>, url: string): void {
+  if (!/^data:/i.test(url.trim()) || typeof URL.createObjectURL !== 'function') return;
+  event.preventDefault();
+  const tab = window.open('', '_blank');
+  void fetch(url)
+    .then((response) => response.blob())
+    .then((blob) => {
+      const address = URL.createObjectURL(blob);
+      if (tab) tab.location.href = address;
+      else window.open(address, '_blank', 'noreferrer');
+      // The tab has the bytes once it loaded them; the address is let go after a while.
+      setTimeout(() => URL.revokeObjectURL(address), 60_000);
+    })
+    .catch(() => tab?.close());
+}
+
+/**
  * A kept file drawn as MemorySmith's `Attachment` draws it (*observed* at `4b67c7e`): an image with
  * the dimensions the embed declared, an audio or a video player, and everything else — the PDF
  * included — a card with what it is, its size, and the ways out of the page: Open only for what a
@@ -210,7 +230,7 @@ function KeptAttachment({ name, width, height }: { name: string; width: number |
       </span>
       <span className="attachment-card-actions">
         {opens && (
-          <a href={file.url} target="_blank" rel="noreferrer">
+          <a href={file.url} target="_blank" rel="noreferrer" onClick={(event) => openInTab(event, file.url)}>
             {host.strings.attachmentOpen}
           </a>
         )}

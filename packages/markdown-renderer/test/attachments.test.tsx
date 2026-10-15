@@ -4,7 +4,7 @@
  */
 
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineTheme, NoteBody, type KeptFile, type NoteHost } from '../src/index.js';
 import { html, mount, type Mounted } from './render.js';
 
@@ -85,6 +85,25 @@ describe('a kept file, drawn by its type (#77)', () => {
       components: { attachment: ({ name, shape, kind, size, opens }) => <i>{`${name}|${shape}|${kind}|${size}|${opens}`}</i> },
     });
     expect(html('![[report.pdf]]', { ...host, theme })).toContain('<i>report.pdf|card|PDF document|1.5 MB|true</i>');
+  });
+
+  it('opens a file kept as data: as the blob of its bytes, which a browser navigates a tab to (#79)', async () => {
+    const tab = { location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    const created = vi.fn(() => 'blob:local/pdf');
+    Object.defineProperty(URL, 'createObjectURL', { value: created, configurable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
+    const fetched = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Blob(['%PDF'], { type: 'application/pdf' })));
+    const kept: NoteHost = { keeps: () => true, fileOf: () => ({ mimeType: 'application/pdf', bytes: 4, url: 'data:application/pdf;base64,JVBERg==' }) };
+    mounted = await mount(<NoteBody markdown="![[local.pdf]]" {...kept} />);
+    const link = [...mounted.container.querySelectorAll('a')].find((each) => each.textContent === 'Open')!;
+    await act(async () => link.click());
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(fetched).toHaveBeenCalledWith('data:application/pdf;base64,JVBERg==');
+    expect(tab.location.href).toBe('blob:local/pdf');
+    open.mockRestore();
+    fetched.mockRestore();
   });
 
   it('is drawn by renderAttachment, which wins over fileOf', () => {

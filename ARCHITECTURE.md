@@ -136,7 +136,7 @@ A **theme** (`src/theme.ts`) decides how a note looks, never what its notation m
 | `heading` | `level`, `children`; the footnotes' heading is never one | `headings` |
 | `blockquote` | `children`; a callout is never one | `MarkdownBlockquote` |
 | `embed` | `state` (`ready`, `section-missing`, `loading`, `pending`), `target`, `anchor`, `caption`, `children` | `Transclusion` |
-| `attachment` | `name`, `file` (what `fileOf` said, its addresses through the filter), `shape` (`image`, `audio`, `video`, `card`), `kind`, `size`, `opens`, `width`, `height`; drawn only for a host that gives `fileOf` | `KeptAttachment` |
+| `attachment` | `name`, `file` (what `fileOf` said, its addresses through the filter; the default card opens a `data:` one as the `blob:` of its bytes, a browser navigating no tab to `data:`), `shape` (`image`, `audio`, `video`, `card`), `kind`, `size`, `opens`, `width`, `height`; drawn only for a host that gives `fileOf` | `KeptAttachment` |
 | `footnotes` | `label`, `children` (the list) | `MarkdownSection`, for the section remark-rehype gathers |
 | `taskBox` | `checked`, `enabled`, `toggle`, which reports the box's ordinal and does nothing when it is not enabled, `pending`, while the host saves a tick of it (`checked` is then the state being written and `enabled` is false), and `failed`, once a save of it failed; the lock and the notice are drawn beside the slot, as `.task-lock` and `.task-notice` | `TaskItem` |
 | `wikilink` | `pending`, `children`, `link`, which draws a label as the host's link to the resolved address, the choice, or the pending marker | `MarkdownAnchor` |
