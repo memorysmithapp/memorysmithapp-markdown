@@ -193,8 +193,12 @@ describe('the save of an edit (#64)', () => {
     expect($('.cm-editor')).not.toBeNull();
     expect(onModeChange).not.toHaveBeenCalled();
     expect(said()).toBe('Not saved: the note stays in edit');
-    expect(status().title).toBe('Not saved: the note stays in edit');
-    expect($('.edit-save-icon svg')).not.toBeNull();
+    // The icon alone is the retry, named by what happened and what it does (#66).
+    const retry = $<HTMLButtonElement>('button.edit-save-icon.edit-save-retry')!;
+    expect(retry.getAttribute('aria-label')).toBe('Not saved: the note stays in edit. Try again');
+    expect(retry.title).toBe(retry.getAttribute('aria-label'));
+    expect(retry.textContent).toBe('');
+    expect(retry.querySelector('svg')).not.toBeNull();
   });
 
   it('never takes back what the author typed when the host gives back an older save', async () => {

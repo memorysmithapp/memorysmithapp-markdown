@@ -293,24 +293,27 @@ function SourceDialog({ text, host, onClose, onClosed }: { text: string; host: R
 /**
  * Where the save of the author's last change stands, in the toolbar before the switch: an icon for
  * each state, in a slot of one size, so the toolbar never moves as the author types; its word is
- * its title. Whoever hears the page is told the whole of it, why the note stays in edit included.
+ * its title. A failed save's icon is the button that tries again (#66). Whoever hears the page is
+ * told the whole of it, why the note stays in edit included.
  */
 function SaveStatus({ state, blocked, retry, host }: { state: string; blocked: boolean; retry: () => void; host: ResolvedHost }) {
   const words = host.strings.editor;
   const shown = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
   const said = state === 'failed' && blocked ? words.stayInEdit : shown;
   const icon = state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'failed' ? ICONS.notSaved : null;
+  const retryLabel = `${said}. ${words.retry}`;
   return (
-    <div className="edit-save" data-save={state} title={said || undefined}>
-      <span className="edit-save-icon">{icon}</span>
+    <div className="edit-save" data-save={state} title={state === 'failed' ? undefined : said || undefined}>
+      {state === 'failed' ? (
+        <button type="button" className="edit-save-icon edit-save-retry" title={retryLabel} aria-label={retryLabel} onClick={retry}>
+          {icon}
+        </button>
+      ) : (
+        <span className="edit-save-icon">{icon}</span>
+      )}
       <span className="visually-hidden" role="status" aria-live="polite">
         {said}
       </span>
-      {state === 'failed' && (
-        <button type="button" className="edit-save-retry" onClick={retry}>
-          {words.retry}
-        </button>
-      )}
     </div>
   );
 }

@@ -88,7 +88,7 @@ A note the host makes `editable` carries a button at its top right that switches
 />
 ```
 
-When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, with *Try again*, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
+When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
 
 `mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
 
