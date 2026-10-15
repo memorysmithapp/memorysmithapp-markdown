@@ -108,10 +108,19 @@ function listKindOf(text: string): ListKind | null {
 
 /**
  * Makes each selected line an item of a list of `kind`, renumbering an ordered one from 1; when
- * every line already is one, they become paragraphs again. Blank lines are left alone.
+ * every line already is one, they become paragraphs again. Blank lines among them are left alone;
+ * a blank line alone starts a list.
  */
 export function toggleList(state: EditorState, kind: ListKind): TransactionSpec {
-  const lines = selectedLines(state).filter((line) => line.text.trim().length > 0);
+  const selected = selectedLines(state);
+  const marker = kind === 'bullet' ? '- ' : kind === 'task' ? '- [ ] ' : '1. ';
+  // On a blank line a list starts: its marker, the cursor after it for the first item (#74).
+  if (selected.every((line) => line.text.trim().length === 0)) {
+    const line = state.doc.lineAt(state.selection.main.head);
+    const quote = QUOTE.exec(line.text)![0];
+    return { changes: { from: line.from + quote.length, to: line.to, insert: marker }, selection: { anchor: line.from + quote.length + marker.length } };
+  }
+  const lines = selected.filter((line) => line.text.trim().length > 0);
   const remove = lines.length > 0 && lines.every((line) => listKindOf(line.text) === kind);
   let number = 1;
   const changes: ChangeSpec[] = lines.map((line) => {

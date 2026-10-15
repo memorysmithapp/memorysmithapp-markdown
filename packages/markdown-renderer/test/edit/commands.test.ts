@@ -65,6 +65,23 @@ describe('lines', () => {
     expect(run(at('  |- one|'), (state) => toggleList(state, 'bullet'))).toBe('  one');
   });
 
+  it('starts a list of each kind on a blank line, the cursor after its marker (#74)', () => {
+    const cases = [
+      ['bullet', '- '],
+      ['ordered', '1. '],
+      ['task', '- [ ] '],
+    ] as const;
+    for (const [kind, marker] of cases) {
+      const state = at('Text.\n\n|\n\nMore.');
+      const next = state.update(toggleList(state, kind)).state;
+      expect(next.doc.toString()).toBe(`Text.\n\n${marker}\n\nMore.`);
+      expect(next.selection.main.head).toBe(7 + marker.length);
+    }
+    // In a quotation, after its marker; and blank lines among items are still left alone.
+    expect(run(at('> |'), (state) => toggleList(state, 'bullet'))).toBe('> - ');
+    expect(run(at('|one\n\ntwo|'), (state) => toggleList(state, 'bullet'))).toBe('- one\n\n- two');
+  });
+
   it('quotes and unquotes lines', () => {
     expect(run(at('|a\nb|'), toggleQuote)).toBe('> a\n> b');
     expect(run(at('|> a\n> b|'), toggleQuote)).toBe('a\nb');
