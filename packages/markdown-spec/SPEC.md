@@ -531,7 +531,7 @@ block:
 ---
 ```
 
-Scalars, inline lists and dash lists. One layer of matching quotes around a value is stripped. Nesting, anchors, multi-line scalars and typed tags are **not** part of this specification: an implementation MAY store them, and MUST NOT derive anything from them.
+Scalars, inline lists and dash lists. One layer of matching quotes around a value is stripped. **The subset has no comments**: a `#` is a character of the value it is written in, wherever it stands, so `name: Incident #4711 · Region loss` has the value `Incident #4711 · Region loss` — which carries a `#`, and so names nothing (§5.3). Nesting, anchors, multi-line scalars and typed tags are **not** part of this specification: an implementation MAY store them, and MUST NOT derive anything from them.
 
 ### 6.3 The shape of the value decides indexing
 
@@ -820,7 +820,7 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `diagram-invalid` | notice | §7.2 | A `mermaid` block its diagram language cannot read is shown as a code block, or as the diagram language's own error |
 | `frontmatter-unclosed` | notice | §6.1 | A `---` on the first line with no `---` closing it is no frontmatter: the note has no properties and no name, and the lines are body text |
 | `name-missing` | notice | §6.5 | The note has no `name`: it is unnamed, and a link reaches it only through an alias |
-| `name-unusable` | notice | §6.5 | A `name` of a shape other than a single text value leaves the note unnamed |
+| `name-unusable` | notice | §6.5 | A `name` of a shape other than a single text value, or one carrying `#`, `[`, `]` or `\|` (§5.3), leaves the note unnamed |
 | `reserved-not-a-list` | notice | §6.4 | `aliases` or `tags` written as a single value rather than a list degrade to an ordinary attribute |
 | `aliases-missing` | hint | §6.4 | The note has no `aliases`: only its name catches a link |
 | `tags-missing` | hint | §6.4 | The note has no `tags`: it has no subjects to be filtered by |

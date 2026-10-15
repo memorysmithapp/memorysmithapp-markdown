@@ -505,7 +505,7 @@
       "code": "name-unusable",
       "severity": "notice",
       "spec": "6.5",
-      "effect": "A name of a shape other than a single text value leaves the note unnamed."
+      "effect": "A name of a shape other than a single text value, or one carrying #, [, ] or |, leaves the note unnamed."
     },
     {
       "code": "reserved-not-a-list",

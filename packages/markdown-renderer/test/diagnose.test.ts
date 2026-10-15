@@ -106,7 +106,7 @@ describe('the demonstration notebooks', () => {
   };
   collect(NOTEBOOKS);
 
-  it('raise no notice but the name the two drafts leave out on purpose', async () => {
+  it('raise no notice but the names three notes leave out on purpose', async () => {
     const raised: Record<string, NoticeCode[]> = {};
     for (const path of notes) {
       const notices = (await diagnose(readFileSync(path, 'utf8'))).filter((notice) => notice.severity === 'notice');
@@ -114,6 +114,8 @@ describe('the demonstration notebooks', () => {
     }
     expect(raised).toEqual({
       'continuity-engineering/03 Reviews/Exercise 2026-06 · Account loss (draft).md': ['name-missing'],
+      // Named `Incident #4711`, to show that a name carrying `#` is no name (§5.3, #41).
+      'continuity-engineering/03 Reviews/Incident 4711 · Region loss.md': ['name-unusable'],
       'enologia/03 Safras/Rascunho da safra 2027.md': ['name-missing'],
     });
   }, 30_000);

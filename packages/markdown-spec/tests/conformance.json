@@ -678,6 +678,17 @@
       "name": null
     },
     {
+      "id": "frontmatter/a-hash-is-part-of-the-value-and-opens-no-comment",
+      "notation": "frontmatter-enum",
+      "markdown": "---\nname: Note\nstatus: draft # to review\n---\n\nBody.",
+      "facets": {
+        "status": {
+          "kind": "enum",
+          "values": ["draft # to review"]
+        }
+      }
+    },
+    {
       "id": "name/a-slash-is-an-ordinary-character",
       "notation": "note-name",
       "markdown": "---\nname: Reunião 03/09/2026\n---\n\nA ata.\n",
@@ -1186,6 +1197,15 @@
       "id": "notice/name-unusable",
       "notation": "frontmatter-name",
       "markdown": "---\nname: [One, Two]\naliases: [note]\ntags: [example]\n---\n# Title\n",
+      "notices": [
+        { "code": "name-unusable", "line": 2 }
+      ]
+    },
+    {
+      "id": "notice/a-name-carrying-a-hash-is-unusable",
+      "notation": "frontmatter-name",
+      "markdown": "---\nname: Incident #4711 · Region loss\naliases: [incident]\ntags: [example]\n---\n# Title\n",
+      "name": null,
       "notices": [
         { "code": "name-unusable", "line": 2 }
       ]

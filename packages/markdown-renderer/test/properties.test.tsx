@@ -5,12 +5,31 @@
  */
 
 import { act } from 'react';
+import { cases } from '@memorysmithapp/markdown-spec';
 import { describe, expect, it, vi } from 'vitest';
 import { defineTheme, readProperties, type PropertiesSlotProps } from '../src/index.js';
 import { notebook } from './notebook.js';
 import { draw, html } from './render.js';
 
 const front = (lines: string) => `---\n${lines}\n---\n\nThe body.`;
+
+describe('the name of a note, as the conformance suite states it (§5.3, §6.5)', () => {
+  const named = cases.filter((testCase) => testCase.name !== undefined);
+
+  it('has name cases to read', () => {
+    expect(named.length).toBeGreaterThan(10);
+  });
+
+  it.each(named.map((testCase) => [testCase.id, testCase.markdown, testCase.name] as const))('%s', (_id, markdown, name) => {
+    expect(readProperties(markdown).name).toBe(name);
+  });
+
+  it('draws a name carrying a # as no name, as the kernel reads it (#41)', () => {
+    const out = html('---\nname: Incident #4711 · Region loss\n---\n\nBody.');
+    expect(out).toContain('<h1 class="note-title note-unnamed">Unnamed note</h1>');
+    expect(out).not.toContain('Incident #4711');
+  });
+});
 
 describe('reading the frontmatter', () => {
   it('reads each value by its shape (§6.3)', () => {
