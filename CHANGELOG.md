@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-14
+
 ### Changed
 
 - The demonstration notebooks show a callout title holding bold text, in the red-wine protocol and the March exercise, and a callout of a type outside A–Z, `[!atenção]`, in the protocol; the comparison with MemorySmith lists both notes as deliberate differences (#42, #43).
@@ -101,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
 [unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...HEAD
+[0.3.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...v0.1.2
