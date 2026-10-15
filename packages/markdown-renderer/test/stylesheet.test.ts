@@ -101,7 +101,7 @@ describe('the stylesheet', () => {
 
   it('cuts away the separator of a toolbar group that starts a row, so every row starts alike (#80)', () => {
     const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
-    const group = /\.markdown \.edit-toolbar-group \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    const group = [...source.matchAll(/\.markdown \.edit-toolbar-group \{([^}]*)\}/g)].map((match) => match[1]).join('');
     expect(group).toContain('margin-inline-start: -1px;');
     expect(group).toContain('border-inline-start: 1px solid');
     const tools = [...source.matchAll(/\.markdown \.edit-toolbar-tools \{([^}]*)\}/g)].map((match) => match[1]).join('');
