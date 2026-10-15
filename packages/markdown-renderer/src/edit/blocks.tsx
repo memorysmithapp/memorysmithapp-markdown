@@ -463,6 +463,7 @@ function Field({
 function ListField({ items, label, onCommit }: { items: readonly string[]; label: string; onCommit: (items: string[], typing: boolean) => void }) {
   const { strings } = useHost();
   const [draft, setDraft] = useState('');
+  const field = useRef<HTMLInputElement>(null);
   const add = (typing: boolean) => {
     const item = draft.trim();
     if (item.length === 0) return;
@@ -488,6 +489,7 @@ function ListField({ items, label, onCommit }: { items: readonly string[]; label
         </span>
       ))}
       <input
+        ref={field}
         className="edit-field edit-list-add"
         aria-label={`${strings.editor.addItem}: ${label}`}
         placeholder={strings.editor.addItem}
@@ -503,6 +505,10 @@ function ListField({ items, label, onCommit }: { items: readonly string[]; label
           if (event.key === 'Backspace' && draft === '' && items.length > 0) onCommit(items.slice(0, -1), true);
         }}
       />
+      {/* What is typed becomes an item; with nothing typed, the field takes the focus for it. */}
+      <Control label={`${strings.editor.addItem} ${label}`} onClick={() => (draft.trim() === '' ? field.current?.focus() : add(true))}>
+        {ICONS.add}
+      </Control>
     </span>
   );
 }
@@ -578,6 +584,53 @@ function emptyValue(type: Exclude<NewPropertyType, 'list'>): string {
   return '';
 }
 
+/** The type a property's value has, as the form offers it. */
+function typeOf(shape: string): NewPropertyType {
+  return shape === 'list' ? 'list' : shape === 'date' ? 'date' : shape === 'boolean' ? 'boolean' : 'text';
+}
+
+/**
+ * A property given another type, its value carried over where the new type can hold it: a list's
+ * items joined as text, a text split at its commas as a list's items; a value the new type
+ * cannot hold becomes that type's empty one. Undo takes it back.
+ */
+function retype(front: Frontmatter, key: string, read: { shape: string; values: readonly string[] }, to: NewPropertyType): TextChange[] {
+  const from = typeOf(read.shape);
+  if (from === to) return [];
+  const values = read.values.filter((value) => value.length > 0);
+  if (to === 'list') {
+    // A text splits at its commas, as a list joined as text was written.
+    const items = from === 'boolean' ? [] : from === 'text' ? values.flatMap((value) => value.split(',')).map((item) => item.trim()).filter(Boolean) : values;
+    return setList(front, key, items);
+  }
+  if (to === 'boolean') return setScalar(front, key, 'false');
+  if (to === 'date') return setScalar(front, key, emptyValue('date'));
+  return setScalar(front, key, from === 'list' ? values.join(', ') : '');
+}
+
+/**
+ * The choice of a property's type, drawn as the icon of its type before its key: a select laid
+ * over the icon, so it opens where the author looks and is reached by keyboard and named (#71).
+ */
+function TypeChoice({ value, label, onChoose }: { value: NewPropertyType; label: string; onChoose: (type: NewPropertyType) => void }) {
+  const words = useHost().strings.editor;
+  return (
+    <select
+      className="edit-type"
+      aria-label={label}
+      title={label}
+      value={value}
+      data-ms-control=""
+      onChange={(event) => onChoose(event.target.value as NewPropertyType)}
+    >
+      <option value="text">{words.typeText}</option>
+      <option value="list">{words.typeList}</option>
+      <option value="boolean">{words.typeBoolean}</option>
+      <option value="date">{words.typeDate}</option>
+    </select>
+  );
+}
+
 /**
  * The property whose value field takes the focus once the form is drawn again, per editor: one
  * just made (#70), or a list the author is adding items to.
@@ -646,10 +699,19 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
               const found = properties.entries.find((each) => each.key === entry.key) ?? { key: entry.key, shape: 'empty', values: [] };
               // A list with no items is empty to the page, which draws nothing; to the form it is still a list.
               const read = found.shape === 'empty' && entry.form !== 'scalar' ? { ...found, shape: 'list' } : found;
-              const type = read.shape === 'list' ? 'list' : read.shape === 'date' ? 'date' : read.shape === 'boolean' ? 'checkbox' : 'text';
+              const kind = typeOf(read.shape);
+              // The property itself is handled at its key — its type, its name, its removal — and its value at the value.
               return (
-                <div key={entry.key} className="metadata-property edit-property" data-property-type={type}>
+                <div key={entry.key} className="metadata-property edit-property" data-property-type={kind === 'boolean' ? 'checkbox' : kind}>
                   <span className="metadata-property-key">
+                    <TypeChoice
+                      value={kind}
+                      label={`${words.propertyType}: ${entry.key}`}
+                      onChoose={(to) => {
+                        focusAfterDraw.set(view, entry.key);
+                        write(view, retype(front, entry.key, read, to));
+                      }}
+                    />
                     <Field
                       value={entry.key}
                       label={`${words.propertyKey}: ${entry.key}`}
@@ -657,18 +719,19 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
                       size={Math.max(4, entry.key.length + 1)}
                       onCommit={(next) => write(view, renameKey(front, entry.key, next.trim()))}
                     />
-                  </span>
-                  <span className="metadata-property-value">
-                    <ValueField view={view} front={front} entry={read} written={source.slice(entry.valueSpan.from, entry.valueSpan.to)} />
                     <Control label={`${words.removeProperty}: ${entry.key}`} onClick={() => write(view, removeEntry(front, entry.key))}>
                       {ICONS.remove}
                     </Control>
                   </span>
+                  <span className="metadata-property-value">
+                    <ValueField view={view} front={front} entry={read} written={source.slice(entry.valueSpan.from, entry.valueSpan.to)} />
+                  </span>
                 </div>
               );
             })}
-          <div className="metadata-property edit-property edit-property-new">
+          <div className="metadata-property edit-property edit-property-new" data-property-type={type === 'boolean' ? 'checkbox' : type}>
             <span className="metadata-property-key">
+              <TypeChoice value={type} label={`${words.propertyType}: ${words.addProperty}`} onChoose={setType} />
               <input
                 className="edit-field edit-key"
                 size={Math.max(words.addProperty.length, adding.length + 1)}
@@ -681,19 +744,6 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
               />
             </span>
             <span className="metadata-property-value">
-              <select
-                className="edit-property-type"
-                aria-label={words.propertyType}
-                title={words.propertyType}
-                value={type}
-                data-ms-control=""
-                onChange={(event) => setType(event.target.value as NewPropertyType)}
-              >
-                <option value="text">{words.typeText}</option>
-                <option value="list">{words.typeList}</option>
-                <option value="boolean">{words.typeBoolean}</option>
-                <option value="date">{words.typeDate}</option>
-              </select>
               <Control label={words.addProperty} onClick={add}>
                 {ICONS.add}
               </Control>

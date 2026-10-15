@@ -87,7 +87,7 @@ describe('the properties form', () => {
         setter.call(name, key);
         name.dispatchEvent(new Event('input', { bubbles: true }));
       });
-      const select = $<HTMLSelectElement>('select[aria-label="Type of the new property"]')!;
+      const select = $<HTMLSelectElement>('select[aria-label="Type: Add a property"]')!;
       await act(async () => {
         select.value = type;
         select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -98,7 +98,7 @@ describe('the properties form', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 15, 12));
     const changes = await open(NOTE);
-    expect([...$<HTMLSelectElement>('select[aria-label="Type of the new property"]')!.options].map((option) => option.textContent)).toEqual(['Text', 'List', 'Yes or no', 'Date']);
+    expect([...$<HTMLSelectElement>('select[aria-label="Type: Add a property"]')!.options].map((option) => option.textContent)).toEqual(['Text', 'List', 'Yes or no', 'Date']);
 
     await add('aliases', 'list');
     expect(changes.at(-1)).toBe(NOTE.replace('status: draft\n', 'status: draft\naliases: []\n'));
@@ -135,6 +135,55 @@ describe('the properties form', () => {
     expect(changes.at(-1)).toContain('note:\n---');
     expect(document.activeElement).toBe($('input[aria-label="Value: note"]'));
     vi.useRealTimers();
+  });
+
+  it('holds each property at its key: its type, laid over its icon, and its removal (#71)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 15, 12));
+    const changes = await open(NOTE);
+    const key = (name: string) => $<HTMLInputElement>(`input[aria-label="Key: ${name}"]`)!.closest('.metadata-property-key')!;
+    const retype = async (name: string, type: string) => {
+      const select = key(name).querySelector<HTMLSelectElement>('select.edit-type')!;
+      await act(async () => {
+        select.value = type;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await settle();
+    };
+    expect(key('tags').querySelector<HTMLSelectElement>('select.edit-type')!.value).toBe('list');
+    expect(key('status').querySelector('button[aria-label="Remove the property: status"]')).not.toBeNull();
+
+    // A list as text: its items joined; back as a list: the text its one item.
+    await retype('tags', 'text');
+    expect(changes.at(-1)).toContain('tags: a, b\n');
+    await retype('tags', 'list');
+    expect(changes.at(-1)).toContain('tags: [a, b]\n');
+    expect(document.activeElement).toBe($('input[aria-label="Add: tags"]'));
+    await retype('status', 'boolean');
+    expect(changes.at(-1)).toContain('status: false\n');
+    await retype('status', 'date');
+    expect(changes.at(-1)).toContain('status: 2026-10-15\n');
+
+    await act(async () => key('status').querySelector<HTMLButtonElement>('button[aria-label="Remove the property: status"]')!.click());
+    await settle();
+    expect(changes.at(-1)).not.toContain('status');
+    vi.useRealTimers();
+  });
+
+  it("adds a list's next item with its + button, or gives its field the focus (#71)", async () => {
+    const changes = await open(NOTE);
+    const plus = () => $<HTMLButtonElement>('button[aria-label="Add tags"]')!;
+    await act(async () => plus().click());
+    expect(document.activeElement).toBe($('input[aria-label="Add: tags"]'));
+    const field = $<HTMLInputElement>('input[aria-label="Add: tags"]')!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setter.call(field, 'c');
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => plus().click());
+    await settle();
+    expect(changes.at(-1)).toContain('tags: [a, b, c]\n');
   });
 
   it('gives a note with no frontmatter one, at its top', async () => {

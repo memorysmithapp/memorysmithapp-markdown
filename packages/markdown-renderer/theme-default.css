@@ -1290,8 +1290,7 @@
   gap: 0.35rem;
 }
 .markdown .edit-toolbar select,
-.markdown .edit-block-controls select,
-.markdown .edit-property-type {
+.markdown .edit-block-controls select {
   height: 1.9rem;
   padding: 0 0.3rem;
   border: 1px solid var(--ms-border);
@@ -1567,17 +1566,53 @@
   align-items: center;
   gap: 0.25rem;
 }
-.markdown .edit-property .metadata-property-value .edit-control {
+.markdown .edit-property .edit-control {
   min-width: 1.5rem;
   height: 1.5rem;
   opacity: 0;
 }
-/* A property's controls show on hover or focus; the row that adds one shows
-   its button always, at the specificity of the rule that hides the others. */
+/* A property's controls show on hover or focus; the row that adds one and a
+   list's button for its next item show always. */
 .markdown .edit-property:hover .edit-control,
 .markdown .edit-property:focus-within .edit-control,
-.markdown .edit-property-new .metadata-property-value .edit-control {
+.markdown .edit-property-new .edit-control,
+.markdown .edit-property .edit-list .edit-control {
   opacity: 1;
+}
+/* The key holds the property: the choice of its type, laid over the icon of
+   its type and opening there, its name, and the button that removes it. */
+.markdown .edit-property .metadata-property-key {
+  position: relative;
+  align-items: center;
+}
+.markdown .edit-type {
+  position: absolute;
+  left: -0.25em;
+  top: 50%;
+  width: 1.45em;
+  height: 1.6em;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-type:hover {
+  border-color: var(--ms-border);
+}
+.markdown .edit-type:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 1px;
+}
+.markdown .edit-type option {
+  background: var(--ms-surface);
+  color: var(--ms-text);
 }
 .markdown .edit-list {
   align-items: center;
@@ -1585,7 +1620,8 @@
 }
 .markdown .edit-list-add {
   width: 6rem;
-  flex: 1 1 4rem;
+  flex: 0 1 8rem;
+  min-width: 4rem;
 }
 .markdown .edit-chip-remove {
   margin-inline-start: 0.3rem;

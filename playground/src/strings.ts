@@ -97,7 +97,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     removeProperty: 'Remover a propriedade',
     propertyKey: 'Chave',
     propertyValue: 'Valor',
-    propertyType: 'Tipo da nova propriedade',
+    propertyType: 'Tipo',
     typeText: 'Texto',
     typeList: 'Lista',
     typeBoolean: 'Sim ou não',
