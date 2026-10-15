@@ -35,6 +35,7 @@ import {
 import { analysisField, editorEnvironment, livePage } from './live.js';
 import { NoteActions } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
+import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
 import { useEditSaves } from './saves.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
@@ -124,6 +125,13 @@ const shortcuts = (view: () => EditorView | null): Extension =>
     { key: 'Mod-/', run: command(toggleComment) },
     ...[0, 1, 2, 3, 4, 5, 6].map((level) => ({ key: `Mod-Alt-${level}`, run: command((state) => setHeading(state, level)) })),
     { key: 'Escape', run: () => (view()?.contentDOM.blur(), true) },
+  ]);
+
+/** The editing menu's keys: the context-menu key and Shift+F10 open it at the cursor (#81). */
+const menuKeys = (open: (view: EditorView) => boolean): Extension =>
+  keymap.of([
+    { key: 'Shift-F10', run: open },
+    { key: 'ContextMenu', run: open },
   ]);
 
 /** Where the files the author attached stand: none in flight, some being kept, or the last one failed. */
@@ -344,6 +352,86 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   };
   const attachButton = useRef<HTMLButtonElement>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+  /** Where the editing menu is open, in the window's coordinates (#81). */
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const openMenu = useRef((x: number, y: number) => setMenu({ x, y }));
+  /** The menu's groups, from the same commands as the toolbar: Format with a selection, Insert, Edit. */
+  const menuGroups = (target: EditorView): MenuGroup[] => {
+    const words = resolved.strings.editor;
+    const item = (name: keyof typeof ICONS & keyof typeof words, action: Command, shortcut?: string): MenuItem => ({
+      name,
+      label: words[name],
+      icon: ICONS[name],
+      shortcut,
+      run: () => action(target),
+    });
+    const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) =>
+      item(name, command((state) => insertBlock(state, BLOCKS[name].text, BLOCKS[name].cursor)));
+    const selection = target.state.selection.main;
+    const selected = target.state.sliceDoc(selection.from, selection.to);
+    const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    const groups: MenuGroup[] = [];
+    if (!selection.empty) {
+      groups.push({
+        label: words.menuFormat,
+        items: [
+          item('bold', command((state) => toggleMark(state, '**')), 'Mod-b'),
+          item('italic', command((state) => toggleMark(state, '_')), 'Mod-i'),
+          item('strikethrough', command((state) => toggleMark(state, '~~')), 'Mod-Shift-x'),
+          item('highlight', command((state) => toggleMark(state, '==')), 'Mod-Shift-h'),
+          item('code', command((state) => toggleMark(state, '`')), 'Mod-e'),
+        ],
+      });
+    }
+    groups.push({
+      label: words.menuInsert,
+      items: [
+        item('link', command(insertLink), 'Mod-k'),
+        item('wikilink', command(insertWikilink), 'Mod-Shift-k'),
+        item('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8'),
+        item('orderedList', command((state) => toggleList(state, 'ordered')), 'Mod-Shift-7'),
+        item('taskList', command((state) => toggleList(state, 'task')), 'Mod-Shift-9'),
+        item('quote', command(toggleQuote), 'Mod-Shift-.'),
+        block('callout'),
+        block('table'),
+        block('codeBlock'),
+        block('math'),
+        block('diagram'),
+        block('rule'),
+        item('footnote', command(insertFootnote)),
+        item('comment', command(toggleComment), 'Mod-/'),
+        { name: 'attach', label: words.attach, icon: ICONS.attach, run: () => setAttachOpen(true) },
+      ],
+    });
+    groups.push({
+      label: words.menuEdit,
+      items: [
+        {
+          name: 'cut',
+          label: words.cut,
+          icon: ICONS.cut,
+          shortcut: 'Mod-x',
+          disabled: selection.empty || !clipboard,
+          run: () =>
+            void clipboard?.writeText(selected).then(() => target.dispatch({ changes: { from: selection.from, to: selection.to }, userEvent: 'delete.cut' })),
+        },
+        { name: 'copy', label: words.copy, icon: ICONS.copy, shortcut: 'Mod-c', disabled: selection.empty || !clipboard, run: () => void clipboard?.writeText(selected) },
+        {
+          name: 'paste',
+          label: words.paste,
+          icon: ICONS.paste,
+          shortcut: 'Mod-v',
+          disabled: !clipboard?.readText,
+          run: () =>
+            void clipboard?.readText().then(
+              (text) => target.dispatch({ ...target.state.replaceSelection(text), userEvent: 'input.paste', scrollIntoView: true }),
+              () => undefined,
+            ),
+        },
+      ],
+    });
+    return groups;
+  };
   /** A pasted or dropped file, kept under its own name and with no description. */
   const asChosen = (files: readonly File[]): ChosenFile[] => files.map((file) => ({ file, name: file.name, description: '' }));
   useEffect(() => {
@@ -382,7 +470,26 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           shortcuts(() => created),
           keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
           // A file pasted or dropped is attached, where the host keeps files (#75).
+          menuKeys((target) => {
+            if (target.state.readOnly) return false;
+            const at = target.coordsAtPos(target.state.selection.main.head);
+            const box = target.contentDOM.getBoundingClientRect();
+            openMenu.current(at?.left ?? box.left, at?.bottom ?? box.top);
+            return true;
+          }),
           EditorView.domEventHandlers({
+            // The editing menu where the pointer is; Shift keeps the browser's, and so do the
+            // drawn blocks' own fields, which are the browser's to edit (#81).
+            contextmenu: (event, target) => {
+              if (event.shiftKey || target.state.readOnly) return false;
+              if (event.target instanceof Element && event.target.closest('[data-ms-control]')) return false;
+              event.preventDefault();
+              const at = target.posAtCoords({ x: event.clientX, y: event.clientY });
+              const selection = target.state.selection.main;
+              if (at !== null && (at < selection.from || at > selection.to)) target.dispatch({ selection: { anchor: at } });
+              openMenu.current(event.clientX, event.clientY);
+              return true;
+            },
             paste: (event) => {
               const files = [...(event.clipboardData?.files ?? [])];
               if (files.length === 0 || !latest.current.host.attach) return false;
@@ -526,6 +633,18 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             }
           />
         </div>
+        {menu && view && (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label={resolved.strings.editor.menu}
+            groups={menuGroups(view)}
+            onClose={(back) => {
+              setMenu(null);
+              if (back) view.focus();
+            }}
+          />
+        )}
         {attachOpen && (
           <AttachDialog
             onClose={() => setAttachOpen(false)}

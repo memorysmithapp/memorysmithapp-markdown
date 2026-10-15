@@ -108,6 +108,13 @@ export interface EditorWords {
   readonly attach: string;
   readonly attaching: string;
   readonly attachFailed: string;
+  /** The editing menu of a right-click (#81): its name, its groups, and the clipboard's verbs. */
+  readonly menu: string;
+  readonly menuFormat: string;
+  readonly menuInsert: string;
+  readonly menuEdit: string;
+  readonly cut: string;
+  readonly paste: string;
   /** The attach dialog (#78): its title, its three ways in, and what each one asks and says. */
   readonly attachTitle: string;
   readonly fromComputer: string;
@@ -286,6 +293,12 @@ export const ENGLISH: NoteStrings = {
     attach: 'Attach a file',
     attaching: 'Attaching…',
     attachFailed: 'The file was not attached',
+    menu: 'Editing',
+    menuFormat: 'Format',
+    menuInsert: 'Insert',
+    menuEdit: 'Edit',
+    cut: 'Cut',
+    paste: 'Paste',
     attachTitle: 'Attach',
     fromComputer: 'From the computer',
     fromNotebook: 'From the notebook',

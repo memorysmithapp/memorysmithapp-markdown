@@ -168,6 +168,30 @@
   justify-content: center;
 }
 
+/* The editing menu of a right-click (#81): over everything, where it was
+   opened, its entries a column of rows that scrolls when the window is short. */
+.markdown .edit-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+}
+.markdown .edit-menu-group {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+}
+.markdown .edit-menu-label {
+  flex: 1 1 auto;
+}
+
 /* The attach dialog (#78): its ways in as tabs, a panel that alone scrolls,
    and the files of the notebook as a list of buttons. */
 /* One height for every way in, so the dialog does not jump between them. */
