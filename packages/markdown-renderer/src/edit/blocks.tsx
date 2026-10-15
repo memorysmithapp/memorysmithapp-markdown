@@ -468,18 +468,26 @@ function ValueField({ view, front, entry, written }: { view: EditorView; front: 
   }
   if (entry.shape === 'boolean') {
     const value = entry.values[0] ?? 'false';
-    // The box writes the opposite in the words the author used: `true`/`false` or `yes`/`no`.
-    const flip = (on: boolean) => {
+    // Chosen as reading draws it, Yes or No, and written in the words the author used: `true`/`false` or `yes`/`no`.
+    const choose = (on: boolean) => {
+      if (on === isTrue(value)) return;
       const yesNo = /^(yes|no)$/i.test(value);
       const word = yesNo ? (on ? 'yes' : 'no') : on ? 'true' : 'false';
       const cased = value === value.toUpperCase() ? word.toUpperCase() : value[0] === value[0]?.toUpperCase() ? word[0]!.toUpperCase() + word.slice(1) : word;
       write(view, setScalar(front, entry.key, cased));
     };
     return (
-      <label className="edit-boolean">
-        <input type="checkbox" checked={isTrue(value)} aria-label={label} data-ms-control="" onChange={(event) => flip(event.target.checked)} />
-        {isTrue(value) ? strings.yes : strings.no}
-      </label>
+      <select
+        className="edit-boolean"
+        value={isTrue(value) ? 'yes' : 'no'}
+        aria-label={label}
+        title={label}
+        data-ms-control=""
+        onChange={(event) => choose(event.target.value === 'yes')}
+      >
+        <option value="yes">{strings.yes}</option>
+        <option value="no">{strings.no}</option>
+      </select>
     );
   }
   if (entry.shape === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(entry.values[0] ?? '')) {

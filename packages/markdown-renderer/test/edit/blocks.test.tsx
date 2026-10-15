@@ -58,6 +58,27 @@ describe('the properties form', () => {
     expect(changes.at(-1)).toBe(NOTE.replace('status: draft', 'state: final').replace('[a, b]', '[b]'));
   });
 
+  it('edits a yes/no property as Yes or No, in the words the author used (#61)', async () => {
+    const note = '---\nreviewed: true\npublished: No\n---\n\nBody.\n';
+    const changes = await open(note);
+    expect($('.edit-properties input[type="checkbox"]')).toBeNull();
+    const choose = async (key: string, value: string) => {
+      const select = $<HTMLSelectElement>(`select[aria-label="Value: ${key}"]`)!;
+      await act(async () => {
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await settle();
+    };
+    const reviewed = $<HTMLSelectElement>('select[aria-label="Value: reviewed"]')!;
+    expect(reviewed.value).toBe('yes');
+    expect([...reviewed.options].map((option) => option.textContent)).toEqual(['Yes', 'No']);
+    await choose('reviewed', 'no');
+    expect(changes.at(-1)).toBe(note.replace('true', 'false'));
+    await choose('published', 'yes');
+    expect(changes.at(-1)).toBe(note.replace('true', 'false').replace('No', 'Yes'));
+  });
+
   it('gives a note with no frontmatter one, at its top', async () => {
     const changes = await open('# Title\n');
     await act(async () => $<HTMLButtonElement>('.edit-add-properties button')!.click());

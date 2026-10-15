@@ -97,6 +97,9 @@
   align-items: center;
   gap: 0.35em;
 }
+.markdown .mode-switch-glyph {
+  flex: none;
+}
 .markdown .edit-toolbar {
   position: sticky;
   top: 0;

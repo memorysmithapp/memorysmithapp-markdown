@@ -62,6 +62,18 @@ describe('the switch', () => {
     expect(button().getAttribute('aria-label')).toBe('Visualizar');
   });
 
+  it('draws its icon with a class of its own, which no form of the button shares (#60)', async () => {
+    for (const modeButton of ['label', 'icon'] as const) {
+      mounted = await mount(<NoteBody markdown={NOTE} editable modeButton={modeButton} />);
+      const icon = button().querySelector('svg')!;
+      const own = [...icon.classList];
+      expect(own.length).toBeGreaterThan(0);
+      for (const name of button().classList) expect(own).not.toContain(name);
+      mounted.unmount();
+      mounted = null;
+    }
+  });
+
   it('follows the mode a host controls', async () => {
     const onModeChange = vi.fn();
     mounted = await mount(<NoteBody markdown={NOTE} editable mode="edit" onModeChange={onModeChange} />);

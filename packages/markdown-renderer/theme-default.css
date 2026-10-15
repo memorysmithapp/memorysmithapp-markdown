@@ -1095,8 +1095,12 @@
   line-height: 1.2;
   cursor: pointer;
 }
-.markdown .mode-switch-icon {
+.markdown .mode-switch.mode-switch-icon {
   padding: 0.3rem;
+}
+.markdown .mode-switch-glyph {
+  width: 1.1em;
+  height: 1.1em;
 }
 .markdown .mode-switch:hover {
   border-color: var(--ms-accent);
@@ -1454,8 +1458,17 @@
   opacity: 1;
 }
 .markdown .edit-boolean {
-  display: inline-flex;
-  align-items: center;
+  margin: 0 0 0 -0.3rem;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-boolean:hover {
+  border-color: var(--ms-border);
 }
 .markdown .edit-add-properties {
   margin: 0 0 0.75rem;

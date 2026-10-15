@@ -2,7 +2,7 @@
 // in the current colour at the size of the text. Apart from the editor, which loads on demand.
 
 const svg = (...paths: string[]) => (
-  <svg className="mode-switch-icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg className="mode-switch-glyph" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {paths.map((d) => (
       <path key={d} d={d} />
     ))}
