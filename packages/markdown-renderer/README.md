@@ -19,17 +19,17 @@ import 'katex/dist/katex.min.css';
   markdown={note}                                  // the note as you keep it, frontmatter included
   resolve={(name) => addressOfTheOneNoteNamed(name)} // or null: the link is pending
   keeps={(name) => notebookKeepsAFile(name)}       // only an embed reaches a file
-  renderAttachment={({ name, width, height }) => <img src={urlOf(name)} width={width ?? undefined} />}
+  fileOf={(name) => describe(name)}               // { mimeType, bytes, url, description }: drawn by its type, as MemorySmith does
   renderLink={({ href, className, children }) => <RouterLink to={href} className={className}>{children}</RouterLink>}
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches
   writable
-  onToggleTask={(ordinal) => save(toggleTaskAt(note, ordinal))}
+  onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"
   strings={{ footnotes: 'Notas' }}                 // every word left out is MemorySmith's English
 />;
 ```
 
-Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
+Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
 
 ## Themes
 
@@ -64,7 +64,7 @@ const acme = defineTheme({
 
 - **Properties** name every value the stylesheet reads — colours, faces, sizes, spacing, headings, quotations, tables, callout hues and icons — and are written on the root as `--markdown-*`, so your CSS may set them too.
 - **Your CSS** is scoped by `.markdown-theme-<name>`, and reaches the note and nothing else.
-- **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
+- **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties`, `modeSwitch` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
 
 The frontmatter is the note's too. The default theme draws it as MemorySmith does: `name` as the title, and the other entries in a block that folds, each key with the icon of its value's shape, lists as chips and dates in `strings.locale`, with a `[[wikilink]]`, a Markdown link or a web address in a value drawn as a link. A theme decides otherwise through the `properties` slot, which may draw nothing, as a host that shows properties elsewhere does:
 
@@ -73,6 +73,34 @@ const mine = defineTheme({ name: 'mine', components: { properties: () => null } 
 ```
 
 Import `structure.css` instead of `styles.css` for a theme that draws everything itself. A theme names faces; your page loads them.
+
+## Edit
+
+A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar grows out of the switch, which becomes its last control; its first tool undoes every change since editing began, and a right-click on the text opens a menu of the same tools where you are (Shift keeps the browser's); beside the switch, in both modes, Show Markdown opens the note's Markdown, as you have it or would receive it, in a dialog, and Copy Markdown copies it.
+
+```tsx
+<NoteBody
+  markdown={note}
+  editable                                        // the switch, at the top right
+  onChange={(next) => save(next)}                 // after every change; return the save's promise
+  suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
+  attach={(file, { name, description }) => keepInNotebook(file, name, description)} // the name it is kept under
+  files={() => filesOfTheNotebook()}              // what the attach dialog lists: { name, mimeType, bytes, url, description }
+  modeButton="icon"                               // or "label", the icon and its word
+/>
+```
+
+When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
+
+`mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
+
+```tsx
+import { NoteEditor } from '@memorysmithapp/markdown-renderer/edit';
+
+<NoteEditor markdown={note} onChange={setNote} {...host} />;
+```
+
+A note that mixes line breaks (CRLF and LF) opens read-only, because the editor could not give it back byte for byte.
 
 ## Diagnose
 

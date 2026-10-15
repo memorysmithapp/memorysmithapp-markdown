@@ -22,6 +22,8 @@
  */
 
 import type { ReactNode } from 'react';
+import type { FileShape } from './file-types.js';
+import type { KeptFile } from './host.js';
 import type { PropertyEntry } from './properties.js';
 
 export type Scheme = 'light' | 'dark';
@@ -77,6 +79,8 @@ export interface ThemeProperties {
   readonly iconDanger?: string;
   readonly iconExample?: string;
   readonly iconQuote?: string;
+  /** The chevron of a callout that folds (#83), a CSS image used as a mask. */
+  readonly iconChevron?: string;
   // Faces.
   readonly fontSans?: string;
   readonly fontDisplay?: string;
@@ -145,7 +149,7 @@ export const THEME_PROPERTIES = Object.keys({
   calloutInfo: 1, calloutIdea: 1, calloutDone: 1, calloutWarn: 1, calloutStop: 1, calloutAside: 1, calloutQuote: 1,
   calloutTitleLinkDecoration: 1, calloutTitleLinkOffset: 1,
   iconNote: 1, iconInfo: 1, iconSummary: 1, iconTip: 1, iconSuccess: 1, iconQuestion: 1, iconWarning: 1,
-  iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1,
+  iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1, iconChevron: 1,
   fontSans: 1, fontDisplay: 1, fontMono: 1, fontHeading: 1,
   radius: 1, radiusLarge: 1,
   fontSize: 1, lineHeight: 1, lineHeightTight: 1, rootLineHeight: 1, paragraphSpacing: 1, headingSpacing: 1,
@@ -250,6 +254,10 @@ export interface TaskBoxSlotProps {
   readonly enabled: boolean;
   /** Reports the tick to the host; does nothing when the box is not enabled. */
   readonly toggle: () => void;
+  /** The host is saving a tick of this box: `checked` is the state being written, and the box is not enabled. */
+  readonly pending: boolean;
+  /** The host failed to save the last tick: `checked` is back to what the source holds. */
+  readonly failed: boolean;
 }
 
 /** A wikilink to a note (§5.2). */
@@ -292,6 +300,45 @@ export interface PropertiesSlotProps {
   readonly value: (text: string) => ReactNode;
 }
 
+/**
+ * The switch between reading and editing a note, at its top right (#51). It is drawn only when the
+ * host made the note `editable`; a theme decides how it looks, never whether editing is allowed.
+ */
+export interface ModeSwitchSlotProps {
+  /** The mode the note is in. */
+  readonly mode: 'view' | 'edit';
+  /** The word of the action the switch takes, in the reader's language: `strings.edit` or `strings.view`. */
+  readonly label: string;
+  /** The default theme's icon of that action: a pencil to edit, an eye to read. */
+  readonly icon: ReactNode;
+  /** Whether the host asked for the icon alone or the icon and its word. */
+  readonly display: 'icon' | 'label';
+  /** Switches to the other mode. */
+  readonly toggle: () => void;
+}
+
+/**
+ * A file the notebook keeps, where a note embedded it, described by the host's `fileOf` (#77): the
+ * slot decides how it looks, the package what it is.
+ */
+export interface AttachmentSlotProps {
+  /** The name it is kept under, as the embed wrote it. */
+  readonly name: string;
+  /** What the host said of it, its addresses already through the package's filter. */
+  readonly file: KeptFile;
+  /** The shape its media type is drawn in: `image`, `audio`, `video` or `card`. */
+  readonly shape: FileShape;
+  /** Its type in the reader's words, or its media type. */
+  readonly kind: string;
+  /** Its size in the reader's locale. */
+  readonly size: string;
+  /** Whether a browser shows it on its own, so a card may offer to open it. */
+  readonly opens: boolean;
+  /** The dimensions the embed declared (§3.14), in CSS pixels, or `null`. */
+  readonly width: number | null;
+  readonly height: number | null;
+}
+
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */
 export interface ThemeComponents {
   readonly callout: (props: CalloutSlotProps) => ReactNode;
@@ -302,17 +349,19 @@ export interface ThemeComponents {
   readonly heading: (props: HeadingSlotProps) => ReactNode;
   readonly blockquote: (props: BlockquoteSlotProps) => ReactNode;
   readonly embed: (props: EmbedSlotProps) => ReactNode;
+  readonly attachment: (props: AttachmentSlotProps) => ReactNode;
   readonly footnotes: (props: FootnotesSlotProps) => ReactNode;
   readonly taskBox: (props: TaskBoxSlotProps) => ReactNode;
   readonly wikilink: (props: WikilinkSlotProps) => ReactNode;
   readonly diagram: (props: DiagramSlotProps) => ReactNode;
   readonly properties: (props: PropertiesSlotProps) => ReactNode;
+  readonly modeSwitch: (props: ModeSwitchSlotProps) => ReactNode;
 }
 
 /** The names of the slots, in the order the documentation lists them. */
 export const THEME_SLOTS = Object.keys({
   callout: 1, calloutIcon: 1, table: 1, codeBlock: 1, inlineCode: 1, heading: 1, blockquote: 1,
-  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1,
+  embed: 1, attachment: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1, modeSwitch: 1,
 } satisfies Record<keyof ThemeComponents, 1>) as (keyof ThemeComponents)[];
 
 export interface Theme {

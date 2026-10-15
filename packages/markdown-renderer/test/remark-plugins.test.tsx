@@ -8,7 +8,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { html } from './render.js';
+import { act } from 'react';
+import { NoteBody } from '../src/index.js';
+import { html, mount } from './render.js';
 
 describe('a callout', () => {
   it('becomes an element with its kind on it, titled by what follows the marker', () => {
@@ -38,8 +40,31 @@ describe('a callout', () => {
   it('reads the kind case-insensitively, and takes the fold marker off the page', () => {
     const out = html('> [!NOTE]- Recolhido\n> Corpo.');
     expect(out).toContain('data-callout="note"');
-    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">Recolhido</span></div>');
-    expect(html('> [!faq]+ Aberto\n> Corpo.')).toContain('<div class="callout-title"><span class="callout-title-text">Aberto</span></div>');
+    expect(out).not.toContain(']-');
+    expect(out).toContain('<span class="callout-title-text">Recolhido</span>');
+  });
+
+  it('folds a callout marked + or -, open or closed, its title the control (#83)', () => {
+    const closed = html('> [!NOTE]- Recolhido\n> Corpo.');
+    expect(closed).toContain('<details class="callout" data-callout="note" data-fold="-"><summary class="callout-title"><span class="callout-title-text">Recolhido</span></summary>');
+    expect(html('> [!faq]+ Aberto\n> Corpo.')).toContain('<details class="callout" data-callout="faq" data-fold="+" open=""><summary class="callout-title">');
+    // A callout with no title is named by its type's word; one with no mark keeps MemorySmith's markup.
+    expect(html('> [!tip]-\n> Corpo.')).toContain('<span class="callout-title-text">Tip</span></summary>');
+    const fixed = html('> [!note] Fixo\n> Corpo.');
+    expect(fixed).toContain('<div class="callout" data-callout="note">');
+    expect(fixed).toContain('<div class="callout-title"><span class="callout-title-text">Fixo</span></div>');
+    expect(fixed).not.toContain('<details');
+  });
+
+  it('opens and closes a folding callout from its title (#83)', async () => {
+    const mounted = await mount(<NoteBody markdown={'> [!warning]- Cuidado\n> Corpo.'} />);
+    const details = mounted.container.querySelector<HTMLDetailsElement>('details.callout')!;
+    expect(details.open).toBe(false);
+    await act(async () => details.querySelector('summary')!.click());
+    expect(details.open).toBe(true);
+    await act(async () => details.querySelector('summary')!.click());
+    expect(details.open).toBe(false);
+    mounted.unmount();
   });
 
   it('keeps emphasis in its title and cuts the title at the first line break', () => {

@@ -15,6 +15,7 @@ import {
   Fragment,
   isValidElement,
   useContext,
+  useState,
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
@@ -94,10 +95,43 @@ function Callout({ kind, fold, children }: { kind: string; fold: '+' | '-' | nul
     const body = parts.filter((_, index) => index !== at);
     return drawSlot(slot, { kind, fold, title, icon, children: body });
   }
+  if (fold) {
+    const body = parts.filter((_, index) => index !== at);
+    return (
+      <FoldingCallout kind={kind} fold={fold} icon={icon} body={body}>
+        {title}
+      </FoldingCallout>
+    );
+  }
   return (
     <div className="callout" data-callout={kind} {...(fold ? { 'data-fold': fold } : {})}>
       {parts.map((part, index) => (index === at ? <Fragment key="title">{titled}</Fragment> : part))}
     </div>
+  );
+}
+
+/**
+ * A callout marked `+` or `-`, which the default theme folds (§7, #83): a disclosure whose title
+ * is its control, open at first for `+` and closed for `-`, where only the title shows. A callout
+ * with no mark keeps MemorySmith's markup, which draws every callout open.
+ */
+function FoldingCallout({ kind, fold, icon, body, children }: { kind: string; fold: '+' | '-'; icon: ReactNode; body: ReactNode[]; children?: ReactNode }) {
+  const { strings } = useHost();
+  const [open, setOpen] = useState(fold === '+');
+  // A callout with no title is named by its type's word, so the control always says what it opens.
+  const words = children ?? strings.callouts[kind.toLowerCase()] ?? kind;
+  return (
+    <details className="callout" data-callout={kind} data-fold={fold} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className={icon === null ? 'callout-title' : 'callout-title has-icon'}>
+        {icon !== null && (
+          <span className="callout-icon" aria-hidden="true">
+            {icon}
+          </span>
+        )}
+        <CalloutTitleText>{words}</CalloutTitleText>
+      </summary>
+      {body}
+    </details>
   );
 }
 

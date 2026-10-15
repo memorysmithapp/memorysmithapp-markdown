@@ -1,6 +1,10 @@
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import {
   isValidElement,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
   type AnchorHTMLAttributes,
   type HTMLAttributes,
   type ImgHTMLAttributes,
@@ -12,8 +16,9 @@ import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
-import { highlightLanguage, highlightTree } from './highlight.js';
-import { useHost } from './host.js';
+import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
+import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from './highlight.js';
+import { useHost, type KeptFile } from './host.js';
 import { readDimensions, readImageAlt } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
@@ -21,6 +26,7 @@ import { MermaidDiagram } from './MermaidDiagram.js';
 import { readingPlugins } from './reading.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
+import type { TaskSave } from './task-saves.js';
 import { ordinalAt } from './tasklist.js';
 
 /**
@@ -39,7 +45,10 @@ export interface MarkdownProps {
    * the two disagree on how many there are.
    */
   readonly source?: string;
-  readonly onToggleTask?: (ordinal: number) => void;
+  /** A box of this run was ticked: its ordinal in the run, and the state it is being set to. */
+  readonly onToggleTask?: (ordinal: number, checked: boolean) => void;
+  /** Where the save of a box of this run stands, by its ordinal in the run (`task-saves.ts`). */
+  readonly taskSave?: (ordinal: number) => TaskSave | null;
   readonly writable?: boolean;
   /**
    * How this run takes part in the footnotes of a note drawn in several runs
@@ -113,22 +122,125 @@ function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnch
 }
 
 /**
- * A file the notebook keeps, where a note embedded it. The host draws it by its
- * type — an image, audio, video, or a card — and a name the notebook keeps
- * nothing under is reported the way a pending link is: a notebook is read most
- * while it is being written (§5.8).
+ * A file the notebook keeps, where a note embedded it, drawn by its type — an
+ * image, audio, video, or a card — by the host's `renderAttachment`, else from
+ * what its `fileOf` says (#77). A name the notebook keeps nothing under is
+ * reported the way a pending link is: a notebook is read most while it is
+ * being written (§5.8).
  */
 function Attachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
   const host = useHost();
-  if (!host.keeps(name)) {
-    return (
-      <span className="attachment-missing" title={host.strings.attachmentMissing}>
-        {name}
-      </span>
+  if (!host.keeps(name)) return <AttachmentMissing name={name} />;
+  if (host.renderAttachment) return <>{host.renderAttachment({ name, width, height })}</>;
+  if (!host.fileOf) return <span className="attachment-loading">{name}</span>;
+  return <KeptAttachment name={name} width={width} height={height} />;
+}
+
+function AttachmentMissing({ name }: { name: string }) {
+  const host = useHost();
+  return (
+    <span className="attachment-missing" title={host.strings.attachmentMissing}>
+      {name}
+    </span>
+  );
+}
+
+function isThenable<T>(value: unknown): value is PromiseLike<T> {
+  return typeof value === 'object' && value !== null && typeof (value as { then?: unknown }).then === 'function';
+}
+
+/**
+ * What the host's `fileOf` says of a name: the file, `null` for none, or `undefined` while a
+ * promise is on its way. An answer given at once is drawn at once, a server's render included.
+ */
+function useKeptFile(name: string): KeptFile | null | undefined {
+  const { fileOf } = useHost();
+  const answer = useMemo(() => fileOf?.(name) ?? null, [fileOf, name]);
+  const [settled, setSettled] = useState<{ answer: unknown; file: KeptFile | null } | null>(null);
+  useEffect(() => {
+    if (!isThenable<KeptFile | null>(answer)) return;
+    let live = true;
+    answer.then(
+      (file) => live && setSettled({ answer, file }),
+      () => live && setSettled({ answer, file: null }),
     );
-  }
-  if (!host.renderAttachment) return <span className="attachment-loading">{name}</span>;
-  return <>{host.renderAttachment({ name, width, height })}</>;
+    return () => {
+      live = false;
+    };
+  }, [answer]);
+  if (!isThenable(answer)) return answer;
+  return settled?.answer === answer ? settled.file : undefined;
+}
+
+/**
+ * Opens a file kept as `data:` in a new tab as the `blob:` of its bytes: a browser navigates no tab
+ * to a `data:` address, so the link alone would do nothing (#79). Any other address is the link's.
+ */
+function openInTab(event: MouseEvent<HTMLAnchorElement>, url: string): void {
+  if (!/^data:/i.test(url.trim()) || typeof URL.createObjectURL !== 'function') return;
+  event.preventDefault();
+  const tab = window.open('', '_blank');
+  void fetch(url)
+    .then((response) => response.blob())
+    .then((blob) => {
+      const address = URL.createObjectURL(blob);
+      if (tab) tab.location.href = address;
+      else window.open(address, '_blank', 'noreferrer');
+      // The tab has the bytes once it loaded them; the address is let go after a while.
+      setTimeout(() => URL.revokeObjectURL(address), 60_000);
+    })
+    .catch(() => tab?.close());
+}
+
+/**
+ * A kept file drawn as MemorySmith's `Attachment` draws it (*observed* at `4b67c7e`): an image with
+ * the dimensions the embed declared, an audio or a video player, and everything else — the PDF
+ * included — a card with what it is, its size, and the ways out of the page: Open only for what a
+ * browser shows, Download always. A theme may draw it through the `attachment` slot.
+ */
+function KeptAttachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+  const host = useHost();
+  const slot = useSlot('attachment');
+  const described = useKeptFile(name);
+  if (described === undefined) return <span className="attachment-loading">{name}</span>;
+  const url = described ? fileAddress(described.url) : '';
+  if (!described || url === '') return <AttachmentMissing name={name} />;
+  const file: KeptFile = { ...described, url, downloadUrl: fileAddress(described.downloadUrl ?? described.url) || url };
+  const shape = rendersAs(file.mimeType);
+  const kind = fileKind(file.mimeType, host.strings.fileKinds);
+  const size = formatBytes(file.bytes, host.strings.locale);
+  const opens = opensInBrowser(file.mimeType);
+  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, width, height })}</>;
+  // The attributes reserve the box before the bytes arrive; a height is a style too, since the
+  // surface gives an image `height: auto`, which two numbers overrule (§3.14).
+  const sized = {
+    ...(width === null ? {} : { width }),
+    ...(height === null ? {} : { height, style: { height: `${height}px` } }),
+  };
+  if (shape === 'image') return <img className="attachment-image" src={file.url} alt={file.description || name} {...sized} />;
+  if (shape === 'audio') return <audio className="attachment-player" controls src={file.url} />;
+  if (shape === 'video') return <video className="attachment-player" controls src={file.url} {...sized} />;
+  return (
+    <span className="attachment-card">
+      <span className="attachment-card-body">
+        <span className="attachment-card-name">{name}</span>
+        <span className="attachment-card-note" title={file.mimeType}>
+          {kind} · {size}
+        </span>
+        {file.description && <span className="attachment-card-note">{file.description}</span>}
+      </span>
+      <span className="attachment-card-actions">
+        {opens && (
+          <a href={file.url} target="_blank" rel="noreferrer" onClick={(event) => openInTab(event, file.url)}>
+            {host.strings.attachmentOpen}
+          </a>
+        )}
+        <a href={file.downloadUrl} download={name}>
+          {host.strings.attachmentDownload}
+        </a>
+      </span>
+    </span>
+  );
 }
 
 export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {
@@ -218,6 +330,18 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
   const { scheme } = useHost();
   const inBlock = useInBlock();
   const inlineSlot = useSlot('inlineCode');
+  // A grammar not among the fifteen is fetched the first time a fence names it, and the block
+  // drawn again highlighted once it is there (#84); until then it is plain code.
+  const toLoad = inBlock ? languageToLoad(className) : null;
+  const [, arrived] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    if (!toLoad) return;
+    let live = true;
+    void loadGrammar(toLoad).then((loaded) => live && loaded && arrived());
+    return () => {
+      live = false;
+    };
+  }, [toLoad]);
   if (className?.includes('language-mermaid')) {
     return <MermaidDiagram code={String(children ?? '').trim()} scheme={scheme} />;
   }
@@ -329,14 +453,17 @@ function TaskItem({
   className,
   source,
   toggleTask,
+  taskSave,
   writable,
   ...rest
 }: LiProps & {
   source: string;
-  toggleTask: ((ordinal: number) => void) | undefined;
+  toggleTask: ((ordinal: number, checked: boolean) => void) | undefined;
+  taskSave: ((ordinal: number) => TaskSave | null) | undefined;
   writable: boolean;
 }) {
   const boxSlot = useSlot('taskBox');
+  const { strings } = useHost();
   const element = node as HastElement | undefined;
   const checked = taskState(element);
   if (checked === null) {
@@ -349,23 +476,45 @@ function TaskItem({
 
   const offset = element?.position?.start?.offset;
   const ordinal = offset === undefined ? -1 : ordinalAt(source, offset);
-  const enabled = writable && toggleTask !== undefined && ordinal >= 0;
+  // While the host saves a tick the box shows the state being written and answers no click; once a
+  // save failed it is back to what its source holds, which is `checked`.
+  const save = ordinal >= 0 ? (taskSave?.(ordinal) ?? null) : null;
+  const pending = save?.kind === 'pending';
+  const failed = save?.kind === 'failed';
+  const shown = save?.kind === 'pending' ? save.checked : checked;
+  const enabled = writable && toggleTask !== undefined && ordinal >= 0 && !pending;
   const toggle = (): void => {
-    if (enabled) toggleTask(ordinal);
+    if (enabled) toggleTask(ordinal, !checked);
   };
 
   return (
     // Our class comes LAST, because the one react-markdown passes in is on
     // `className` and spreading it after would silently take the item back.
-    <li {...rest} className={`${className ?? ''} task-item`.trim()}>
+    <li
+      {...rest}
+      className={`${className ?? ''} task-item`.trim()}
+      data-save={pending ? 'pending' : failed ? 'failed' : undefined}
+      aria-busy={pending || undefined}
+    >
       {boxSlot ? (
-        drawSlot(boxSlot, { checked, enabled, toggle })
+        drawSlot(boxSlot, { checked: shown, enabled, toggle, pending, failed })
       ) : (
-        <input type="checkbox" checked={checked} disabled={!enabled} onChange={toggle} />
+        <input type="checkbox" checked={shown} disabled={!enabled} onChange={toggle} />
       )}
       {/* The box GFM already rendered is dropped: it is `disabled`, it answers
           to nothing, and two boxes in one item is worse than none. */}
       {dropBox(children)}
+      {/* The lock and the notice are said once, by the note's live region; here they are only seen. */}
+      {pending && (
+        <span className="task-lock" aria-hidden="true">
+          <span className="task-lock-label">{strings.updating}</span>
+        </span>
+      )}
+      {failed && (
+        <span className="task-notice" aria-hidden="true">
+          {strings.notSaved}
+        </span>
+      )}
     </li>
   );
 }
@@ -381,7 +530,7 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, writable = false, footnotes }: MarkdownProps) {
+export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
@@ -431,7 +580,13 @@ export function Markdown({ children, source, onToggleTask, writable = false, foo
           section: MarkdownSection,
           ...headings,
           li: (props: LiProps) => (
-            <TaskItem {...props} source={source ?? text} toggleTask={onToggleTask} writable={writable} />
+            <TaskItem
+              {...props}
+              source={source ?? text}
+              toggleTask={onToggleTask}
+              taskSave={taskSave}
+              writable={writable}
+            />
           ),
         }}
       >

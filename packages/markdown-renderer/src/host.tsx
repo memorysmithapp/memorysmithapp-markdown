@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { withDefaults, type NoteStrings } from './strings.js';
+import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 
 /**
@@ -51,10 +51,40 @@ export interface NoteHost {
    * A task box was ticked. The ordinal counts the boxes of the note as the host gave it, frontmatter
    * included; the host applies it with `toggleTaskAt`, a one-character change of its bytes. The
    * package never writes the note.
+   *
+   * Answered with a promise, the item is locked under `strings.updating` until it settles: resolved,
+   * the box is what the host's bytes say; rejected, it returns to the state its source holds and the
+   * item says `strings.notSaved` for a moment. Ticks are queued, so a host is never asked again
+   * before its last save settled, and applies each one to its latest bytes. Answered with anything
+   * but a promise, no lock is drawn.
    */
-  readonly onToggleTask?: (ordinal: number) => void;
+  readonly onToggleTask?: (ordinal: number) => unknown;
   /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
   readonly keeps?: (name: string) => boolean;
+  /**
+   * The names of notes that start with, or contain, what an author typed after `[[` in edit mode,
+   * best first. Without it, the editor suggests nothing.
+   */
+  readonly suggest?: (query: string) => readonly string[] | PromiseLike<readonly string[]>;
+  /**
+   * Keeps a file the author attached in edit mode — from the attach dialog, pasted or dropped — in
+   * the notebook, under the name and with the description the author gave (a pasted or dropped file
+   * has its own name and none), and answers the name it is kept under, which the editor embeds as
+   * `![[name]]` (#75, #78). The package never stores a file. Without it, the editor offers no file
+   * from the computer.
+   */
+  readonly attach?: (file: File, attributes: AttachAttributes) => string | PromiseLike<string>;
+  /**
+   * The files the notebook keeps, with their names, which the attach dialog lists for the author to
+   * embed one (#78). Without it, the dialog offers no file of the notebook.
+   */
+  readonly files?: () => readonly KeptFileEntry[] | PromiseLike<readonly KeptFileEntry[]>;
+  /**
+   * What the notebook knows of a file it keeps (#77): its media type, its size and where its bytes
+   * are. With it, the package draws the file as MemorySmith does, by its type — an image, an audio,
+   * a video, or a card — and `null` is a name it keeps nothing under. `renderAttachment` wins over it.
+   */
+  readonly fileOf?: (name: string) => KeptFile | null | PromiseLike<KeptFile | null>;
   /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
    * dimensions are the ones the embed declared, in CSS pixels, or `null`.
@@ -63,7 +93,7 @@ export interface NoteHost {
   /** Draws a link to an internal address, through the host's router. */
   readonly renderLink?: (link: LinkRequest) => ReactNode;
   /** The words the page shows, in the reader's language; each one left out is MemorySmith's English. */
-  readonly strings?: Partial<NoteStrings>;
+  readonly strings?: NoteStringsInput;
   /**
    * How the note looks: a theme (`defineTheme`), or `light` or `dark`, which are the default
    * theme — MemorySmith's look — in that scheme. Defaults to the default theme.
@@ -113,6 +143,32 @@ export interface EmbeddedNote {
 }
 
 /** A file to draw: its name, and the dimensions the embed declared. */
+/** A file the notebook keeps, as the host describes it to draw it (#77). */
+export interface KeptFile {
+  /** Its media type, which decides how it is drawn; the name decides nothing (§5.8). */
+  readonly mimeType: string;
+  /** Its size, in bytes. */
+  readonly bytes: number;
+  /** Where its bytes are shown: the source of an image or a player, and what a card opens. */
+  readonly url: string;
+  /** Where its bytes are saved from. Defaults to `url`. */
+  readonly downloadUrl?: string;
+  /** What the author said it is: an image's `alt`, a line of its card. */
+  readonly description?: string;
+}
+
+/** A kept file with the name it is kept under, as `files` lists it (#78). */
+export interface KeptFileEntry extends KeptFile {
+  readonly name: string;
+}
+
+/** What the author said of a file they attach (#78). */
+export interface AttachAttributes {
+  /** The name to keep it under; the host may answer another, when that one is taken. */
+  readonly name: string;
+  readonly description: string;
+}
+
 export interface AttachmentRequest {
   readonly name: string;
   readonly width: number | null;
@@ -140,6 +196,10 @@ export const HOST_KEYS = Object.keys({
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
+  suggest: 1,
+  attach: 1,
+  files: 1,
+  fileOf: 1,
   renderAttachment: 1,
   renderLink: 1,
   strings: 1,
@@ -158,6 +218,10 @@ export interface ResolvedHost {
   readonly remoteNotice: boolean;
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
+  readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
+  readonly attach: ((file: File, attributes: AttachAttributes) => string | PromiseLike<string>) | null;
+  readonly files: (() => readonly KeptFileEntry[] | PromiseLike<readonly KeptFileEntry[]>) | null;
+  readonly fileOf: ((name: string) => KeptFile | null | PromiseLike<KeptFile | null>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
@@ -193,6 +257,10 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     remoteNotice: host.remoteNotice ?? true,
     loadNote: host.loadNote ?? null,
     keeps: host.keeps ?? never,
+    suggest: host.suggest ?? null,
+    attach: host.attach ?? null,
+    files: host.files ?? null,
+    fileOf: host.fileOf ?? null,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),

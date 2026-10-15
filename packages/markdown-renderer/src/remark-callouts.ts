@@ -31,7 +31,7 @@ interface MdastNode {
  * in any script (§7.1): it opens with a letter and goes on in letters, marks,
  * digits, `_` and `-`, so `[!atenção]` is a type as much as `[!warning]` is.
  */
-const MARKER = /^\[!(\p{L}[\p{L}\p{M}\p{N}_-]*)\]([+-]?)[ \t]*(.*)$/u;
+export const CALLOUT_MARKER = /^\[!(\p{L}[\p{L}\p{M}\p{N}_-]*)\]([+-]?)[ \t]*(.*)$/u;
 
 export interface CalloutOptions {
   /**
@@ -61,7 +61,7 @@ function rewrite(quote: MdastNode, options: CalloutOptions): void {
   if (lead?.type !== 'text' || typeof lead.value !== 'string') return;
 
   const broke = lead.value.indexOf('\n');
-  const marker = MARKER.exec(broke === -1 ? lead.value : lead.value.slice(0, broke));
+  const marker = CALLOUT_MARKER.exec(broke === -1 ? lead.value : lead.value.slice(0, broke));
   if (!marker) return;
 
   const kind = (marker[1] ?? '').normalize('NFC').toLowerCase();

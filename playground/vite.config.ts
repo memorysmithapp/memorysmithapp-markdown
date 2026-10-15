@@ -48,4 +48,6 @@ function notebookAssets(): Plugin {
 
 export default defineConfig({
   plugins: [react(), notebookAssets()],
+  // The samples of `fixtures/files/` of a type the bundler does not know as an asset (#77).
+  assetsInclude: ['**/*.docx', '**/*.xlsx', '**/*.pptx', '**/*.weba', '**/*.mov'],
 });

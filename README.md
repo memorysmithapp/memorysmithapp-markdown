@@ -28,6 +28,8 @@ pnpm --filter playground dev   # http://localhost:5173/
 
 The sidebar picks the theme and the scheme: the default theme, MemorySmith's look, and three example themes in `playground/src/themes/` — `sepia`, properties alone; `docs`, its own CSS; `terminal`, components. The address carries them (`?theme=sepia&scheme=dark`; `?theme=dark` is the default theme, dark), and `?lang=pt` draws the words of the page in Brazilian Portuguese.
 
+The button at the top right of every note edits it on the page; the toolbar grows out of it, its first tool undoes every change, and beside the button, in both modes, two more show and copy the note's Markdown. The paperclip opens a dialog that attaches a file from the computer with a name and a description, embeds one the notebook keeps — among them a sample of each of MemorySmith's sixteen types — or writes an image from a web address; pasting or dropping a file attaches it too. The playground keeps the notes you saved and the files you attached in this browser, and its sidebar discards them. `?button=icon` draws the button as its icon alone and `?editable=0` hides it. A ticked task box or an edit is saved after a delay with `?save=slow`, fails with `?save=fail`, and does either with `?save=random`, so you can see the item locked under *Updating…*, the editor's icons for *Saving…* and *Saved*, and the *Not saved* that follows a failure.
+
 ## Compare it with MemorySmith
 
 The renderer is MemorySmith's reading page, extracted. This draws every note of the two notebooks with MemorySmith's own component and with the renderer, in light and dark, at a desktop and a phone width, and compares the images:

@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
-import { HOST_KEYS, HostProvider, resolveHost, type NoteHost } from './host.js';
+import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ICON_EDIT, ICON_VIEW } from './mode-icons.js';
+import { NoteActions } from './NoteActions.js';
+import { drawSlot } from './slots.js';
+import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type ResolvedHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
 import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
 import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
+import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
@@ -15,9 +19,56 @@ import { wikilinkAddress } from './wikilink-address.js';
 export interface NoteBodyProps extends NoteHost {
   /**
    * The note as the host keeps it, frontmatter included. It is drawn from these bytes and never
-   * rewritten; the frontmatter is not drawn, because a host shows it as properties.
+   * rewritten; the frontmatter is drawn as the theme decides.
    */
   readonly markdown: string;
+  /**
+   * Whether the note offers the switch to edit it, at its top right (#51). Defaults to `false`:
+   * no switch, and the page is the one a reader always had.
+   */
+  readonly editable?: boolean;
+  /** The mode, for a host that controls it; left out, the note keeps its own, starting from `defaultMode`. */
+  readonly mode?: NoteMode;
+  /** The mode a note that keeps its own starts in. Defaults to `view`. */
+  readonly defaultMode?: NoteMode;
+  /** The switch was used: the mode the reader asked for. */
+  readonly onModeChange?: (mode: NoteMode) => void;
+  /**
+   * The note after each change made in edit mode, byte for byte the original wherever it was not
+   * edited. The package never saves it; a host that answers with the promise of its save has the
+   * editor say whether it was saved, and going back to reading wait for it (#64).
+   */
+  readonly onChange?: (markdown: string) => unknown;
+  /** Whether the switch shows its icon alone or its icon and its word. Defaults to `label`. */
+  readonly modeButton?: 'icon' | 'label';
+}
+
+/** Whether a note is read or edited. */
+export type NoteMode = 'view' | 'edit';
+
+/** The editor, loaded the first time a note is edited, so a host that only draws never loads it. */
+const NoteEditor = lazy(() => import('./edit/NoteEditor.js').then((module) => ({ default: module.NoteEditor })));
+
+/** The switch between reading and editing, drawn by the theme's slot or as the default theme draws it. */
+function ModeSwitch({ mode, display, toggle }: { mode: NoteMode; display: 'icon' | 'label'; toggle: () => void }) {
+  const host = useHost();
+  const slot = host.theme.components?.modeSwitch;
+  const label = mode === 'view' ? host.strings.edit : host.strings.view;
+  const icon = mode === 'view' ? ICON_EDIT : ICON_VIEW;
+  if (slot) return <>{drawSlot(slot, { mode, label, icon, display, toggle })}</>;
+  return (
+    <button
+      type="button"
+      className={`mode-switch mode-switch-${display}`}
+      data-mode={mode}
+      title={label}
+      aria-label={display === 'icon' ? label : undefined}
+      onClick={toggle}
+    >
+      {icon}
+      {display === 'label' && <span className="mode-switch-label">{label}</span>}
+    </button>
+  );
 }
 
 /**
@@ -26,7 +77,76 @@ export interface NoteBodyProps extends NoteHost {
  * It renders inside `.markdown`, so the stylesheet of the package applies, and asks the host for
  * every piece of notebook data through the props of `NoteHost`.
  */
-export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: NoteBodyProps) {
+export function NoteBody({
+  editable = false,
+  mode,
+  defaultMode = 'view',
+  onModeChange,
+  onChange,
+  modeButton = 'label',
+  ...rest
+}: NoteBodyProps) {
+  const [own, setOwn] = useState<NoteMode>(defaultMode);
+  // The author asked to go back to reading, and the editor is finishing: a save, the toolbar folding.
+  const [leaving, setLeaving] = useState(false);
+  // The last text handed to the host in edit mode, which Show and Copy Markdown give there (#76).
+  const handed = useRef<string | null>(null);
+  const current: NoteMode = editable ? (mode ?? own) : 'view';
+  if (!editable) return <NoteView {...rest} />;
+  const go = (next: NoteMode) => {
+    if (mode === undefined) setOwn(next);
+    onModeChange?.(next);
+  };
+  const toggle = () => {
+    if (current === 'view') {
+      handed.current = null;
+      go('edit');
+    } else setLeaving(true);
+  };
+  const hand = (text: string) => {
+    handed.current = text;
+    return onChange?.(text);
+  };
+  const onLeave = (left: boolean) => {
+    setLeaving(false);
+    if (left) go('view');
+  };
+  const { writable: _writable, onToggleTask: _toggle, ...host } = rest;
+  return (
+    <HostOnly host={rest}>
+      {(resolved) => {
+        // The switch, with Show and Copy Markdown beside it in both modes (#76).
+        const corner = (
+          <HostProvider value={resolved}>
+            <div className="note-corner">
+              <NoteActions text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />
+              <ModeSwitch mode={current} display={modeButton} toggle={toggle} />
+            </div>
+          </HostProvider>
+        );
+        if (current === 'view') return <NoteView {...rest} corner={corner} />;
+        return (
+          // While the editor loads, the note stays on the page as it was.
+          <Suspense fallback={<NoteView {...rest} corner={corner} />}>
+            <NoteEditor {...host} onChange={hand} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
+          </Suspense>
+        );
+      }}
+    </HostOnly>
+  );
+}
+
+/** The host resolved once, for what is drawn around the note. */
+function HostOnly({ host, children }: { host: NoteHost; children: (host: ResolvedHost) => ReactNode }) {
+  const resolved = useMemo(
+    () => resolveHost(host),
+    HOST_KEYS.map((key) => host[key]),
+  );
+  return <>{children(resolved)}</>;
+}
+
+/** The note drawn for reading: the page MemorySmith's reading page draws. */
+function NoteView({ markdown, writable = false, onToggleTask, corner, ...host }: NoteHost & { markdown: string; corner?: ReactNode }) {
   const resolved = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
@@ -34,6 +154,8 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
   );
   // The frontmatter is drawn apart from the body, as the theme decides, so the
   // runs start after it. Everything below counts task items from there.
+  // Each tick the host answers with a promise locks its item until the save settles.
+  const saves = useTaskSaves(onToggleTask);
   const split = bodyStart(markdown);
   const properties = useMemo(() => readProperties(markdown), [markdown]);
   // What a comment holds is never read (§7.6): it leaves before the embeds and the links are found.
@@ -106,10 +228,11 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
-        className={`markdown markdown-theme-${resolved.theme.name}`}
+        className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-mode-switch' : ''}`}
         data-theme={resolved.scheme}
         style={rootStyle(resolved.theme, resolved.scheme)}
       >
+        {corner}
         {/* The frontmatter is content: read here, drawn as the theme decides. */}
         <Properties properties={properties} />
         {segments.map((segment, index) => {
@@ -128,7 +251,8 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
               // A planned run is the same text with definitions appended after
               // it, so every box keeps the offset it had.
               source={planned?.text ?? segment.rendered}
-              onToggleTask={onToggleTask && ((ordinal) => onToggleTask(base + ordinal))}
+              onToggleTask={onToggleTask && ((ordinal, checked) => saves.toggle(base + ordinal, checked))}
+              taskSave={(ordinal) => saves.stateOf(base + ordinal)}
               writable={writable && mappable}
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
             >
@@ -140,6 +264,12 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
             not where the ordinals of the runs count them. */}
         {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
         {hosts.length > 0 && <p className="remote-notice">{resolved.strings.remoteImages(hosts)}</p>}
+        {/* Where a save is said to whoever hears the page: once, politely, never by the item itself. */}
+        {writable && onToggleTask && (
+          <p className="visually-hidden" role="status" aria-live="polite">
+            {saves.announcement && resolved.strings[saves.announcement]}
+          </p>
+        )}
       </div>
     </HostProvider>
   );

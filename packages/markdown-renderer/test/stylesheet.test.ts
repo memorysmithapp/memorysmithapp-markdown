@@ -99,6 +99,24 @@ describe('the stylesheet', () => {
     expect(rule).toContain("content: '\\200b';");
   });
 
+  it('cuts away the separator of a toolbar group that starts a row, so every row starts alike (#80)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const group = [...source.matchAll(/\.markdown \.edit-toolbar-group \{([^}]*)\}/g)].map((match) => match[1]).join('');
+    expect(group).toContain('margin-inline-start: -1px;');
+    expect(group).toContain('border-inline-start: 1px solid');
+    const tools = [...source.matchAll(/\.markdown \.edit-toolbar-tools \{([^}]*)\}/g)].map((match) => match[1]).join('');
+    expect(tools).toContain('clip-path: inset(-0.5rem -0.5rem -0.5rem 0);');
+    expect(source).not.toContain('.edit-toolbar-group + .edit-toolbar-group');
+  });
+
+  it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
+    const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(rule).toContain('display: block;');
+    expect(rule).toMatch(/min-width: [1-9]/);
+    expect(rule).toMatch(/min-height: [1-9]/);
+  });
+
   it('keeps the words of a callout title one item of its row, so they wrap as a sentence (#42)', () => {
     const rule = /\.markdown \.callout-title-text \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
     expect(rule).toContain('flex: 1 1 auto;');

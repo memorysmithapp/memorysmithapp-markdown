@@ -10,6 +10,9 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { hostOf } from '../src/notebooks.js';
+
+/** A kept file as the test's host describes it: every fixture is an image, at its path. */
+const fileAt = (name: string) => ({ mimeType: 'image/png', bytes: 1, url: `/assets/${name}` });
 import { schemesOf, THEMES } from '../src/themes/index.js';
 import { readNotebooks } from './notebook-files.js';
 
@@ -43,9 +46,9 @@ async function draw(element: React.ReactElement): Promise<HTMLElement> {
   return container;
 }
 
-describe('the two notebooks', () => {
-  it('are both here, with their notes', () => {
-    expect(notebooks.map((notebook) => notebook.slug)).toEqual(['continuity-engineering', 'enologia']);
+describe('the notebooks', () => {
+  it('are all here, with their notes: the two that demonstrate the notation, and the code samples (#84)', () => {
+    expect(notebooks.map((notebook) => notebook.slug)).toEqual(['code-samples', 'continuity-engineering', 'enologia']);
     for (const notebook of notebooks) expect(notebook.notes.length).toBeGreaterThan(5);
   });
 });
@@ -55,7 +58,7 @@ describe.each(notebooks.map((notebook) => [notebook.slug, notebook] as const))('
     for (const theme of ['light', 'dark'] as const) {
       errors.length = 0;
       const container = await draw(
-        <NoteBody markdown={note.markdown} {...hostOf(notebook, (name) => `/assets/${name}`)} theme={theme} writable onToggleTask={() => undefined} />,
+        <NoteBody markdown={note.markdown} {...hostOf(notebook, fileAt)} theme={theme} writable onToggleTask={() => undefined} />,
       );
       const root = container.querySelector(':scope > .markdown');
       expect(root?.getAttribute('data-theme')).toBe(theme);
@@ -80,7 +83,7 @@ describe.each(THEMES.map((entry) => [entry.theme.name, entry] as const))('the th
           const container = await draw(
             <NoteBody
               markdown={note.markdown}
-              {...hostOf(notebook, (file) => `/assets/${file}`)}
+              {...hostOf(notebook, fileAt)}
               theme={entry.theme}
               scheme={scheme}
               writable
@@ -105,7 +108,7 @@ describe('what the notebooks leave pending on purpose', () => {
     const pending: string[] = [];
     for (const notebook of notebooks) {
       for (const note of notebook.notes) {
-        const container = await draw(<NoteBody markdown={note.markdown} {...hostOf(notebook, (name) => `/assets/${name}`)} />);
+        const container = await draw(<NoteBody markdown={note.markdown} {...hostOf(notebook, fileAt)} />);
         pending.push(...[...container.querySelectorAll('.wikilink-pending')].map((span) => span.textContent ?? ''));
         container.remove();
       }

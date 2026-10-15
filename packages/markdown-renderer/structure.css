@@ -62,3 +62,334 @@
   width: 100%;
   height: 100%;
 }
+
+/* A task item whose tick the host is saving is covered by a lock, which takes
+   every click on the item until the save settles; a failed save leaves a
+   notice in the same corner. Where they are drawn is the theme's. */
+.markdown li.task-item[data-save] {
+  position: relative;
+}
+.markdown .task-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  cursor: progress;
+}
+.markdown .task-notice {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* The switch between reading and editing sits at the top right of the note,
+   and the text of a title flows around it. In edit mode it stays there, at
+   the end of a bar that holds the toolbar to its left and the save's status
+   under it, and the bar stays at the top of the note while it scrolls. */
+/* The group at the top right: Show Markdown, Copy Markdown and the switch (#76). */
+.markdown .note-corner {
+  float: right;
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+.markdown .mode-switch,
+.markdown .note-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+}
+.markdown .mode-switch-glyph {
+  flex: none;
+}
+.markdown .edit-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+/* The toolbar's box: its tools, which wrap, and at its top right the corner
+   that holds the save's status and the switch, which it grows out of. */
+.markdown .edit-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.markdown .edit-toolbar-tools {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-corner {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-corner .note-corner {
+  float: none;
+}
+/* On a phone the corner keeps the top right, and the tools take the whole
+   width under it rather than a narrow column beside it. */
+@media (max-width: 560px) {
+  .markdown .edit-toolbar {
+    flex-wrap: wrap;
+  }
+  .markdown .edit-corner {
+    order: -1;
+    flex-basis: 100%;
+  }
+}
+.markdown .edit-save {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  column-gap: 0.3em;
+}
+.markdown .edit-bar[data-leaving] .edit-save {
+  display: none;
+}
+.markdown .edit-save-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A code block's language, at the top right of its first line (#84), and
+   the list it is chosen from, over the lines below. */
+.markdown .markdown-editor .cm-line.cm-ms-code-first {
+  position: relative;
+}
+.markdown .edit-language {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.4rem;
+  z-index: 4;
+  white-space: normal;
+}
+.markdown .edit-language-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-language-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 16rem;
+  max-height: 18rem;
+}
+.markdown .edit-language-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+.markdown .edit-language-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* The editing menu of a right-click (#81): over everything, where it was
+   opened, its entries a column of rows that scrolls when the window is short. */
+.markdown .edit-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+}
+.markdown .edit-menu-group {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+}
+.markdown .edit-menu-label {
+  flex: 1 1 auto;
+}
+
+/* The attach dialog (#78): its ways in as tabs, a panel that alone scrolls,
+   and the files of the notebook as a list of buttons. */
+/* One height for every way in, so the dialog does not jump between them. */
+.markdown .edit-attach .edit-source-frame {
+  height: min(34rem, calc(100vh - 4rem));
+}
+.markdown .edit-attach-ways {
+  display: flex;
+  flex: none;
+}
+.markdown .edit-attach-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.markdown .edit-attach-form,
+.markdown .edit-attach-files {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-attach-form label {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-attach-file {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+.markdown .edit-attach-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.markdown .edit-attach-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+}
+.markdown .edit-attach-item-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.markdown .edit-attach-preview {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.markdown .edit-attach-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.markdown .edit-attach-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 560px) {
+  .markdown .edit-attach-file {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+/* The note's Markdown, in a dialog over the page: the dialog has no padding,
+   so a click on it and not on its frame is a click outside. */
+.markdown .edit-source {
+  padding: 0;
+  max-width: min(56rem, calc(100vw - 2rem));
+  width: 100%;
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
+}
+/* Only the text scrolls: the frame is as tall as the dialog lets it be. */
+.markdown .edit-source[open] {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-source-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.markdown .edit-source-header {
+  flex: none;
+}
+.markdown .edit-source-text {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.markdown .edit-source-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown .edit-source-title {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.markdown .edit-source-text {
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.markdown .edit-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+.markdown .edit-control,
+.markdown .edit-toolbar select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.markdown .markdown-editor .cm-editor {
+  outline: none;
+}
+.markdown .markdown-editor .cm-scroller {
+  overflow: visible;
+}
+.markdown .cm-ms-block,
+.markdown .edit-block {
+  position: relative;
+}
+/* A drawn block is laid out as the page lays it out, not as the editor's text,
+   and holds the margins of what it draws: a margin that collapsed through it
+   would be space the editor does not count, and every click below it would
+   land a line off. */
+.markdown .cm-ms-block,
+.markdown .cm-ms-inline-block {
+  white-space: normal;
+}
+.markdown .cm-ms-block,
+.markdown .cm-ms-rule,
+.markdown .cm-ms-math-block {
+  display: flow-root;
+}
+/* A table's cell is where a click edits it: it fills its column and keeps a
+   size of its own when it is empty, as every cell of a new table is, or it
+   would be nothing wide and nothing could be clicked (#68). */
+.markdown .edit-cell {
+  display: block;
+  min-width: 3em;
+  min-height: 1.5em;
+}
+.markdown .edit-block-controls {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.15rem;
+}
+.markdown .cm-ms-image {
+  max-width: 100%;
+  vertical-align: middle;
+}

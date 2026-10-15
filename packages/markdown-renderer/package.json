@@ -1,6 +1,6 @@
 {
   "name": "@memorysmithapp/markdown-renderer",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A React component that draws a MemorySmith note exactly as MemorySmith's reading page does.",
   "keywords": [
     "markdown",
@@ -30,6 +30,8 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts",
+    "dist/edit/*.js",
+    "dist/edit/*.d.ts",
     "styles.css",
     "structure.css",
     "theme-default.css",
@@ -46,6 +48,10 @@
       "types": "./dist/diagnose.d.ts",
       "default": "./dist/diagnose.js"
     },
+    "./edit": {
+      "types": "./dist/edit/index.d.ts",
+      "default": "./dist/edit/index.js"
+    },
     "./styles.css": "./styles.css",
     "./structure.css": "./structure.css",
     "./theme-default.css": "./theme-default.css"
@@ -61,6 +67,12 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "6.20.3",
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/lang-markdown": "6.5.2",
+    "@codemirror/language": "6.12.4",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
     "hast-util-to-jsx-runtime": "2.3.6",
     "mermaid": "11.17.0",
     "react-markdown": "9.1.0",

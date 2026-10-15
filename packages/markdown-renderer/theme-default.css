@@ -137,6 +137,7 @@
      are the Lucide set the reference theme draws with; a theme names its own
      per family, as the icon properties, or draws them as elements. */
   --ms-icon-pencil: var(--markdown-icon-note, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E"));
+  --ms-icon-chevron: var(--markdown-icon-chevron, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"));
   --ms-icon-info: var(--markdown-icon-info, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E"));
   --ms-icon-clipboard: var(--markdown-icon-summary, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='2' width='8' height='4' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M8 11h8'/%3E%3Cpath d='M8 16h6'/%3E%3C/svg%3E"));
   --ms-icon-flame: var(--markdown-icon-tip, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5Z'/%3E%3C/svg%3E"));
@@ -588,6 +589,44 @@
   font-weight: 600;
   line-height: var(--ms-line-height-tight);
 }
+/* A callout marked + or - folds (#83): its title is the control, with a
+   chevron at its end that turns as it opens; closed, the title alone shows. */
+.markdown details.callout > summary.callout-title {
+  list-style: none;
+  cursor: pointer;
+}
+.markdown details.callout > summary.callout-title::-webkit-details-marker {
+  display: none;
+}
+.markdown details.callout > summary.callout-title::after {
+  content: '';
+  flex: 0 0 auto;
+  align-self: center;
+  width: 1em;
+  height: 1em;
+  margin-inline-start: auto;
+  background-color: currentcolor;
+  -webkit-mask: var(--ms-icon-chevron) center / contain no-repeat;
+  mask: var(--ms-icon-chevron) center / contain no-repeat;
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+.markdown details.callout[open] > summary.callout-title::after {
+  transform: none;
+}
+.markdown details.callout:not([open]) > summary.callout-title {
+  margin-bottom: 0;
+}
+.markdown details.callout > summary.callout-title:focus-visible {
+  outline: 2px solid rgb(var(--callout-color));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown details.callout > summary.callout-title::after {
+    transition: none;
+  }
+}
 /* A link in the title is marked by more than its colour, which may be the
    title's own; a pending link keeps its dashed rule, and a footnote's number
    its own look. */
@@ -838,6 +877,61 @@
   border-bottom: 1px dashed var(--ms-text-soft);
   cursor: help;
 }
+/* A file the notebook keeps, drawn by its type as MemorySmith draws it
+   (observed at 4b67c7e, #77): what a browser draws is drawn — an image, a
+   player — and everything else, the PDF included, is a card with what it is
+   and the ways out of the page. */
+.markdown .attachment-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--ms-p-spacing);
+  border-radius: 8px;
+}
+.markdown .attachment-player {
+  display: block;
+  width: 100%;
+  margin-block: var(--ms-p-spacing);
+}
+.markdown .attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: var(--ms-p-spacing);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--ms-border);
+  border-inline-start: 2px solid var(--ms-accent);
+  border-radius: 8px;
+}
+.markdown .attachment-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.markdown .attachment-card-name {
+  font-family: var(--ms-font-display);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.markdown .attachment-card-note {
+  font-size: 0.8rem;
+  color: var(--ms-text-soft);
+  overflow-wrap: anywhere;
+}
+.markdown .attachment-card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+.markdown .attachment-card-actions a {
+  font-size: 0.85rem;
+}
+.markdown .attachment-loading {
+  color: var(--ms-text-soft);
+}
 /* An address this surface does not follow. The text is the author's and stays
    exactly as they wrote it; what it loses is the affordance. The dotted rule
    is the only sign, and the title says why. */
@@ -950,6 +1044,70 @@
   cursor: pointer;
 }
 
+/* The lock over an item whose tick is being saved: the item dimmed under a
+   sweep of the accent, and "Updating…" in a pill at its right, breathing. */
+.markdown .task-lock {
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--ms-bg) 55%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ms-accent) 14%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: markdown-task-sweep 1.2s linear infinite;
+}
+.markdown .task-lock-label,
+.markdown .task-notice {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.markdown .task-lock-label {
+  border: 1px solid color-mix(in srgb, var(--ms-accent) 45%, transparent);
+  background: var(--ms-surface);
+  color: var(--ms-accent);
+  animation: markdown-task-breathe 1.2s ease-in-out infinite;
+}
+/* A save that failed: the box is back, and this says so, then fades. */
+.markdown .task-notice {
+  border: 1px solid rgba(var(--ms-callout-stop), 0.45);
+  background: var(--ms-surface);
+  color: rgb(var(--ms-callout-stop));
+  animation: markdown-task-fade 2.5s ease-in forwards;
+}
+@keyframes markdown-task-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@keyframes markdown-task-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes markdown-task-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .task-lock,
+  .markdown .task-lock-label {
+    animation: none;
+  }
+}
+
 /* ── Skeletons ──────────────────────────────────────────────────────────────
    The shape of an embed that is coming, in the position it will occupy. */
 .markdown .skeleton {
@@ -1011,4 +1169,918 @@
     animation: none;
     background-image: none;
   }
+}
+
+/* ── Edit mode ──────────────────────────────────────────────────────────────
+   The note edited on the page that draws it: the same faces, sizes and
+   colours as reading, with the notation the author is in shown dimmed, the
+   blocks drawn as on the page, and the editor's own controls kept small and
+   neutral so they never read as content. */
+.markdown .note-corner {
+  margin: 0 0 0.5rem 1rem;
+}
+.markdown .mode-switch,
+.markdown .note-action {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-family: var(--ms-font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.markdown .mode-switch.mode-switch-icon,
+.markdown .note-action {
+  padding: 0.3rem 0.4rem;
+}
+.markdown .note-action {
+  color: var(--ms-text-soft);
+}
+.markdown .note-action[data-copied='copied'] {
+  color: var(--ms-accent);
+}
+.markdown .mode-switch-glyph {
+  width: 1.1em;
+  height: 1.1em;
+}
+.markdown .mode-switch:hover,
+.markdown .note-action:hover {
+  border-color: var(--ms-accent);
+  color: var(--ms-accent);
+}
+.markdown .mode-switch:focus-visible,
+.markdown .note-action:focus-visible,
+.markdown .edit-control:focus-visible,
+.markdown .edit-field:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 2px;
+}
+.markdown .edit-bar {
+  margin: 0 0 1rem;
+  background: var(--ms-bg);
+}
+/* The toolbar grows out of the switch, leftwards and down, and shrinks back
+   into it when the note goes back to reading: its clip starts and ends on
+   the corner that holds the switch, which the editor measures. */
+.markdown .edit-toolbar {
+  padding: 0.35rem 0.4rem 0.35rem 0.15rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  animation: markdown-toolbar-grow 340ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.markdown .edit-bar[data-leaving] .edit-toolbar {
+  animation: markdown-toolbar-shrink 260ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes markdown-toolbar-grow {
+  from {
+    clip-path: inset(0 0 calc(100% - var(--edit-corner-height, 100%)) calc(100% - var(--edit-corner-width, 100%)) round var(--ms-radius));
+  }
+  to {
+    clip-path: inset(0 0 0 0 round var(--ms-radius));
+  }
+}
+@keyframes markdown-toolbar-shrink {
+  from {
+    clip-path: inset(0 0 0 0 round var(--ms-radius));
+  }
+  to {
+    clip-path: inset(0 0 calc(100% - var(--edit-corner-height, 100%)) calc(100% - var(--edit-corner-width, 100%)) round var(--ms-radius));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-toolbar,
+  .markdown .edit-bar[data-leaving] .edit-toolbar {
+    animation: none;
+  }
+}
+/* In the toolbar the group is its end, as tall as its other controls. */
+.markdown .edit-corner .note-corner {
+  margin: 0;
+}
+.markdown .edit-corner .mode-switch,
+.markdown .edit-corner .note-action {
+  height: 1.9rem;
+}
+@media (max-width: 560px) {
+  .markdown .edit-corner {
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--ms-border);
+  }
+}
+
+/* Where the save of the last change stands, before the switch: an icon for
+   each state, the loader turning while the save is in flight. */
+.markdown .edit-save {
+  padding: 0 0.35rem;
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-display);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.markdown .edit-save-icon {
+  width: 1.25rem;
+  height: 1.9rem;
+}
+.markdown .edit-save-icon > svg {
+  width: 1rem;
+  height: 1rem;
+}
+.markdown .edit-save[data-save='saving'] {
+  color: var(--ms-accent);
+}
+.markdown .edit-save[data-save='saving'] .edit-save-icon > svg {
+  animation: markdown-save-turn 0.9s linear infinite;
+}
+.markdown .edit-save[data-save='failed'] {
+  color: rgb(var(--ms-callout-stop));
+}
+/* Asked to leave while the last save failed: the corner shakes once. */
+.markdown .edit-corner[data-blocked] {
+  animation: markdown-corner-refuse 360ms ease-in-out;
+}
+@keyframes markdown-corner-refuse {
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+/* The attach button while the host keeps a file, and when it could not. */
+.markdown .edit-control[data-attach='busy'] {
+  color: var(--ms-accent);
+}
+.markdown .edit-control[data-attach='busy'] > svg {
+  animation: markdown-save-turn 0.9s linear infinite;
+}
+.markdown .edit-control[data-attach='failed'] {
+  color: rgb(var(--ms-callout-stop));
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-control[data-attach='busy'] > svg {
+    animation: none;
+  }
+}
+@keyframes markdown-save-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.markdown .edit-save-retry {
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.markdown .edit-save-retry:hover {
+  background: var(--ms-code-bg);
+}
+.markdown .edit-save-retry:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-save[data-save='saving'] .edit-save-icon > svg,
+  .markdown .edit-corner[data-blocked] {
+    animation: none;
+  }
+}
+
+/* A code block's language (#84): a quiet label until it is pointed at. */
+.markdown .edit-language-button {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.markdown .edit-language-button:hover,
+.markdown .edit-language-button[aria-expanded='true'] {
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+}
+.markdown .edit-language-button:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 1px;
+}
+.markdown .edit-language-caret > svg {
+  width: 0.8em;
+  height: 0.8em;
+}
+.markdown .edit-language-popover {
+  padding: 0.3rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.18);
+  font-family: var(--ms-font-sans);
+  font-size: 0.85rem;
+}
+.markdown .edit-language-search {
+  margin-bottom: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--ms-border);
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font: inherit;
+}
+.markdown .edit-language-search:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 0;
+}
+.markdown .edit-language-option {
+  padding: 0.3rem 0.5rem;
+  border-radius: calc(var(--ms-radius) - 2px);
+  color: var(--ms-text);
+  cursor: pointer;
+}
+.markdown .edit-language-option[data-active] {
+  background: var(--ms-code-bg);
+}
+.markdown .edit-language-option[aria-selected='true'] {
+  font-weight: 600;
+}
+.markdown .edit-language-hint,
+.markdown .edit-language-none {
+  color: var(--ms-text-soft);
+  font-size: 0.78rem;
+}
+.markdown .edit-language-none {
+  padding: 0.3rem 0.5rem;
+}
+
+/* The editing menu (#81): small and neutral, as the toolbar's controls. */
+.markdown .edit-menu {
+  min-width: 15rem;
+  padding: 0.3rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.18);
+  font-family: var(--ms-font-sans);
+  font-size: 0.85rem;
+}
+.markdown .edit-menu-separator {
+  height: 1px;
+  margin: 0.3rem 0.2rem;
+  background: var(--ms-border);
+}
+.markdown .edit-menu-heading {
+  padding: 0.25rem 0.55rem 0.15rem;
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.markdown .edit-menu-item {
+  gap: 0.6rem;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-menu-item:hover,
+.markdown .edit-menu-item:focus-visible {
+  background: var(--ms-code-bg);
+  outline: none;
+}
+.markdown .edit-menu-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ms-accent);
+}
+.markdown .edit-menu-item[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.markdown .edit-menu-icon {
+  display: inline-flex;
+  color: var(--ms-text-soft);
+}
+.markdown .edit-menu-shortcut {
+  color: var(--ms-text-soft);
+  font-size: 0.75rem;
+}
+
+/* The attach dialog (#78), in the look of the dialog of the Markdown. */
+.markdown .edit-attach-ways {
+  gap: 0.25rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--ms-border);
+}
+.markdown .edit-attach-way {
+  margin-bottom: -1px;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ms-text-soft);
+  font: inherit;
+  font-family: var(--ms-font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.markdown .edit-attach-way[aria-selected='true'] {
+  border-bottom-color: var(--ms-accent);
+  color: var(--ms-text);
+}
+.markdown .edit-attach-panel {
+  padding: 1rem;
+}
+.markdown .edit-attach-form,
+.markdown .edit-attach-files {
+  gap: 0.75rem;
+}
+.markdown .edit-attach-form label {
+  gap: 0.25rem;
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+}
+.markdown .edit-attach-input {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--ms-border);
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.markdown .edit-attach-input:focus-visible,
+.markdown .edit-attach-way:focus-visible,
+.markdown .edit-attach-item:focus-visible,
+.markdown .edit-attach-button:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 1px;
+}
+.markdown .edit-attach-input[aria-invalid='true'] {
+  border-color: rgb(var(--ms-callout-stop));
+}
+.markdown .edit-attach-error {
+  margin: 0;
+  color: rgb(var(--ms-callout-stop));
+  font-size: 0.8rem;
+}
+.markdown .edit-attach-button {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font: inherit;
+  font-family: var(--ms-font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.markdown .edit-attach-primary {
+  border-color: var(--ms-accent);
+  background: var(--ms-accent);
+  color: #fff;
+}
+.markdown .edit-attach-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.markdown .edit-attach-file {
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+}
+.markdown .edit-attach-file-kind {
+  padding: 0 0.25rem;
+  color: var(--ms-text-soft);
+  font-size: 0.78rem;
+}
+.markdown .edit-attach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.markdown .edit-attach-item {
+  gap: 0.75rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--ms-radius);
+  background: none;
+  color: var(--ms-text);
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-attach-item:hover {
+  border-color: var(--ms-border);
+  background: var(--ms-code-bg);
+}
+.markdown .edit-attach-preview {
+  width: 3rem;
+  height: 2.25rem;
+  border-radius: 6px;
+  background: var(--ms-code-bg);
+  color: var(--ms-text-soft);
+}
+.markdown .edit-attach-item-name {
+  font-family: var(--ms-font-display);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.markdown .edit-attach-item-note,
+.markdown .edit-attach-note {
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.markdown .edit-attach-note {
+  margin: 0;
+}
+
+/* The note's Markdown, over the page. */
+.markdown .edit-source {
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);
+}
+.markdown .edit-source::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.markdown .edit-source-header {
+  padding: 0.6rem 0.75rem 0.6rem 1rem;
+  border-bottom: 1px solid var(--ms-border);
+}
+.markdown .edit-source-title {
+  font-family: var(--ms-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.markdown .edit-source-copied {
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+}
+.markdown .edit-source-text {
+  padding: 1rem;
+  background: var(--ms-code-bg);
+  font-family: var(--ms-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+/* Every group draws its separator on its left edge and overlaps the group
+   before it by that rule's width; the tools clip their own left edge, so the
+   separator of a group that starts a row — the first one's too — is cut away
+   and every row starts at the same place, with no script (#80). */
+.markdown .edit-toolbar-tools {
+  column-gap: 0;
+  clip-path: inset(-0.5rem -0.5rem -0.5rem 0);
+}
+.markdown .edit-toolbar-group {
+  margin-inline-start: -1px;
+  padding-inline: 0.25rem;
+  border-inline-start: 1px solid var(--ms-border);
+}
+.markdown .edit-control {
+  min-width: 1.9rem;
+  height: 1.9rem;
+  padding: 0 0.35rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: var(--ms-text-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.markdown .edit-control:hover:not(:disabled),
+.markdown .edit-control[aria-pressed='true'] {
+  background: var(--ms-code-bg);
+  color: var(--ms-text);
+}
+.markdown .edit-control:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.markdown .edit-control-labelled {
+  gap: 0.35rem;
+}
+.markdown .edit-toolbar select,
+.markdown .edit-block-controls select {
+  height: 1.9rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--ms-border);
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.markdown .edit-unavailable {
+  margin: 0 0 1rem;
+  color: var(--ms-text-soft);
+  font-size: 0.85rem;
+}
+
+/* The text: the line height of a run, and the caret in the accent. */
+.markdown .markdown-editor .cm-content {
+  padding: 0;
+  font-family: var(--ms-font-sans);
+  line-height: var(--ms-line-height-normal);
+  caret-color: var(--ms-accent);
+}
+.markdown .markdown-editor .cm-line {
+  padding: 0;
+}
+.markdown .markdown-editor .cm-cursor {
+  border-left-color: var(--ms-accent);
+}
+.markdown .markdown-editor .cm-selectionBackground,
+.markdown .markdown-editor .cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--ms-accent) 22%, transparent);
+}
+.markdown .cm-ms-syntax {
+  color: var(--ms-text-soft);
+  opacity: 0.75;
+  font-weight: normal;
+  font-style: normal;
+}
+.markdown .cm-ms-heading {
+  font-family: var(--ms-font-heading);
+  font-weight: var(--ms-heading-weight);
+  color: var(--ms-heading-color);
+  line-height: var(--ms-line-height-tight);
+  padding-top: 0.6em;
+}
+.markdown .cm-ms-h1 {
+  font-size: var(--ms-h1-size);
+  font-weight: var(--ms-h1-weight);
+}
+.markdown .cm-ms-h2 {
+  font-size: var(--ms-h2-size);
+}
+.markdown .cm-ms-h3 {
+  font-size: var(--ms-h3-size);
+}
+.markdown .cm-ms-h4 {
+  font-size: var(--ms-h4-size);
+}
+.markdown .cm-ms-h5 {
+  font-size: var(--ms-h5-size);
+}
+.markdown .cm-ms-h6 {
+  font-size: var(--ms-h6-size);
+  color: var(--ms-h6-color);
+}
+.markdown .cm-ms-strong {
+  font-weight: 700;
+}
+.markdown .cm-ms-em {
+  font-style: italic;
+}
+.markdown .cm-ms-strike {
+  text-decoration: line-through;
+}
+.markdown .cm-ms-highlight {
+  /* What the page draws for marked text: the browser's own <mark>. */
+  background: mark;
+  color: marktext;
+}
+.markdown .cm-ms-code {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  color: var(--ms-code-color);
+  background: var(--ms-inline-code-bg);
+}
+.markdown .cm-ms-link,
+.markdown .cm-ms-wikilink {
+  color: var(--ms-accent);
+  cursor: text;
+}
+.markdown .cm-ms-wikilink {
+  font-weight: 600;
+}
+.markdown .cm-ms-wikilink.cm-ms-pending {
+  color: var(--ms-pending);
+  border-bottom: 1px dashed var(--ms-pending);
+}
+.markdown .cm-ms-bullet {
+  display: inline-block;
+  width: 1em;
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-list-marker {
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-task {
+  margin: 0 0.45em 0 0;
+  vertical-align: middle;
+  accent-color: var(--ms-accent);
+  cursor: pointer;
+}
+.markdown .cm-ms-task-done {
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-quote {
+  padding-inline-start: 1.5em !important;
+  border-inline-start: var(--ms-quote-border-width) solid var(--ms-quote-border-color);
+  color: var(--ms-quote-color);
+}
+.markdown .cm-ms-quote-2 {
+  box-shadow: inset calc(var(--ms-quote-border-width) + 0.6em) 0 0 -0.6em var(--ms-quote-border-color);
+}
+.markdown .cm-ms-code-line,
+.markdown .cm-ms-yaml,
+.markdown .cm-ms-table-source,
+.markdown .cm-ms-callout-source {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  background: var(--ms-code-bg);
+  padding: 0 1rem !important;
+}
+.markdown .cm-ms-code-line {
+  border-inline: 1px solid var(--ms-code-border);
+}
+.markdown .cm-ms-code-first {
+  border-top: 1px solid var(--ms-code-border);
+  border-start-start-radius: var(--ms-radius);
+  border-start-end-radius: var(--ms-radius);
+  padding-top: 0.5rem !important;
+}
+.markdown .cm-ms-code-last {
+  border-bottom: 1px solid var(--ms-code-border);
+  border-end-start-radius: var(--ms-radius);
+  border-end-end-radius: var(--ms-radius);
+  padding-bottom: 0.5rem !important;
+}
+.markdown .cm-ms-callout-source {
+  border-inline-start: 3px solid color-mix(in srgb, var(--ms-accent) 60%, transparent);
+}
+.markdown .cm-ms-math-source {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+}
+.markdown .cm-ms-math-block {
+  padding: 0.5rem 0;
+  text-align: center;
+  cursor: text;
+}
+.markdown .cm-ms-rule hr {
+  margin: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--ms-border);
+}
+.markdown .cm-ms-footnote-ref {
+  vertical-align: super;
+  font-size: 0.75em;
+  color: var(--ms-accent);
+}
+.markdown .cm-ms-footnote-def {
+  color: var(--ms-text-soft);
+  font-size: 0.9em;
+}
+/* A comment is not on the page, so in edit mode it reads as a margin note. */
+.markdown .cm-ms-comment {
+  color: var(--ms-text-soft);
+  font-style: italic;
+  background: color-mix(in srgb, var(--ms-text-soft) 12%, transparent);
+  border-radius: 2px;
+}
+.markdown .cm-ms-block-id {
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-mono);
+  font-size: 0.75em;
+}
+.markdown .cm-ms-raw {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+
+/* A drawn block answers the pointer by showing it can be opened as source;
+   its controls appear when it is pointed at or holds the focus. */
+.markdown .cm-ms-block {
+  border-radius: var(--ms-radius);
+  cursor: text;
+}
+.markdown .cm-ms-block:hover {
+  box-shadow: 0 0 0 1px var(--ms-border);
+}
+.markdown .edit-block-controls {
+  opacity: 0;
+  padding: 0.1rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  transition: opacity 0.12s;
+}
+.markdown .cm-ms-block:hover .edit-block-controls,
+.markdown .edit-block:focus-within .edit-block-controls {
+  opacity: 1;
+}
+.markdown .edit-table table {
+  width: 100%;
+}
+.markdown .edit-cell {
+  outline: none;
+}
+.markdown .edit-cell-drawn {
+  cursor: text;
+}
+.markdown .edit-cell-drawn .markdown,
+.markdown .edit-cell-drawn p {
+  display: inline;
+  margin: 0;
+}
+.markdown .edit-cell:focus {
+  box-shadow: 0 0 0 2px var(--ms-accent);
+  border-radius: 2px;
+}
+
+/* The properties as a form: the fields look like the values they hold until
+   they are pointed at, so the form reads as the page. */
+.markdown .edit-properties {
+  padding-top: 0.25rem;
+}
+.markdown .edit-field {
+  width: 100%;
+  min-width: 0;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 3px);
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.markdown .edit-field:hover,
+.markdown .edit-field:focus {
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+}
+.markdown .edit-field::placeholder {
+  color: var(--ms-pending);
+}
+.markdown .edit-title {
+  display: block;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  font-family: var(--ms-title-font);
+  font-size: var(--ms-title-size);
+  font-weight: var(--ms-title-weight);
+  line-height: var(--ms-line-height-tight);
+  color: var(--ms-title-color);
+}
+.markdown .edit-key {
+  width: auto;
+  color: var(--ms-properties-key-color);
+}
+.markdown .edit-field[type='date'] {
+  width: auto;
+}
+.markdown .edit-property .metadata-property-value {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-property .edit-control {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0;
+}
+/* A property's remove button, before its name, shows always (#73). */
+.markdown .edit-property .metadata-property-key .edit-control {
+  opacity: 1;
+}
+.markdown .edit-key-spacer {
+  flex: none;
+  visibility: hidden;
+}
+/* A property's controls show on hover or focus; the row that adds one and a
+   list's button for its next item show always. */
+.markdown .edit-property:hover .edit-control,
+.markdown .edit-property:focus-within .edit-control,
+.markdown .edit-property-new .edit-control,
+.markdown .edit-property .edit-list .edit-control {
+  opacity: 1;
+}
+/* The key holds the property: the choice of its type, laid over the icon of
+   its type and opening there, its name, and the button that removes it. */
+.markdown .edit-property .metadata-property-key {
+  position: relative;
+  align-items: center;
+}
+.markdown .edit-type {
+  position: absolute;
+  left: -0.25em;
+  top: 50%;
+  /* From before the icon to just past the chevron, short of the remove button. */
+  width: calc(1.95em + 0.15rem + 2px);
+  height: 1.6em;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-type:hover {
+  border-color: var(--ms-border);
+}
+.markdown .edit-type:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 1px;
+}
+.markdown .edit-type-caret {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: -0.25rem;
+  pointer-events: none;
+}
+.markdown .edit-type-caret > svg {
+  width: 0.75em;
+  height: 0.75em;
+}
+.markdown .edit-type option {
+  background: var(--ms-surface);
+  color: var(--ms-text);
+}
+.markdown .edit-list {
+  align-items: center;
+  flex: 1 1 auto;
+}
+.markdown .edit-list-add {
+  width: 6rem;
+  flex: 0 1 8rem;
+  min-width: 4rem;
+}
+.markdown .edit-chip-remove {
+  margin-inline-start: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.markdown .edit-chip-remove:hover {
+  opacity: 1;
+}
+.markdown .edit-boolean {
+  margin: 0 0 0 -0.3rem;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--ms-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.markdown .edit-boolean:hover {
+  border-color: var(--ms-border);
+}
+.markdown .edit-add-properties {
+  margin: 0 0 0.75rem;
+}
+
+/* What the editor suggests after `[[`: a list on the surface. */
+.markdown .cm-tooltip-autocomplete {
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-family: var(--ms-font-sans);
+  font-size: 0.875rem;
+}
+.markdown .cm-tooltip-autocomplete > ul {
+  font-family: var(--ms-font-sans);
+}
+.markdown .cm-tooltip-autocomplete li[aria-selected] {
+  background: color-mix(in srgb, var(--ms-accent) 18%, transparent);
+  color: var(--ms-text);
 }

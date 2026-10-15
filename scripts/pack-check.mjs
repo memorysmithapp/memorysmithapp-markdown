@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // What each published package ships, checked against what it is meant to ship: `npm pack
-// --dry-run` lists the files, and the list has to be exactly the built modules of `src/` (a `.js`
+// --dry-run` lists the files, and the list has to be exactly the built modules of `src/` and its folders (a `.js`
 // and a `.d.ts` each, no test, no source map) and the files named below. Run after the build.
 //   node scripts/pack-check.mjs
 
@@ -43,7 +43,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const dir = join(root, pkg.dir);
     const listing = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
     const packed = listing[0].files.map((file) => file.path).sort();
-    const expected = [...builtModules(readdirSync(join(dir, 'src'))), ...(SHIPPED[pkg.name] ?? [])].sort();
+    const expected = [...builtModules(readdirSync(join(dir, 'src'), { recursive: true }).map(String)), ...(SHIPPED[pkg.name] ?? [])].sort();
     const found = checkPack(pkg.name, packed, expected);
     problems.push(...found);
     console.log(`${found.length === 0 ? 'ok  ' : 'FAIL'} ${pkg.name}: ${packed.length} files`);

@@ -172,7 +172,8 @@ export const terminal = defineTheme({
         </Tag>
       );
     },
-    taskBox: ({ checked, enabled, toggle }) => (
+    // While the host saves a tick the box says so in its own notation: `[~]`.
+    taskBox: ({ checked, enabled, toggle, pending }) => (
       <button
         type="button"
         role="checkbox"
@@ -181,7 +182,7 @@ export const terminal = defineTheme({
         disabled={!enabled}
         onClick={toggle}
       >
-        [{checked ? 'x' : ' '}]
+        [{pending ? '~' : checked ? 'x' : ' '}]
       </button>
     ),
     wikilink: ({ pending, children, link }) => link(<>{pending ? '?' : '→'} {children}</>),

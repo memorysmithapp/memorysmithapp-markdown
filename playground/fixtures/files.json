@@ -1,0 +1,82 @@
+[
+  {
+    "name": "sample.png",
+    "mimeType": "image/png",
+    "description": "A PNG image made in Chromium."
+  },
+  {
+    "name": "sample.jpg",
+    "mimeType": "image/jpeg",
+    "description": "A JPEG image made in Chromium."
+  },
+  {
+    "name": "sample.webp",
+    "mimeType": "image/webp",
+    "description": "A WebP image made in Chromium."
+  },
+  {
+    "name": "sample.gif",
+    "mimeType": "image/gif",
+    "description": "A GIF of two colours, written by hand."
+  },
+  {
+    "name": "sample.svg",
+    "mimeType": "image/svg+xml",
+    "description": "An SVG drawing."
+  },
+  {
+    "name": "sample.pdf",
+    "mimeType": "application/pdf",
+    "description": "A one-page PDF."
+  },
+  {
+    "name": "sample.mp3",
+    "mimeType": "audio/mpeg",
+    "description": "Stands for an MP3: the repository has no MP3 encoder, so its bytes are a WAV tone, which a browser plays all the same."
+  },
+  {
+    "name": "sample.wav",
+    "mimeType": "audio/wav",
+    "description": "A second of a 440 Hz tone."
+  },
+  {
+    "name": "sample.ogg",
+    "mimeType": "audio/ogg",
+    "description": "Stands for an Ogg: Chromium records no Ogg, so its bytes are an Opus sound in WebM."
+  },
+  {
+    "name": "sample.weba",
+    "mimeType": "audio/webm",
+    "description": "An Opus sound in WebM, recorded in Chromium."
+  },
+  {
+    "name": "sample.mp4",
+    "mimeType": "video/mp4",
+    "description": "An H.264 clip in MP4, recorded in Chromium."
+  },
+  {
+    "name": "sample.webm",
+    "mimeType": "video/webm",
+    "description": "A VP8 clip in WebM, recorded in Chromium."
+  },
+  {
+    "name": "sample.mov",
+    "mimeType": "video/quicktime",
+    "description": "Stands for a QuickTime movie: its bytes are the MP4 clip, the format QuickTime grew from. Chromium plays no QuickTime type, so its player stays empty there."
+  },
+  {
+    "name": "sample.docx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "description": "A Word document of one paragraph, written by hand."
+  },
+  {
+    "name": "sample.xlsx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "description": "An Excel sheet of two rows, written by hand."
+  },
+  {
+    "name": "sample.pptx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "description": "A PowerPoint presentation of one slide, written by hand."
+  }
+]
