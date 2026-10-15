@@ -87,6 +87,23 @@ describe('lines', () => {
     expect(run(at('|> a\n> b|'), toggleQuote)).toBe('a\nb');
   });
 
+  it('leaves a cursor at a line\'s start after the marker it writes, so typing goes in it (#82)', () => {
+    const after = (text: string, spec: (state: EditorState) => TransactionSpec) => {
+      const state = at(text);
+      const next = state.update(spec(state)).state;
+      return `${next.doc.sliceString(0, next.selection.main.head)}|${next.doc.sliceString(next.selection.main.head)}`;
+    };
+    expect(after('Text.\n\n|\n\nMore.', toggleQuote)).toBe('Text.\n\n> |\n\nMore.');
+    expect(after('|one', toggleQuote)).toBe('> |one');
+    expect(after('|one', (state) => setHeading(state, 2))).toBe('## |one');
+    expect(after('|one', (state) => toggleList(state, 'bullet'))).toBe('- |one');
+    // A cursor elsewhere in the line keeps its place in the text, and one stays there when the marker goes.
+    expect(after('on|e', toggleQuote)).toBe('> on|e');
+    expect(after('> on|e', toggleQuote)).toBe('on|e');
+    // Before a quotation's marker, a list's goes after it, and so does the cursor.
+    expect(after('|> one', (state) => toggleList(state, 'bullet'))).toBe('> - |one');
+  });
+
   it('flips a task box as toggleTaskAt does', () => {
     expect(run(at('- [ ] a'), (state) => toggleTaskBox(state, 2))).toBe('- [x] a');
     expect(run(at('- [X] a'), (state) => toggleTaskBox(state, 2))).toBe('- [ ] a');

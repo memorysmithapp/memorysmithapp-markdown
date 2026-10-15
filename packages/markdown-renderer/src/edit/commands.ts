@@ -7,7 +7,7 @@
  * because the editor draws the text.
  */
 
-import { EditorSelection, type ChangeSpec, type EditorState, type TransactionSpec } from '@codemirror/state';
+import { EditorSelection, type EditorState, type TransactionSpec } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 export type Command = (view: EditorView) => boolean;
@@ -60,6 +60,25 @@ export function toggleMark(state: EditorState, delimiter: string): TransactionSp
   });
 }
 
+/**
+ * Changes to the start of lines, with the selection after what they insert: a cursor between a
+ * line's start and where its marker goes — before a quotation's `>` a list marker follows — is after
+ * the marker, so what is typed next is in it (#82). Any other cursor keeps its place in the text.
+ */
+function atLineStarts(state: EditorState, changes: readonly { from: number; to: number; insert: string }[]): TransactionSpec {
+  const set = state.changes([...changes]);
+  const selection = EditorSelection.create(
+    state.selection.ranges.map((range) => {
+      if (!range.empty) return range.map(set, 1);
+      const line = state.doc.lineAt(range.head);
+      const change = changes.find((each) => each.from >= line.from && each.from <= line.to && range.head <= each.to);
+      return change ? EditorSelection.cursor(set.mapPos(change.to, 1)) : range.map(set, 1);
+    }),
+    state.selection.mainIndex,
+  );
+  return { changes: set, selection };
+}
+
 /** The lines the selection touches, each once. */
 function selectedLines(state: EditorState): { from: number; to: number; text: string; number: number }[] {
   const seen = new Set<number>();
@@ -81,13 +100,13 @@ const LIST = /^([ \t]*)(?:([-*+]|\d{1,9}[.)])[ \t]+(\[[ xX]\][ \t]+)?)?/;
 
 /** Makes each selected line a heading of `level`, or a paragraph at 0; a quotation's markers stay. */
 export function setHeading(state: EditorState, level: number): TransactionSpec {
-  const changes: ChangeSpec[] = selectedLines(state).map((line) => {
+  const changes = selectedLines(state).map((line) => {
     const quote = QUOTE.exec(line.text)![0];
     const rest = line.text.slice(quote.length);
     const marker = HEADING.exec(rest)?.[0] ?? '';
     return { from: line.from + quote.length, to: line.from + quote.length + marker.length, insert: level > 0 ? `${'#'.repeat(level)} ` : '' };
   });
-  return { changes };
+  return atLineStarts(state, changes);
 }
 
 /** The heading level of the line the cursor is on, or 0. */
@@ -123,7 +142,7 @@ export function toggleList(state: EditorState, kind: ListKind): TransactionSpec 
   const lines = selected.filter((line) => line.text.trim().length > 0);
   const remove = lines.length > 0 && lines.every((line) => listKindOf(line.text) === kind);
   let number = 1;
-  const changes: ChangeSpec[] = lines.map((line) => {
+  const changes = lines.map((line) => {
     const quote = QUOTE.exec(line.text)![0];
     const match = LIST.exec(line.text.slice(quote.length))!;
     const from = line.from + quote.length + match[1]!.length;
@@ -131,19 +150,19 @@ export function toggleList(state: EditorState, kind: ListKind): TransactionSpec 
     const marker = remove ? '' : kind === 'bullet' ? '- ' : kind === 'task' ? '- [ ] ' : `${number++}. `;
     return { from, to, insert: marker };
   });
-  return { changes };
+  return atLineStarts(state, changes);
 }
 
 /** Quotes each selected line, or unquotes them when every one is quoted. */
 export function toggleQuote(state: EditorState): TransactionSpec {
   const lines = selectedLines(state);
   const remove = lines.every((line) => /^[ \t]{0,3}>/.test(line.text));
-  const changes: ChangeSpec[] = lines.map((line) => {
-    if (!remove) return { from: line.from, insert: '> ' };
+  const changes = lines.map((line) => {
+    if (!remove) return { from: line.from, to: line.from, insert: '> ' };
     const marker = /^[ \t]{0,3}>[ \t]?/.exec(line.text)![0];
     return { from: line.from, to: line.from + marker.length, insert: '' };
   });
-  return { changes };
+  return atLineStarts(state, changes);
 }
 
 /**
