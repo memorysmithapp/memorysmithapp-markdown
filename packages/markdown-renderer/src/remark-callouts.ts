@@ -26,8 +26,12 @@ interface MdastNode {
   data?: { hName?: string; hProperties?: Record<string, unknown> };
 }
 
-/** `[!type]`, an optional fold marker, and whatever titles it. */
-const MARKER = /^\[!([A-Za-z][\w-]*)\]([+-]?)[ \t]*(.*)$/;
+/**
+ * `[!type]`, an optional fold marker, and whatever titles it. The type is a word
+ * in any script (§7.1): it opens with a letter and goes on in letters, marks,
+ * digits, `_` and `-`, so `[!atenção]` is a type as much as `[!warning]` is.
+ */
+const MARKER = /^\[!(\p{L}[\p{L}\p{M}\p{N}_-]*)\]([+-]?)[ \t]*(.*)$/u;
 
 export interface CalloutOptions {
   /**
@@ -60,7 +64,7 @@ function rewrite(quote: MdastNode, options: CalloutOptions): void {
   const marker = MARKER.exec(broke === -1 ? lead.value : lead.value.slice(0, broke));
   if (!marker) return;
 
-  const kind = (marker[1] ?? '').toLowerCase();
+  const kind = (marker[1] ?? '').normalize('NFC').toLowerCase();
   const { title, body } = split(
     marker[3] ?? '',
     broke === -1 ? null : lead.value.slice(broke + 1),

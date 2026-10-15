@@ -39,9 +39,22 @@ export const InBlock = createContext(false);
 
 // ── Callouts ─────────────────────────────────────────────────────────────────
 
+/**
+ * The words of a title, in one element: the title is laid out as a row beside
+ * its icon, and every text node and every `<strong>` of it would otherwise be
+ * an item of that row of its own, drawn as columns. One run wraps as a sentence.
+ */
+function CalloutTitleText({ children }: { children?: ReactNode }) {
+  return <span className="callout-title-text">{children}</span>;
+}
+
 /** The title `remarkCallouts` built, carried to the callout that holds it. */
 function CalloutTitle({ children }: { children?: ReactNode }) {
-  return <div className="callout-title">{children}</div>;
+  return (
+    <div className="callout-title">
+      <CalloutTitleText>{children}</CalloutTitleText>
+    </div>
+  );
 }
 
 function Callout({ kind, fold, children }: { kind: string; fold: '+' | '-' | null; children?: ReactNode }) {
@@ -73,7 +86,7 @@ function Callout({ kind, fold, children }: { kind: string; fold: '+' | '-' | nul
         <span className="callout-icon" aria-hidden="true">
           {icon}
         </span>
-        {title}
+        <CalloutTitleText>{title}</CalloutTitleText>
       </div>
     );
 

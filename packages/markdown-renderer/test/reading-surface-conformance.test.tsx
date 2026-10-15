@@ -28,7 +28,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { spec as packaged, type Spec } from '@memorysmithapp/markdown-spec';
+import { cases, spec as packaged, type Spec } from '@memorysmithapp/markdown-spec';
 import { describe, expect, it } from 'vitest';
 import { DELEGATED_TO_THE_BASE_PARSER, unclassified } from '../src/delegated.js';
 import { html } from './render.js';
@@ -228,6 +228,24 @@ describe('the reading surface implements the specification', () => {
  * specification says so in as many words, so the negatives are asserted next
  * to the positives rather than left to the library.
  */
+/** The callout cases of the suite, drawn: what they say of links holds only if the marker left the page. */
+describe('every callout of the conformance suite is drawn as a callout', () => {
+  const callouts = cases.filter((testCase) => testCase.notation === 'callout');
+
+  it('has callout cases to draw', () => {
+    expect(callouts.length).toBeGreaterThan(0);
+  });
+
+  it.each(callouts.map((testCase) => [testCase.id, testCase.markdown] as const))('%s', (_id, markdown) => {
+    const html = render(markdown);
+    const type = /^> \[!([^\]]+)\]/.exec(markdown)?.[1] ?? '';
+
+    expect(html).toContain(`data-callout="${type.normalize('NFC').toLowerCase()}"`);
+    expect(html).not.toContain(`[!${type}]`);
+    expect(html).not.toContain('<blockquote>');
+  });
+});
+
 describe('a dollar sign that is not opening a formula stays a dollar sign', () => {
   it('leaves a price alone when a space separates it from the amount', () => {
     // The outside edge: a `$` followed by whitespace does not open, and one

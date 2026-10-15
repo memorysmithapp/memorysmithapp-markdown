@@ -162,8 +162,8 @@ describe('level 3: slots', () => {
   it('draws an icon the theme gives a kind in the title, in place of the stylesheet one', () => {
     const theme = defineTheme({ name: 'icons', icons: { warning: <svg data-icon="w" /> } });
     const out = html('> [!warning] Careful\n> Body.\n\n> [!note] Plain', { theme });
-    expect(out).toContain('<div class="callout-title has-icon"><span class="callout-icon" aria-hidden="true"><svg data-icon="w"></svg></span>Careful</div>');
-    expect(out).toContain('<div class="callout-title">Plain</div>');
+    expect(out).toContain('<div class="callout-title has-icon"><span class="callout-icon" aria-hidden="true"><svg data-icon="w"></svg></span><span class="callout-title-text">Careful</span></div>');
+    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">Plain</span></div>');
   });
 
   it('asks the calloutIcon slot for a kind the icons leave out', () => {

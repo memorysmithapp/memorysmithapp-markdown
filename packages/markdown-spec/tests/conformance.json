@@ -446,6 +446,18 @@
       "facets": {}
     },
     {
+      "id": "callout/a-type-outside-a-z-is-a-type",
+      "notation": "callout",
+      "markdown": "> [!atenção] Veja [[Lei 14.133]]\n> O corpo do aviso.\n",
+      "links": [
+        {
+          "name": "Lei 14.133",
+          "anchor": null
+        }
+      ],
+      "facets": {}
+    },
+    {
       "id": "highlight/carries-no-index-entry",
       "notation": "highlight",
       "markdown": "The exception is ==only for the cases listed in article 75==.",
