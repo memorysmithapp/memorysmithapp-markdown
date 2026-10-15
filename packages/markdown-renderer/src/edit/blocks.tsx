@@ -656,6 +656,7 @@ export const ICONS = {
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
   markdown: icon('M10 12.5 8 15l2 2.5', 'm14 12.5 2 2.5-2 2.5', 'M14 2v4a2 2 0 0 0 2 2h4', 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'),
   close: icon('M18 6 6 18', 'm6 6 12 12'),
+  revert: icon('M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'),
   saving: icon('M21 12a9 9 0 1 1-6.219-8.56'),
   saved: icon('M20 6 9 17l-5-5'),
   notSaved: icon('M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z', 'M12 8v4', 'M12 16h.01'),

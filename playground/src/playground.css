@@ -60,22 +60,6 @@ body {
   border-radius: 6px;
   padding: 0.15rem 0.3rem;
 }
-.sidebar .controls button {
-  font: inherit;
-  color: var(--page-text);
-  background: var(--page-bg);
-  border: 1px solid var(--page-line);
-  border-radius: 6px;
-  padding: 0.15rem 0.5rem;
-  cursor: pointer;
-}
-.sidebar .controls button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-.sidebar .controls .changed {
-  color: var(--page-accent);
-}
 .sidebar .controls select:disabled {
   opacity: 0.55;
 }

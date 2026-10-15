@@ -74,6 +74,8 @@ export interface NoteStrings {
 /** The words of the editor (`./edit`), each a label a control shows or is named by. */
 export interface EditorWords {
   readonly toolbar: string;
+  /** The control that gives back the note as edit mode opened it (#67). */
+  readonly revert: string;
   readonly undo: string;
   readonly redo: string;
   readonly paragraph: string;
@@ -205,6 +207,7 @@ export const ENGLISH: NoteStrings = {
     'This note mixes line endings, which the editor cannot keep byte for byte, so it opens read-only.',
   editor: {
     toolbar: 'Formatting',
+    revert: 'Undo all changes',
     undo: 'Undo',
     redo: 'Redo',
     paragraph: 'Paragraph',

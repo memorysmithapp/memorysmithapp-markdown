@@ -114,6 +114,30 @@ describe("the note's Markdown (#63)", () => {
   });
 });
 
+describe('Undo all changes (#67)', () => {
+  it('gives back the note as edit mode opened it, in one change that Undo reverses', async () => {
+    const crlf = NOTE.replace(/\n/g, '\r\n');
+    const handed: string[] = [];
+    mounted = await mount(<NoteEditor markdown={crlf} onChange={(text) => void handed.push(text)} />);
+    const view = await editor();
+    const revert = () => $<HTMLButtonElement>('button[aria-label="Undo all changes"]')!;
+    // Before the toolbar's button for Undo, and idle while nothing changed.
+    expect(revert().nextElementSibling?.getAttribute('aria-label')).toBe('Undo');
+    expect(revert().disabled).toBe(true);
+    await type(view, 'One.');
+    await act(async () => view.dispatch({ changes: { from: 0, insert: 'X' }, userEvent: 'input.type' }));
+    expect(revert().disabled).toBe(false);
+
+    await act(async () => revert().click());
+    expect(handed.at(-1)).toBe(crlf);
+    expect(handed).toHaveLength(3);
+    expect(revert().disabled).toBe(true);
+
+    await act(async () => $<HTMLButtonElement>('button[aria-label="Undo"]')!.click());
+    expect(handed.at(-1)).toBe(`X${crlf}One.`);
+  });
+});
+
 describe('the save of an edit (#64)', () => {
   it('says nothing for a host that answers with nothing', async () => {
     mounted = await mount(<NoteEditor markdown={NOTE} onChange={() => undefined} />);

@@ -11,7 +11,7 @@
 import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands';
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
-import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state';
+import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
@@ -80,6 +80,12 @@ function difference(current: string, next: string): { from: number; to: number; 
   return { from: start, to: current.length - end, insert: next.slice(start, next.length - end) };
 }
 
+/** The note back to the text edit mode opened, as one change, the least that differs, which Undo reverses (#67). */
+function revert(state: EditorState, opened: string): TransactionSpec | null {
+  const change = difference(state.doc.toString(), opened);
+  return change ? { changes: change, selection: { anchor: Math.min(change.from + change.insert.length, opened.length) } } : null;
+}
+
 /** A change that came from the host, which is not handed back to it. */
 const fromHost = Annotation.define<boolean>();
 
@@ -125,6 +131,7 @@ function Toolbar({
   showSource,
   sourceButton,
   end,
+  opened,
 }: {
   view: EditorView | null;
   host: ResolvedHost;
@@ -132,6 +139,8 @@ function Toolbar({
   sourceButton: RefObject<HTMLButtonElement | null>;
   /** What closes the toolbar at its top right: the save's status and the switch (#65). */
   end: ReactNode;
+  /** The note as edit mode opened it, with `\n` for its line breaks, which *Undo all changes* gives back (#67). */
+  opened: string;
 }) {
   const words = host.strings.editor;
   const disabled = !view || view.state.readOnly;
@@ -157,6 +166,17 @@ function Toolbar({
     <div className="edit-toolbar" role="toolbar" aria-label={words.toolbar}>
       <div className="edit-toolbar-tools">
         <span className="edit-toolbar-group">
+          <button
+            type="button"
+            className="edit-control"
+            title={words.revert}
+            aria-label={words.revert}
+            disabled={!view || view.state.readOnly || view.state.doc.toString() === opened}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={run(command((state) => revert(state, opened)))}
+          >
+            {ICONS.revert}
+          </button>
           {button('undo', undo, 'Mod-Z')}
           {button('redo', redo, 'Mod-Shift-Z')}
         </span>
@@ -347,6 +367,8 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const [source, setSource] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [refusals, setRefusals] = useState(0);
+  // The note as edit mode opened it, as the editor holds its text: lines joined by `\n`.
+  const opened = useRef(given.replace(/\r\n?/g, '\n'));
   const lineBreak = lineBreakOf(given);
   const readOnly = !editable || lineBreak === null;
   /**
@@ -482,6 +504,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             host={resolved}
             showSource={() => setSource(true)}
             sourceButton={sourceButton}
+            opened={opened.current}
             end={
               <div
                 className="edit-corner"

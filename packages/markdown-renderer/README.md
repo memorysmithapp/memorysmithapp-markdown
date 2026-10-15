@@ -76,7 +76,7 @@ Import `structure.css` instead of `styles.css` for a theme that draws everything
 
 ## Edit
 
-A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar grows out of the switch, which becomes its last control, and its last tool shows the note's Markdown, as you would receive it, in a dialog.
+A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar grows out of the switch, which becomes its last control; its first tool undoes every change since editing began, and its last tool shows the note's Markdown, as you would receive it, in a dialog.
 
 ```tsx
 <NoteBody

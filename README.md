@@ -28,7 +28,7 @@ pnpm --filter playground dev   # http://localhost:5173/
 
 The sidebar picks the theme and the scheme: the default theme, MemorySmith's look, and three example themes in `playground/src/themes/` — `sepia`, properties alone; `docs`, its own CSS; `terminal`, components. The address carries them (`?theme=sepia&scheme=dark`; `?theme=dark` is the default theme, dark), and `?lang=pt` draws the words of the page in Brazilian Portuguese.
 
-The button at the top right of every note edits it on the page; the toolbar grows out of it, and its last tool shows the note's Markdown. The sidebar says whether the note was saved with changes, and restores the original. `?button=icon` draws the button as its icon alone and `?editable=0` hides it. A ticked task box or an edit is saved after a delay with `?save=slow`, fails with `?save=fail`, and does either with `?save=random`, so you can see the item locked under *Updating…*, the editor's icons for *Saving…* and *Saved*, and the *Not saved* that follows a failure.
+The button at the top right of every note edits it on the page; the toolbar grows out of it, its first tool undoes every change, and its last tool shows the note's Markdown. `?button=icon` draws the button as its icon alone and `?editable=0` hides it. A ticked task box or an edit is saved after a delay with `?save=slow`, fails with `?save=fail`, and does either with `?save=random`, so you can see the item locked under *Updating…*, the editor's icons for *Saving…* and *Saved*, and the *Not saved* that follows a failure.
 
 ## Compare it with MemorySmith
 

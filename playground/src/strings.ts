@@ -66,6 +66,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
   editUnavailable: 'Esta nota mistura quebras de linha, que o editor não consegue manter byte a byte, então abre só para leitura.',
   editor: {
     toolbar: 'Formatação',
+    revert: 'Desfazer tudo',
     undo: 'Desfazer',
     redo: 'Refazer',
     paragraph: 'Parágrafo',

@@ -161,9 +161,6 @@ export function App() {
 
   if (view.bare) return <main className="bare">{body}</main>;
 
-  // The note as the playground saved it, against the one in the notebook (#50); its Markdown is in
-  // the editor's own dialog (#63).
-  const changed = markdown !== view.note.markdown;
 
   return (
     <div className="layout">
@@ -190,22 +187,6 @@ export function App() {
               {mode}
             </a>
           ))}
-        </div>
-        <div className="controls saves">
-          <span>Note</span>
-          <span className={changed ? 'changed' : undefined}>{changed ? 'saved with changes' : 'as in the notebook'}</span>
-          <button
-            type="button"
-            disabled={!changed}
-            onClick={() =>
-              setEdited((all) => {
-                const { [key]: _dropped, ...rest } = all;
-                return rest;
-              })
-            }
-          >
-            Restore the original
-          </button>
         </div>
         <div className="controls themes">
           <label>
