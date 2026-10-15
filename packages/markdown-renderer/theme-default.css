@@ -1187,7 +1187,7 @@
    into it when the note goes back to reading: its clip starts and ends on
    the corner that holds the switch, which the editor measures. */
 .markdown .edit-toolbar {
-  padding: 0.35rem 0.4rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.15rem;
   border: 1px solid var(--ms-border);
   border-radius: var(--ms-radius);
   background: var(--ms-surface);
@@ -1483,13 +1483,18 @@
   font-size: 0.85rem;
   line-height: 1.55;
 }
-.markdown .edit-toolbar-group + .edit-toolbar-group {
-  padding-inline-start: 0.25rem;
-  border-inline-start: 1px solid var(--ms-border);
+/* Every group draws its separator on its left edge and overlaps the group
+   before it by that rule's width; the tools clip their own left edge, so the
+   separator of a group that starts a row — the first one's too — is cut away
+   and every row starts at the same place, with no script (#80). */
+.markdown .edit-toolbar-tools {
+  column-gap: 0;
+  clip-path: inset(-0.5rem -0.5rem -0.5rem 0);
 }
-/* A group that starts a row the toolbar wrapped to separates nothing (#80). */
-.markdown .edit-toolbar-group[data-row-start] {
-  border-inline-start-color: transparent;
+.markdown .edit-toolbar-group {
+  margin-inline-start: -1px;
+  padding-inline: 0.25rem;
+  border-inline-start: 1px solid var(--ms-border);
 }
 .markdown .edit-control {
   min-width: 1.9rem;

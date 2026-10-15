@@ -151,34 +151,6 @@ describe("the note's Markdown (#63)", () => {
   });
 });
 
-describe('a toolbar that wraps (#80)', () => {
-  it('marks the group that starts a row, which then draws no separator', async () => {
-    // jsdom lays nothing out: the rows are given, and the observer is called as a resize would.
-    const observers: (() => void)[] = [];
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        constructor(callback: () => void) {
-          observers.push(callback);
-        }
-        observe() {}
-        disconnect() {}
-      },
-    );
-    mounted = await mount(<NoteEditor markdown={NOTE} />);
-    await editor();
-    const groups = [...mounted.container.querySelectorAll<HTMLElement>('.edit-toolbar-tools > .edit-toolbar-group')];
-    const rows = [0, 0, 0, 30, 30, 60];
-    groups.forEach((group, index) => {
-      Object.defineProperty(group, 'offsetTop', { value: rows[index] ?? 60, configurable: true });
-      Object.defineProperty(group, 'offsetHeight', { value: 28, configurable: true });
-    });
-    await act(async () => observers.forEach((resized) => resized()));
-    expect(groups.map((group) => group.hasAttribute('data-row-start'))).toEqual(rows.map((top, index) => index > 0 && top > rows[index - 1]!).concat(groups.slice(rows.length).map(() => false)));
-    vi.unstubAllGlobals();
-  });
-});
-
 describe('Undo all changes (#67)', () => {
   it('gives back the note as edit mode opened it, in one change that Undo reverses', async () => {
     const crlf = NOTE.replace(/\n/g, '\r\n');

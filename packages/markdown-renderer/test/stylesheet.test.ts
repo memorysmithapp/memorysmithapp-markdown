@@ -99,6 +99,16 @@ describe('the stylesheet', () => {
     expect(rule).toContain("content: '\\200b';");
   });
 
+  it('cuts away the separator of a toolbar group that starts a row, so every row starts alike (#80)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const group = /\.markdown \.edit-toolbar-group \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    expect(group).toContain('margin-inline-start: -1px;');
+    expect(group).toContain('border-inline-start: 1px solid');
+    const tools = [...source.matchAll(/\.markdown \.edit-toolbar-tools \{([^}]*)\}/g)].map((match) => match[1]).join('');
+    expect(tools).toContain('clip-path: inset(-0.5rem -0.5rem -0.5rem 0);');
+    expect(source).not.toContain('.edit-toolbar-group + .edit-toolbar-group');
+  });
+
   it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
     const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';
