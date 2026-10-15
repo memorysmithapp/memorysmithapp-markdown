@@ -615,19 +615,25 @@ function retype(front: Frontmatter, key: string, read: { shape: string; values: 
 function TypeChoice({ value, label, onChoose }: { value: NewPropertyType; label: string; onChoose: (type: NewPropertyType) => void }) {
   const words = useHost().strings.editor;
   return (
-    <select
-      className="edit-type"
-      aria-label={label}
-      title={label}
-      value={value}
-      data-ms-control=""
-      onChange={(event) => onChoose(event.target.value as NewPropertyType)}
-    >
-      <option value="text">{words.typeText}</option>
-      <option value="list">{words.typeList}</option>
-      <option value="boolean">{words.typeBoolean}</option>
-      <option value="date">{words.typeDate}</option>
-    </select>
+    <>
+      <select
+        className="edit-type"
+        aria-label={label}
+        title={label}
+        value={value}
+        data-ms-control=""
+        onChange={(event) => onChoose(event.target.value as NewPropertyType)}
+      >
+        <option value="text">{words.typeText}</option>
+        <option value="list">{words.typeList}</option>
+        <option value="boolean">{words.typeBoolean}</option>
+        <option value="date">{words.typeDate}</option>
+      </select>
+      {/* Says the icon is a menu; the select laid over the icon covers it too (#73). */}
+      <span className="edit-type-caret" aria-hidden="true">
+        {ICONS.caret}
+      </span>
+    </>
   );
 }
 
@@ -826,6 +832,7 @@ export const ICONS = {
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
   markdown: icon('M10 12.5 8 15l2 2.5', 'm14 12.5 2 2.5-2 2.5', 'M14 2v4a2 2 0 0 0 2 2h4', 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'),
   close: icon('M18 6 6 18', 'm6 6 12 12'),
+  caret: icon('m6 9 6 6 6-6'),
   revert: icon('M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'),
   saving: icon('M21 12a9 9 0 1 1-6.219-8.56'),
   saved: icon('M20 6 9 17l-5-5'),

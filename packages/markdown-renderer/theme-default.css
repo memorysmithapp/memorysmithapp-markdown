@@ -1571,6 +1571,10 @@
   height: 1.5rem;
   opacity: 0;
 }
+/* A property's remove button, before its name, shows always (#73). */
+.markdown .edit-property .metadata-property-key .edit-control {
+  opacity: 1;
+}
 .markdown .edit-key-spacer {
   flex: none;
   visibility: hidden;
@@ -1593,7 +1597,8 @@
   position: absolute;
   left: -0.25em;
   top: 50%;
-  width: 1.45em;
+  /* From before the icon to just past the chevron, short of the remove button. */
+  width: calc(1.95em + 0.15rem + 2px);
   height: 1.6em;
   margin: 0;
   padding: 0;
@@ -1613,6 +1618,16 @@
 .markdown .edit-type:focus-visible {
   outline: 2px solid var(--ms-accent);
   outline-offset: 1px;
+}
+.markdown .edit-type-caret {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: -0.25rem;
+  pointer-events: none;
+}
+.markdown .edit-type-caret > svg {
+  width: 0.75em;
+  height: 0.75em;
 }
 .markdown .edit-type option {
   background: var(--ms-surface);

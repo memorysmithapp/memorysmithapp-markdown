@@ -153,7 +153,9 @@ describe('the properties form', () => {
     expect(key('tags').querySelector<HTMLSelectElement>('select.edit-type')!.value).toBe('list');
     // The remove button before the name, after the type (#72).
     const parts = [...key('status').children].map((child) => child.tagName.toLowerCase() + (child.getAttribute('aria-label') ? `:${child.getAttribute('aria-label')}` : ''));
-    expect(parts).toEqual(['select:Type: status', 'button:Remove the property: status', 'input:Key: status']);
+    expect(parts).toEqual(['select:Type: status', 'span', 'button:Remove the property: status', 'input:Key: status']);
+    // The chevron after the type's icon says it is a menu (#73).
+    expect(key('status').querySelector('.edit-type-caret svg')).not.toBeNull();
 
     // A list as text: its items joined; back as a list: the text its one item.
     await retype('tags', 'text');
