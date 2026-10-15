@@ -219,7 +219,7 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
   const inBlock = useInBlock();
   const inlineSlot = useSlot('inlineCode');
   if (className?.includes('language-mermaid')) {
-    return <MermaidDiagram code={String(children).trim()} scheme={scheme} />;
+    return <MermaidDiagram code={String(children ?? '').trim()} scheme={scheme} />;
   }
   if (!inBlock && inlineSlot) return drawSlot(inlineSlot, { children });
 
@@ -228,7 +228,8 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
     // The source is read and never rewritten: what is on the page is the
     // bytes, split into spans. React-markdown hands the children of a fence as
     // a single string ending in the newline before the closing fence.
-    const code = String(children).replace(/\n$/, '');
+    // An empty fence has no children at all, and is no code rather than the word `undefined`.
+    const code = String(children ?? '').replace(/\n$/, '');
     return (
       <code className={className} {...rest}>
         {toJsxRuntime(highlightTree(code, language), { Fragment, jsx, jsxs })}

@@ -360,6 +360,10 @@
   /* Room for the button, so the first line is never under it. */
   padding-right: 6.5rem;
 }
+/* An empty block keeps the height of one line, so its button fits inside it. */
+.markdown .code-block > pre > code:empty::before {
+  content: '\200b';
+}
 .markdown pre code {
   background: none;
   color: var(--ms-text);

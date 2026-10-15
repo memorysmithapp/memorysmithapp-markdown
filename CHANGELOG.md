@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- An empty fenced block is an empty block of code, with a language or without one, where one that named a language drew the word *undefined*; an empty block keeps the height of one line, so its *Copy* button sits inside it instead of over its edge (#38).
 - A callout whose title holds bold or other inline markup draws its title as one sentence beside the icon, wrapping as a paragraph does, where each run of it used to be a column of its own; the words of a title travel in one element, `.callout-title-text` (#42).
 - A callout type is a word of any script, as `SPEC.md` §7.1 says: `> [!atenção]` is a callout titled *Atenção* where it used to be a quotation beginning with its marker, a type written decomposed is the type written composed, and the specification now says so in words, with a conformance case for a type outside A–Z (#43).
 
