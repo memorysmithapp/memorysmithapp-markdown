@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A task box shows its save on the item itself: when the host answers `onToggleTask` with a promise, the item is locked under *Updating…*, its box showing the state being written, until the promise settles; a save that fails returns the box to the state its source holds and the item says *Not saved* for a moment. Ticks reach the host one at a time, and a polite live region tells whoever hears the page. The words are `strings.updating`, `strings.notSaved` and `strings.saved`; the `taskBox` slot is handed `pending` and `failed`; a host that answers with nothing keeps today's page. The playground simulates a save with `?save=slow`, `fail` or `random` and `&delay=<ms>` (#47).
+
 ## [0.3.2] - 2026-10-15
 
 ### Fixed

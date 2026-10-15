@@ -47,6 +47,12 @@ export interface NoteStrings {
   readonly embedSectionMissing: (section: string) => string;
   /** The caption of a note that has no name. */
   readonly unnamedNote: string;
+  /** What a task item says while the host saves its tick. */
+  readonly updating: string;
+  /** What is said, to whoever hears the page, once a tick is saved. */
+  readonly saved: string;
+  /** What a task item says for a moment when the host failed to save its tick. */
+  readonly notSaved: string;
   /** What a region says while it waits for the host. */
   readonly loading: string;
   /** What a region says when the host failed to answer. */
@@ -121,6 +127,9 @@ export const ENGLISH: NoteStrings = {
       : `No note is named “${target}”, so it matched ${count} notes that carry it as an alias — and one of them gives the link up the day somebody writes a note under this name.`,
   embedSectionMissing: (section) => `The section "${section}" is not in this note.`,
   unnamedNote: 'Unnamed note',
+  updating: 'Updating…',
+  saved: 'Saved',
+  notSaved: 'Not saved',
   loading: 'Loading…',
   failed: 'Something went wrong.',
   close: 'Close',

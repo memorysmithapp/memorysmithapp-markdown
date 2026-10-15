@@ -950,6 +950,70 @@
   cursor: pointer;
 }
 
+/* The lock over an item whose tick is being saved: the item dimmed under a
+   sweep of the accent, and "Updating…" in a pill at its right, breathing. */
+.markdown .task-lock {
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--ms-bg) 55%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ms-accent) 14%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: markdown-task-sweep 1.2s linear infinite;
+}
+.markdown .task-lock-label,
+.markdown .task-notice {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.markdown .task-lock-label {
+  border: 1px solid color-mix(in srgb, var(--ms-accent) 45%, transparent);
+  background: var(--ms-surface);
+  color: var(--ms-accent);
+  animation: markdown-task-breathe 1.2s ease-in-out infinite;
+}
+/* A save that failed: the box is back, and this says so, then fades. */
+.markdown .task-notice {
+  border: 1px solid rgba(var(--ms-callout-stop), 0.45);
+  background: var(--ms-surface);
+  color: rgb(var(--ms-callout-stop));
+  animation: markdown-task-fade 2.5s ease-in forwards;
+}
+@keyframes markdown-task-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@keyframes markdown-task-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes markdown-task-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .task-lock,
+  .markdown .task-lock-label {
+    animation: none;
+  }
+}
+
 /* ── Skeletons ──────────────────────────────────────────────────────────────
    The shape of an embed that is coming, in the position it will occupy. */
 .markdown .skeleton {

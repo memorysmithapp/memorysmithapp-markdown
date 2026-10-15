@@ -31,7 +31,19 @@ interface View {
   readonly lang: 'en' | 'pt';
   /** Only the note, in its column: what the comparison screenshots. */
   readonly bare: boolean;
+  /** How a ticked box is saved: at once, as before, or after a delay that may fail. */
+  readonly save: SaveMode;
+  /** The delay of a simulated save, in milliseconds. */
+  readonly delay: number;
 }
+
+/**
+ * The saves the playground simulates (#47): `instant` writes at once and answers nothing, as a
+ * host did before; the others answer with a promise that settles after the delay — `slow` always
+ * resolves, `fail` always rejects, `random` rejects about one save in three.
+ */
+type SaveMode = 'instant' | 'slow' | 'fail' | 'random';
+const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random'];
 
 function readView(): View {
   const query = new URLSearchParams(window.location.search);
@@ -45,6 +57,8 @@ function readView(): View {
     ...themeAndScheme(query),
     lang: query.get('lang') === 'pt' ? 'pt' : 'en',
     bare: query.get('bare') === '1',
+    save: SAVE_MODES.find((mode) => mode === query.get('save')) ?? 'instant',
+    delay: Math.max(0, Number(query.get('delay') ?? '') || 2000),
   };
 }
 
@@ -110,8 +124,21 @@ export function App() {
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         writable
         onToggleTask={(ordinal) => {
-          const next = toggleTaskAt(markdown, ordinal);
-          if (next !== null) setEdited((all) => ({ ...all, [key]: next }));
+          // Applied to the note as it is when the save lands, as a host applies a tick to its latest bytes.
+          const write = () =>
+            setEdited((all) => {
+              const next = toggleTaskAt(all[key] ?? view.note.markdown, ordinal);
+              return next === null ? all : { ...all, [key]: next };
+            });
+          if (view.save === 'instant') return void write();
+          return new Promise<void>((resolve, reject) =>
+            setTimeout(() => {
+              const fails = view.save === 'fail' || (view.save === 'random' && Math.random() < 1 / 3);
+              if (fails) return reject(new Error('The playground failed this save on purpose.'));
+              write();
+              resolve();
+            }, view.delay),
+          );
         }}
       />
     </article>
@@ -125,6 +152,14 @@ export function App() {
         <p className="brand">memorysmithapp-markdown</p>
         <div className="controls">
           <a href={withQuery({ lang: view.lang === 'pt' ? 'en' : 'pt' })}>{view.lang === 'pt' ? 'English' : 'Português'}</a>
+        </div>
+        <div className="controls saves">
+          <span>Save a tick</span>
+          {SAVE_MODES.map((mode) => (
+            <a key={mode} className={mode === view.save ? 'current' : undefined} href={withQuery({ save: mode })}>
+              {mode}
+            </a>
+          ))}
         </div>
         <div className="controls themes">
           <label>

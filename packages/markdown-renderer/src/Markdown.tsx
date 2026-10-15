@@ -21,6 +21,7 @@ import { MermaidDiagram } from './MermaidDiagram.js';
 import { readingPlugins } from './reading.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
+import type { TaskSave } from './task-saves.js';
 import { ordinalAt } from './tasklist.js';
 
 /**
@@ -39,7 +40,10 @@ export interface MarkdownProps {
    * the two disagree on how many there are.
    */
   readonly source?: string;
-  readonly onToggleTask?: (ordinal: number) => void;
+  /** A box of this run was ticked: its ordinal in the run, and the state it is being set to. */
+  readonly onToggleTask?: (ordinal: number, checked: boolean) => void;
+  /** Where the save of a box of this run stands, by its ordinal in the run (`task-saves.ts`). */
+  readonly taskSave?: (ordinal: number) => TaskSave | null;
   readonly writable?: boolean;
   /**
    * How this run takes part in the footnotes of a note drawn in several runs
@@ -329,14 +333,17 @@ function TaskItem({
   className,
   source,
   toggleTask,
+  taskSave,
   writable,
   ...rest
 }: LiProps & {
   source: string;
-  toggleTask: ((ordinal: number) => void) | undefined;
+  toggleTask: ((ordinal: number, checked: boolean) => void) | undefined;
+  taskSave: ((ordinal: number) => TaskSave | null) | undefined;
   writable: boolean;
 }) {
   const boxSlot = useSlot('taskBox');
+  const { strings } = useHost();
   const element = node as HastElement | undefined;
   const checked = taskState(element);
   if (checked === null) {
@@ -349,23 +356,45 @@ function TaskItem({
 
   const offset = element?.position?.start?.offset;
   const ordinal = offset === undefined ? -1 : ordinalAt(source, offset);
-  const enabled = writable && toggleTask !== undefined && ordinal >= 0;
+  // While the host saves a tick the box shows the state being written and answers no click; once a
+  // save failed it is back to what its source holds, which is `checked`.
+  const save = ordinal >= 0 ? (taskSave?.(ordinal) ?? null) : null;
+  const pending = save?.kind === 'pending';
+  const failed = save?.kind === 'failed';
+  const shown = save?.kind === 'pending' ? save.checked : checked;
+  const enabled = writable && toggleTask !== undefined && ordinal >= 0 && !pending;
   const toggle = (): void => {
-    if (enabled) toggleTask(ordinal);
+    if (enabled) toggleTask(ordinal, !checked);
   };
 
   return (
     // Our class comes LAST, because the one react-markdown passes in is on
     // `className` and spreading it after would silently take the item back.
-    <li {...rest} className={`${className ?? ''} task-item`.trim()}>
+    <li
+      {...rest}
+      className={`${className ?? ''} task-item`.trim()}
+      data-save={pending ? 'pending' : failed ? 'failed' : undefined}
+      aria-busy={pending || undefined}
+    >
       {boxSlot ? (
-        drawSlot(boxSlot, { checked, enabled, toggle })
+        drawSlot(boxSlot, { checked: shown, enabled, toggle, pending, failed })
       ) : (
-        <input type="checkbox" checked={checked} disabled={!enabled} onChange={toggle} />
+        <input type="checkbox" checked={shown} disabled={!enabled} onChange={toggle} />
       )}
       {/* The box GFM already rendered is dropped: it is `disabled`, it answers
           to nothing, and two boxes in one item is worse than none. */}
       {dropBox(children)}
+      {/* The lock and the notice are said once, by the note's live region; here they are only seen. */}
+      {pending && (
+        <span className="task-lock" aria-hidden="true">
+          <span className="task-lock-label">{strings.updating}</span>
+        </span>
+      )}
+      {failed && (
+        <span className="task-notice" aria-hidden="true">
+          {strings.notSaved}
+        </span>
+      )}
     </li>
   );
 }
@@ -381,7 +410,7 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, writable = false, footnotes }: MarkdownProps) {
+export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
@@ -431,7 +460,13 @@ export function Markdown({ children, source, onToggleTask, writable = false, foo
           section: MarkdownSection,
           ...headings,
           li: (props: LiProps) => (
-            <TaskItem {...props} source={source ?? text} toggleTask={onToggleTask} writable={writable} />
+            <TaskItem
+              {...props}
+              source={source ?? text}
+              toggleTask={onToggleTask}
+              taskSave={taskSave}
+              writable={writable}
+            />
           ),
         }}
       >

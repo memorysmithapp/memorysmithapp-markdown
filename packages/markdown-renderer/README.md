@@ -23,7 +23,7 @@ import 'katex/dist/katex.min.css';
   renderLink={({ href, className, children }) => <RouterLink to={href} className={className}>{children}</RouterLink>}
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches
   writable
-  onToggleTask={(ordinal) => save(toggleTaskAt(note, ordinal))}
+  onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"
   strings={{ footnotes: 'Notas' }}                 // every word left out is MemorySmith's English
 />;

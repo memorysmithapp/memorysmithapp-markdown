@@ -62,3 +62,26 @@
   width: 100%;
   height: 100%;
 }
+
+/* A task item whose tick the host is saving is covered by a lock, which takes
+   every click on the item until the save settles; a failed save leaves a
+   notice in the same corner. Where they are drawn is the theme's. */
+.markdown li.task-item[data-save] {
+  position: relative;
+}
+.markdown .task-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  cursor: progress;
+}
+.markdown .task-notice {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+}

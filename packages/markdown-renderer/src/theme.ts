@@ -250,6 +250,10 @@ export interface TaskBoxSlotProps {
   readonly enabled: boolean;
   /** Reports the tick to the host; does nothing when the box is not enabled. */
   readonly toggle: () => void;
+  /** The host is saving a tick of this box: `checked` is the state being written, and the box is not enabled. */
+  readonly pending: boolean;
+  /** The host failed to save the last tick: `checked` is back to what the source holds. */
+  readonly failed: boolean;
 }
 
 /** A wikilink to a note (§5.2). */

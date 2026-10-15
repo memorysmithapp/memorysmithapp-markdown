@@ -6,6 +6,7 @@ import { readingPlugins } from './reading.js';
 import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './markdown.js';
 import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
+import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
@@ -34,6 +35,8 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
   );
   // The frontmatter is drawn apart from the body, as the theme decides, so the
   // runs start after it. Everything below counts task items from there.
+  // Each tick the host answers with a promise locks its item until the save settles.
+  const saves = useTaskSaves(onToggleTask);
   const split = bodyStart(markdown);
   const properties = useMemo(() => readProperties(markdown), [markdown]);
   // What a comment holds is never read (§7.6): it leaves before the embeds and the links are found.
@@ -128,7 +131,8 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
               // A planned run is the same text with definitions appended after
               // it, so every box keeps the offset it had.
               source={planned?.text ?? segment.rendered}
-              onToggleTask={onToggleTask && ((ordinal) => onToggleTask(base + ordinal))}
+              onToggleTask={onToggleTask && ((ordinal, checked) => saves.toggle(base + ordinal, checked))}
+              taskSave={(ordinal) => saves.stateOf(base + ordinal)}
               writable={writable && mappable}
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
             >
@@ -140,6 +144,12 @@ export function NoteBody({ markdown, writable = false, onToggleTask, ...host }: 
             not where the ordinals of the runs count them. */}
         {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
         {hosts.length > 0 && <p className="remote-notice">{resolved.strings.remoteImages(hosts)}</p>}
+        {/* Where a save is said to whoever hears the page: once, politely, never by the item itself. */}
+        {writable && onToggleTask && (
+          <p className="visually-hidden" role="status" aria-live="polite">
+            {saves.announcement && resolved.strings[saves.announcement]}
+          </p>
+        )}
       </div>
     </HostProvider>
   );

@@ -51,8 +51,14 @@ export interface NoteHost {
    * A task box was ticked. The ordinal counts the boxes of the note as the host gave it, frontmatter
    * included; the host applies it with `toggleTaskAt`, a one-character change of its bytes. The
    * package never writes the note.
+   *
+   * Answered with a promise, the item is locked under `strings.updating` until it settles: resolved,
+   * the box is what the host's bytes say; rejected, it returns to the state its source holds and the
+   * item says `strings.notSaved` for a moment. Ticks are queued, so a host is never asked again
+   * before its last save settled, and applies each one to its latest bytes. Answered with anything
+   * but a promise, no lock is drawn.
    */
-  readonly onToggleTask?: (ordinal: number) => void;
+  readonly onToggleTask?: (ordinal: number) => unknown;
   /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
   readonly keeps?: (name: string) => boolean;
   /**
