@@ -1,6 +1,9 @@
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import {
   isValidElement,
+  useEffect,
+  useMemo,
+  useState,
   type AnchorHTMLAttributes,
   type HTMLAttributes,
   type ImgHTMLAttributes,
@@ -12,8 +15,9 @@ import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
+import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
 import { highlightLanguage, highlightTree } from './highlight.js';
-import { useHost } from './host.js';
+import { useHost, type KeptFile } from './host.js';
 import { readDimensions, readImageAlt } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
@@ -117,22 +121,105 @@ function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnch
 }
 
 /**
- * A file the notebook keeps, where a note embedded it. The host draws it by its
- * type — an image, audio, video, or a card — and a name the notebook keeps
- * nothing under is reported the way a pending link is: a notebook is read most
- * while it is being written (§5.8).
+ * A file the notebook keeps, where a note embedded it, drawn by its type — an
+ * image, audio, video, or a card — by the host's `renderAttachment`, else from
+ * what its `fileOf` says (#77). A name the notebook keeps nothing under is
+ * reported the way a pending link is: a notebook is read most while it is
+ * being written (§5.8).
  */
 function Attachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
   const host = useHost();
-  if (!host.keeps(name)) {
-    return (
-      <span className="attachment-missing" title={host.strings.attachmentMissing}>
-        {name}
-      </span>
+  if (!host.keeps(name)) return <AttachmentMissing name={name} />;
+  if (host.renderAttachment) return <>{host.renderAttachment({ name, width, height })}</>;
+  if (!host.fileOf) return <span className="attachment-loading">{name}</span>;
+  return <KeptAttachment name={name} width={width} height={height} />;
+}
+
+function AttachmentMissing({ name }: { name: string }) {
+  const host = useHost();
+  return (
+    <span className="attachment-missing" title={host.strings.attachmentMissing}>
+      {name}
+    </span>
+  );
+}
+
+function isThenable<T>(value: unknown): value is PromiseLike<T> {
+  return typeof value === 'object' && value !== null && typeof (value as { then?: unknown }).then === 'function';
+}
+
+/**
+ * What the host's `fileOf` says of a name: the file, `null` for none, or `undefined` while a
+ * promise is on its way. An answer given at once is drawn at once, a server's render included.
+ */
+function useKeptFile(name: string): KeptFile | null | undefined {
+  const { fileOf } = useHost();
+  const answer = useMemo(() => fileOf?.(name) ?? null, [fileOf, name]);
+  const [settled, setSettled] = useState<{ answer: unknown; file: KeptFile | null } | null>(null);
+  useEffect(() => {
+    if (!isThenable<KeptFile | null>(answer)) return;
+    let live = true;
+    answer.then(
+      (file) => live && setSettled({ answer, file }),
+      () => live && setSettled({ answer, file: null }),
     );
-  }
-  if (!host.renderAttachment) return <span className="attachment-loading">{name}</span>;
-  return <>{host.renderAttachment({ name, width, height })}</>;
+    return () => {
+      live = false;
+    };
+  }, [answer]);
+  if (!isThenable(answer)) return answer;
+  return settled?.answer === answer ? settled.file : undefined;
+}
+
+/**
+ * A kept file drawn as MemorySmith's `Attachment` draws it (*observed* at `4b67c7e`): an image with
+ * the dimensions the embed declared, an audio or a video player, and everything else — the PDF
+ * included — a card with what it is, its size, and the ways out of the page: Open only for what a
+ * browser shows, Download always. A theme may draw it through the `attachment` slot.
+ */
+function KeptAttachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+  const host = useHost();
+  const slot = useSlot('attachment');
+  const described = useKeptFile(name);
+  if (described === undefined) return <span className="attachment-loading">{name}</span>;
+  const url = described ? fileAddress(described.url) : '';
+  if (!described || url === '') return <AttachmentMissing name={name} />;
+  const file: KeptFile = { ...described, url, downloadUrl: fileAddress(described.downloadUrl ?? described.url) || url };
+  const shape = rendersAs(file.mimeType);
+  const kind = fileKind(file.mimeType, host.strings.fileKinds);
+  const size = formatBytes(file.bytes, host.strings.locale);
+  const opens = opensInBrowser(file.mimeType);
+  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, width, height })}</>;
+  // The attributes reserve the box before the bytes arrive; a height is a style too, since the
+  // surface gives an image `height: auto`, which two numbers overrule (§3.14).
+  const sized = {
+    ...(width === null ? {} : { width }),
+    ...(height === null ? {} : { height, style: { height: `${height}px` } }),
+  };
+  if (shape === 'image') return <img className="attachment-image" src={file.url} alt={file.description || name} {...sized} />;
+  if (shape === 'audio') return <audio className="attachment-player" controls src={file.url} />;
+  if (shape === 'video') return <video className="attachment-player" controls src={file.url} {...sized} />;
+  return (
+    <span className="attachment-card">
+      <span className="attachment-card-body">
+        <span className="attachment-card-name">{name}</span>
+        <span className="attachment-card-note" title={file.mimeType}>
+          {kind} · {size}
+        </span>
+        {file.description && <span className="attachment-card-note">{file.description}</span>}
+      </span>
+      <span className="attachment-card-actions">
+        {opens && (
+          <a href={file.url} target="_blank" rel="noreferrer">
+            {host.strings.attachmentOpen}
+          </a>
+        )}
+        <a href={file.downloadUrl} download={name}>
+          {host.strings.attachmentDownload}
+        </a>
+      </span>
+    </span>
+  );
 }
 
 export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNode<AnchorHTMLAttributes<HTMLAnchorElement>>) {

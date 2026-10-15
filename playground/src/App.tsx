@@ -1,13 +1,15 @@
 import { NoteBody, toggleTaskAt, type NoteHost } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
+import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
 import { schemesOf, themeNamed, THEMES, type PlaygroundTheme } from './themes/index.js';
 
 /** Every note of the two notebooks, read at build time; nothing is fetched. */
 const sources = import.meta.glob<string>('../../notebooks/*/**/*.md', { query: '?raw', import: 'default', eager: true });
-/** The files the notebooks keep: a few fixture images, served at `/assets/<name>`. */
-const kept = import.meta.glob('../../notebooks/*/assets/*', { query: '?url', import: 'default', eager: true });
+/** The files the notebooks keep: a few fixture images, read as base64 `data:` addresses. */
+const kept = import.meta.glob<string>('../../notebooks/*/assets/*', { query: '?inline', import: 'default', eager: true });
 
 const PREFIX = '../../notebooks/';
 const files = Object.fromEntries(Object.entries(sources).map(([path, text]) => [path.slice(PREFIX.length), text]));
@@ -17,6 +19,15 @@ for (const path of Object.keys(kept)) {
   if (slug && name) keptBySlug[slug] = [...(keptBySlug[slug] ?? []), name.normalize('NFC')];
 }
 const NOTEBOOKS: readonly Notebook[] = buildNotebooks(files, keptBySlug);
+/** One sample of each type MemorySmith accepts, and what `fixtures/files.json` says of each (#77). */
+const samples = import.meta.glob<string>('../fixtures/files/*', { query: '?inline', import: 'default', eager: true });
+/** Each notebook's files as the playground keeps them at the start, with their attributes and their bytes in base64. */
+const STARTING_FILES = startingFiles(
+  Object.fromEntries(Object.entries(kept).map(([path, url]) => [path.slice(PREFIX.length), url])),
+  Object.fromEntries(Object.entries(samples).map(([path, url]) => [path.split('/').pop() ?? path, url])),
+  SAMPLE_ATTRIBUTES,
+  NOTEBOOKS.map((notebook) => notebook.slug),
+);
 
 /**
  * What the page shows, read from its address:
@@ -119,59 +130,36 @@ export function App() {
 
   const key = `${view.notebook.slug}/${view.note.path}`;
   const markdown = edited[key] ?? view.note.markdown;
-  const notebookHost = useMemo(
-    () =>
-      hostOf(
-        view.notebook,
-        (name) => `/notes/${encodeURIComponent(view.notebook.slug)}/assets/${encodeURIComponent(name)}`,
-        (address) => {
-          window.history.pushState(null, '', `${address}${window.location.search}`);
-          setView(readView());
-          window.scrollTo(0, 0);
-        },
-      ),
-    [view.notebook],
-  );
-
-  // The files attached in edit mode (#75), kept in memory for the session as object URLs, by notebook.
-  const [attached, setAttached] = useState<Readonly<Record<string, { url: string; type: string }>>>({});
-  const attachedNow = useRef(attached);
-  attachedNow.current = attached;
+  // The files each notebook keeps, with MemorySmith's attributes and their bytes in base64; a file
+  // attached in edit mode joins them for the session (#75, #77).
+  const [stored, setStored] = useState(STARTING_FILES);
+  const storedNow = useRef(stored);
+  storedNow.current = stored;
   const host = useMemo((): NoteHost => {
-    const keyOf = (name: string) => `${view.notebook.slug}/${name.normalize('NFC')}`;
-    const taken = (name: string) => notebookHost.keeps?.(name) === true || attachedNow.current[keyOf(name)] !== undefined;
+    const slug = view.notebook.slug;
+    const own = (name: string): StoredFile | null => stored[slug]?.[name.normalize('NFC')] ?? null;
+    const base = hostOf(view.notebook, own, (address) => {
+      window.history.pushState(null, '', `${address}${window.location.search}`);
+      setView(readView());
+      window.scrollTo(0, 0);
+    });
     return {
-      ...notebookHost,
-      keeps: (name) => notebookHost.keeps?.(name) === true || attached[keyOf(name)] !== undefined,
-      renderAttachment: (request) => {
-        const file = attached[keyOf(request.name)];
-        if (!file) return notebookHost.renderAttachment?.(request);
-        if (file.type.startsWith('image/')) return <img className="attachment-image" src={file.url} alt={request.name} {...(request.width === null ? {} : { width: request.width })} />;
-        return (
-          <a className="attachment-card" href={file.url} download={request.name}>
-            📎 {request.name}
-          </a>
-        );
-      },
+      ...base,
+      keeps: (name) => own(name) !== null,
       // The name a file is kept under: its own, or with a number when the notebook already keeps one so named.
-      attach: (file) => {
+      attach: async (file) => {
         const dot = file.name.lastIndexOf('.');
         const [stem, extension] = dot > 0 ? [file.name.slice(0, dot), file.name.slice(dot)] : [file.name, ''];
-        let name = file.name;
-        for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`;
-        const url = URL.createObjectURL(file);
-        const saved = save(() => setAttached((all) => ({ ...all, [keyOf(name)]: { url, type: file.type } })));
-        if (!saved) return name;
-        return saved.then(
-          () => name,
-          (error: unknown) => {
-            URL.revokeObjectURL(url);
-            throw error;
-          },
-        );
+        const taken = (name: string) => storedNow.current[slug]?.[name.normalize('NFC')] !== undefined;
+        let name = file.name.normalize('NFC');
+        for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`.normalize('NFC');
+        const url = await readAsDataUrl(file);
+        const kept: StoredFile = { name, mimeType: file.type || 'application/octet-stream', bytes: file.size, url, description: '' };
+        await save(() => setStored((all) => ({ ...all, [slug]: { ...all[slug], [name]: kept } })));
+        return name;
       },
     };
-  }, [notebookHost, attached, view.notebook.slug, view.save, view.delay]);
+  }, [view.notebook, stored, view.save, view.delay]);
 
   const body = (
     <article className="pane">

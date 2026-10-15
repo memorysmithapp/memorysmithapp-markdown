@@ -22,6 +22,8 @@
  */
 
 import type { ReactNode } from 'react';
+import type { FileShape } from './file-types.js';
+import type { KeptFile } from './host.js';
 import type { PropertyEntry } from './properties.js';
 
 export type Scheme = 'light' | 'dark';
@@ -313,6 +315,28 @@ export interface ModeSwitchSlotProps {
   readonly toggle: () => void;
 }
 
+/**
+ * A file the notebook keeps, where a note embedded it, described by the host's `fileOf` (#77): the
+ * slot decides how it looks, the package what it is.
+ */
+export interface AttachmentSlotProps {
+  /** The name it is kept under, as the embed wrote it. */
+  readonly name: string;
+  /** What the host said of it, its addresses already through the package's filter. */
+  readonly file: KeptFile;
+  /** The shape its media type is drawn in: `image`, `audio`, `video` or `card`. */
+  readonly shape: FileShape;
+  /** Its type in the reader's words, or its media type. */
+  readonly kind: string;
+  /** Its size in the reader's locale. */
+  readonly size: string;
+  /** Whether a browser shows it on its own, so a card may offer to open it. */
+  readonly opens: boolean;
+  /** The dimensions the embed declared (§3.14), in CSS pixels, or `null`. */
+  readonly width: number | null;
+  readonly height: number | null;
+}
+
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */
 export interface ThemeComponents {
   readonly callout: (props: CalloutSlotProps) => ReactNode;
@@ -323,6 +347,7 @@ export interface ThemeComponents {
   readonly heading: (props: HeadingSlotProps) => ReactNode;
   readonly blockquote: (props: BlockquoteSlotProps) => ReactNode;
   readonly embed: (props: EmbedSlotProps) => ReactNode;
+  readonly attachment: (props: AttachmentSlotProps) => ReactNode;
   readonly footnotes: (props: FootnotesSlotProps) => ReactNode;
   readonly taskBox: (props: TaskBoxSlotProps) => ReactNode;
   readonly wikilink: (props: WikilinkSlotProps) => ReactNode;
@@ -334,7 +359,7 @@ export interface ThemeComponents {
 /** The names of the slots, in the order the documentation lists them. */
 export const THEME_SLOTS = Object.keys({
   callout: 1, calloutIcon: 1, table: 1, codeBlock: 1, inlineCode: 1, heading: 1, blockquote: 1,
-  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1, modeSwitch: 1,
+  embed: 1, attachment: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1, modeSwitch: 1,
 } satisfies Record<keyof ThemeComponents, 1>) as (keyof ThemeComponents)[];
 
 export interface Theme {

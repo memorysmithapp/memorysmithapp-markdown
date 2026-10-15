@@ -2,7 +2,7 @@
 // reached by name and then by alias, and the host contract that answers from them. The page and
 // the tests build it from the same files.
 
-import type { EmbeddedNote, LinkChoices, NoteHost } from '@memorysmithapp/markdown-renderer';
+import type { EmbeddedNote, KeptFile, LinkChoices, NoteHost } from '@memorysmithapp/markdown-renderer';
 import { splitFrontmatter } from '@memorysmithapp/markdown-renderer';
 
 export interface Note {
@@ -93,7 +93,7 @@ export function reaching(notebook: Notebook, target: string): { by: 'name' | 'al
 }
 
 /** The host contract over one notebook, which is what MemorySmith gives the reading page. */
-export function hostOf(notebook: Notebook, assets: (name: string) => string, go: (address: string) => void = () => undefined): NoteHost {
+export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | null, go: (address: string) => void = () => undefined): NoteHost {
   const one = (name: string): Note | null => {
     const { notes } = reaching(notebook, name);
     return notes.length === 1 ? (notes[0] ?? null) : null;
@@ -139,14 +139,7 @@ export function hostOf(notebook: Notebook, assets: (name: string) => string, go:
         {children}
       </a>
     ),
-    renderAttachment: ({ name, width, height }) => (
-      <img
-        className="attachment-image"
-        src={assets(name)}
-        alt={name}
-        {...(width === null ? {} : { width })}
-        {...(height === null ? {} : { height, style: { height: `${height}px` } })}
-      />
-    ),
+    // The files are drawn by the renderer, by their type, from what `fileOf` says of them (#77).
+    fileOf,
   };
 }

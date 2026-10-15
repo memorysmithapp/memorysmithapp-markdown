@@ -61,7 +61,7 @@ describe('attaching a file (#75)', () => {
     await choose([file('a.png'), file('b.pdf', 'application/pdf')]);
     expect(attach.mock.calls.map(([each]) => each.name)).toEqual(['a.png', 'b.pdf']);
     expect(changes.at(-1)).toBe('Text.\n\n![[kept a.png]]\n\n![[kept b.pdf]]\n');
-    expect($('button[aria-label="Attach a file"]')!.dataset['attach']).toBe('idle');
+    expect($<HTMLButtonElement>('button[aria-label="Attach a file"]')!.dataset['attach']).toBe('idle');
   });
 
   it('writes nothing for a file the host could not keep, and says so on the button', async () => {

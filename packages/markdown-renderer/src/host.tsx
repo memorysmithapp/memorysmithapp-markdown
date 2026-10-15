@@ -73,6 +73,12 @@ export interface NoteHost {
    */
   readonly attach?: (file: File) => string | PromiseLike<string>;
   /**
+   * What the notebook knows of a file it keeps (#77): its media type, its size and where its bytes
+   * are. With it, the package draws the file as MemorySmith does, by its type — an image, an audio,
+   * a video, or a card — and `null` is a name it keeps nothing under. `renderAttachment` wins over it.
+   */
+  readonly fileOf?: (name: string) => KeptFile | null | PromiseLike<KeptFile | null>;
+  /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
    * dimensions are the ones the embed declared, in CSS pixels, or `null`.
    */
@@ -130,6 +136,20 @@ export interface EmbeddedNote {
 }
 
 /** A file to draw: its name, and the dimensions the embed declared. */
+/** A file the notebook keeps, as the host describes it to draw it (#77). */
+export interface KeptFile {
+  /** Its media type, which decides how it is drawn; the name decides nothing (§5.8). */
+  readonly mimeType: string;
+  /** Its size, in bytes. */
+  readonly bytes: number;
+  /** Where its bytes are shown: the source of an image or a player, and what a card opens. */
+  readonly url: string;
+  /** Where its bytes are saved from. Defaults to `url`. */
+  readonly downloadUrl?: string;
+  /** What the author said it is: an image's `alt`, a line of its card. */
+  readonly description?: string;
+}
+
 export interface AttachmentRequest {
   readonly name: string;
   readonly width: number | null;
@@ -159,6 +179,7 @@ export const HOST_KEYS = Object.keys({
   keeps: 1,
   suggest: 1,
   attach: 1,
+  fileOf: 1,
   renderAttachment: 1,
   renderLink: 1,
   strings: 1,
@@ -179,6 +200,7 @@ export interface ResolvedHost {
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File) => string | PromiseLike<string>) | null;
+  readonly fileOf: ((name: string) => KeptFile | null | PromiseLike<KeptFile | null>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
@@ -216,6 +238,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,
+    fileOf: host.fileOf ?? null,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),

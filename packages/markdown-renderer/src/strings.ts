@@ -25,6 +25,11 @@ export interface NoteStrings {
   readonly refusedLink: string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
+  /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
+  readonly attachmentOpen: string;
+  readonly attachmentDownload: string;
+  /** What each type MemorySmith keeps is called, by media type; a type left out is named by its media type. */
+  readonly fileKinds: Readonly<Record<string, string>>;
   /** The verb of the button that copies a block of code. */
   readonly copy: string;
   /** What that button says once the block is copied. */
@@ -188,6 +193,26 @@ export const ENGLISH: NoteStrings = {
   pendingLink: 'Pending link: the target note does not exist yet.',
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
   attachmentMissing: 'This notebook keeps no file under that name.',
+  attachmentOpen: 'Open',
+  attachmentDownload: 'Download',
+  fileKinds: {
+    'image/png': 'PNG image',
+    'image/jpeg': 'JPEG image',
+    'image/webp': 'WebP image',
+    'image/gif': 'GIF image',
+    'image/svg+xml': 'SVG image',
+    'application/pdf': 'PDF document',
+    'audio/mpeg': 'MP3 audio',
+    'audio/wav': 'WAV audio',
+    'audio/ogg': 'Ogg audio',
+    'audio/webm': 'WebM audio',
+    'video/mp4': 'MP4 video',
+    'video/webm': 'WebM video',
+    'video/quicktime': 'QuickTime video',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel spreadsheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint presentation',
+  },
   copy: 'Copy',
   copied: 'Copied',
   remoteImages: (hosts) =>
@@ -289,8 +314,14 @@ export const ENGLISH: NoteStrings = {
 
 /** The host's words over the English ones, key by key. */
 export function withDefaults(strings: NoteStringsInput | undefined): NoteStrings {
-  // The editor's words are merged one by one too, so a host may translate some and keep the rest.
-  return { ...ENGLISH, ...strings, editor: { ...ENGLISH.editor, ...strings?.editor } };
+  // The editor's words and the names of the file types are merged one by one too, so a host may
+  // translate some and keep the rest.
+  return {
+    ...ENGLISH,
+    ...strings,
+    editor: { ...ENGLISH.editor, ...strings?.editor },
+    fileKinds: { ...ENGLISH.fileKinds, ...strings?.fileKinds },
+  };
 }
 
 /** The words a host gives: any of them, and any of the editor's. */

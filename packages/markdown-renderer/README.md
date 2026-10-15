@@ -19,7 +19,7 @@ import 'katex/dist/katex.min.css';
   markdown={note}                                  // the note as you keep it, frontmatter included
   resolve={(name) => addressOfTheOneNoteNamed(name)} // or null: the link is pending
   keeps={(name) => notebookKeepsAFile(name)}       // only an embed reaches a file
-  renderAttachment={({ name, width, height }) => <img src={urlOf(name)} width={width ?? undefined} />}
+  fileOf={(name) => describe(name)}               // { mimeType, bytes, url, description }: drawn by its type, as MemorySmith does
   renderLink={({ href, className, children }) => <RouterLink to={href} className={className}>{children}</RouterLink>}
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches
   writable
@@ -29,7 +29,7 @@ import 'katex/dist/katex.min.css';
 />;
 ```
 
-Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
+Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
 
 ## Themes
 

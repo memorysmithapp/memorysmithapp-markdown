@@ -121,7 +121,7 @@ describe('level 3: slots', () => {
   it('lists every slot it calls', () => {
     expect(THEME_SLOTS).toEqual([
       'callout', 'calloutIcon', 'table', 'codeBlock', 'inlineCode', 'heading', 'blockquote',
-      'embed', 'footnotes', 'taskBox', 'wikilink', 'diagram', 'properties', 'modeSwitch',
+      'embed', 'attachment', 'footnotes', 'taskBox', 'wikilink', 'diagram', 'properties', 'modeSwitch',
     ]);
   });
 

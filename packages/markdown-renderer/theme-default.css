@@ -838,6 +838,61 @@
   border-bottom: 1px dashed var(--ms-text-soft);
   cursor: help;
 }
+/* A file the notebook keeps, drawn by its type as MemorySmith draws it
+   (observed at 4b67c7e, #77): what a browser draws is drawn — an image, a
+   player — and everything else, the PDF included, is a card with what it is
+   and the ways out of the page. */
+.markdown .attachment-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--ms-p-spacing);
+  border-radius: 8px;
+}
+.markdown .attachment-player {
+  display: block;
+  width: 100%;
+  margin-block: var(--ms-p-spacing);
+}
+.markdown .attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: var(--ms-p-spacing);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--ms-border);
+  border-inline-start: 2px solid var(--ms-accent);
+  border-radius: 8px;
+}
+.markdown .attachment-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.markdown .attachment-card-name {
+  font-family: var(--ms-font-display);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.markdown .attachment-card-note {
+  font-size: 0.8rem;
+  color: var(--ms-text-soft);
+  overflow-wrap: anywhere;
+}
+.markdown .attachment-card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+.markdown .attachment-card-actions a {
+  font-size: 0.85rem;
+}
+.markdown .attachment-loading {
+  color: var(--ms-text-soft);
+}
 /* An address this surface does not follow. The text is the author's and stays
    exactly as they wrote it; what it loses is the affordance. The dotted rule
    is the only sign, and the title says why. */
