@@ -116,3 +116,15 @@ body {
   }
 }
 
+
+/* A file attached in edit mode that is not an image: a card that downloads it (#75). */
+.attachment-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--page-line);
+  border-radius: 8px;
+  color: var(--page-text);
+  text-decoration: none;
+}

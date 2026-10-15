@@ -99,6 +99,10 @@ export interface EditorWords {
   readonly rule: string;
   readonly footnote: string;
   readonly comment: string;
+  /** The toolbar's button that attaches a file, and what it says while the host keeps it or failed (#75). */
+  readonly attach: string;
+  readonly attaching: string;
+  readonly attachFailed: string;
   /** The control that shows a block as the text it is written in. */
   readonly source: string;
   readonly title: string;
@@ -238,6 +242,9 @@ export const ENGLISH: NoteStrings = {
     rule: 'Divider',
     footnote: 'Footnote',
     comment: 'Comment',
+    attach: 'Attach a file',
+    attaching: 'Attaching…',
+    attachFailed: 'The file was not attached',
     source: 'Source',
     title: 'Title',
     addProperties: 'Add properties',

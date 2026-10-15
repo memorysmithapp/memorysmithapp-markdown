@@ -125,12 +125,20 @@ const shortcuts = (view: () => EditorView | null): Extension =>
     { key: 'Escape', run: () => (view()?.contentDOM.blur(), true) },
   ]);
 
+/** Where the files the author attached stand: none in flight, some being kept, or the last one failed. */
+type Attaching = 'idle' | 'busy' | 'failed';
+
+/** How long the attach button says a file was not attached, in milliseconds. */
+const ATTACH_FAILED_MS = 3000;
+
 /** The toolbar of the editor: the marks, the blocks and the history, each a command. */
 function Toolbar({
   view,
   host,
   end,
   opened,
+  onAttach,
+  attaching,
 }: {
   view: EditorView | null;
   host: ResolvedHost;
@@ -138,6 +146,9 @@ function Toolbar({
   end: ReactNode;
   /** The note as edit mode opened it, with `\n` for its line breaks, which *Undo all changes* gives back (#67). */
   opened: string;
+  /** Opens the file picker, when the host keeps attached files (#75). */
+  onAttach: (() => void) | null;
+  attaching: Attaching;
 }) {
   const words = host.strings.editor;
   const disabled = !view || view.state.readOnly;
@@ -206,6 +217,21 @@ function Toolbar({
           {button('wikilink', command(insertWikilink), 'Mod-Shift-K')}
           {button('footnote', command(insertFootnote))}
           {button('comment', command(toggleComment), 'Mod-/')}
+          {onAttach && (
+            <button
+              type="button"
+              className="edit-control"
+              title={attaching === 'busy' ? words.attaching : attaching === 'failed' ? words.attachFailed : words.attach}
+              aria-label={words.attach}
+              aria-busy={attaching === 'busy' ? true : undefined}
+              data-attach={attaching}
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onAttach}
+            >
+              {attaching === 'busy' ? ICONS.saving : attaching === 'failed' ? ICONS.notSaved : ICONS.attach}
+            </button>
+          )}
         </span>
         <span className="edit-toolbar-group">
           {button('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8')}
@@ -282,6 +308,41 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const bar = useRef<HTMLDivElement>(null);
   const [blocked, setBlocked] = useState(false);
   const [refusals, setRefusals] = useState(0);
+  const editorView = useRef<EditorView | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [attaching, setAttaching] = useState<Attaching>('idle');
+  /**
+   * Hands each file to the host's `attach`, one after the other, and embeds it as `![[name]]` on a
+   * line of its own where the cursor is once the host answered its name; a file the host could not
+   * keep writes nothing, and the button says so for a moment (#75).
+   */
+  const attachFiles = useRef<(files: readonly File[], at?: number) => void>(() => undefined);
+  attachFiles.current = (files, at) => {
+    const attach = resolved.attach;
+    const target = editorView.current;
+    if (!attach || !target || target.state.readOnly || files.length === 0) return;
+    if (at !== undefined) target.dispatch({ selection: { anchor: at } });
+    setAttaching('busy');
+    void (async () => {
+      let failed = false;
+      for (const file of files) {
+        try {
+          const name = await attach(file);
+          const embed = `![[${name}]]`;
+          const current = editorView.current;
+          if (current) command((state) => insertBlock(state, embed, embed.length + 1))(current);
+        } catch {
+          failed = true;
+        }
+      }
+      if (editorView.current) setAttaching(failed ? 'failed' : 'idle');
+    })();
+  };
+  useEffect(() => {
+    if (attaching !== 'failed') return;
+    const timer = setTimeout(() => setAttaching('idle'), ATTACH_FAILED_MS);
+    return () => clearTimeout(timer);
+  }, [attaching]);
   // The note as edit mode opened it, as the editor holds its text: lines joined by `\n`.
   const opened = useRef(given.replace(/\r\n?/g, '\n'));
   const lineBreak = lineBreakOf(given);
@@ -312,6 +373,23 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           autocompletion({ override: [wikilinkCompletion(() => latest.current.host)], icons: false }),
           shortcuts(() => created),
           keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
+          // A file pasted or dropped is attached, where the host keeps files (#75).
+          EditorView.domEventHandlers({
+            paste: (event) => {
+              const files = [...(event.clipboardData?.files ?? [])];
+              if (files.length === 0 || !latest.current.host.attach) return false;
+              event.preventDefault();
+              attachFiles.current(files);
+              return true;
+            },
+            drop: (event, target) => {
+              const files = [...(event.dataTransfer?.files ?? [])];
+              if (files.length === 0 || !latest.current.host.attach) return false;
+              event.preventDefault();
+              attachFiles.current(files, target.posAtCoords({ x: event.clientX, y: event.clientY }) ?? undefined);
+              return true;
+            },
+          }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(fromHost))) {
               const text = output(update.state);
@@ -324,13 +402,17 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         ],
       }),
     });
+    editorView.current = created;
     setView(created);
     if (autoFocus) {
       // The cursor starts where the body does, so the frontmatter stays drawn as the form.
       created.dispatch({ selection: { anchor: created.state.field(analysisField).bodyFrom } });
       created.focus();
     }
-    return () => created.destroy();
+    return () => {
+      editorView.current = null;
+      created.destroy();
+    };
     // The editor is made once; what changes later reaches it through the effects below.
   }, []);
 
@@ -418,6 +500,8 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             view={view}
             host={resolved}
             opened={opened.current}
+            onAttach={resolved.attach ? () => picker.current?.click() : null}
+            attaching={attaching}
             end={
               <div
                 className="edit-corner"
@@ -433,6 +517,19 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             }
           />
         </div>
+        {resolved.attach && (
+          <input
+            ref={picker}
+            type="file"
+            multiple
+            hidden
+            data-ms-control=""
+            onChange={(event) => {
+              attachFiles.current([...(event.target.files ?? [])]);
+              event.target.value = '';
+            }}
+          />
+        )}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}
         <div ref={parent} className="markdown-editor" />
       </div>

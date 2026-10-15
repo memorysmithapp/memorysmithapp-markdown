@@ -67,6 +67,12 @@ export interface NoteHost {
    */
   readonly suggest?: (query: string) => readonly string[] | PromiseLike<readonly string[]>;
   /**
+   * Keeps a file the author attached in edit mode — from the toolbar, pasted or dropped — in the
+   * notebook, and answers the name it is kept under, which the editor embeds as `![[name]]` (#75).
+   * The package never stores a file. Without it, the editor offers no attaching.
+   */
+  readonly attach?: (file: File) => string | PromiseLike<string>;
+  /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
    * dimensions are the ones the embed declared, in CSS pixels, or `null`.
    */
@@ -152,6 +158,7 @@ export const HOST_KEYS = Object.keys({
   onToggleTask: 1,
   keeps: 1,
   suggest: 1,
+  attach: 1,
   renderAttachment: 1,
   renderLink: 1,
   strings: 1,
@@ -171,6 +178,7 @@ export interface ResolvedHost {
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
+  readonly attach: ((file: File) => string | PromiseLike<string>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
@@ -207,6 +215,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     loadNote: host.loadNote ?? null,
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
+    attach: host.attach ?? null,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),

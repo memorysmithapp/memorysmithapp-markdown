@@ -1,5 +1,5 @@
-import { NoteBody, toggleTaskAt } from '@memorysmithapp/markdown-renderer';
-import { useEffect, useMemo, useState } from 'react';
+import { NoteBody, toggleTaskAt, type NoteHost } from '@memorysmithapp/markdown-renderer';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
 import { schemesOf, themeNamed, THEMES, type PlaygroundTheme } from './themes/index.js';
@@ -119,7 +119,7 @@ export function App() {
 
   const key = `${view.notebook.slug}/${view.note.path}`;
   const markdown = edited[key] ?? view.note.markdown;
-  const host = useMemo(
+  const notebookHost = useMemo(
     () =>
       hostOf(
         view.notebook,
@@ -132,6 +132,46 @@ export function App() {
       ),
     [view.notebook],
   );
+
+  // The files attached in edit mode (#75), kept in memory for the session as object URLs, by notebook.
+  const [attached, setAttached] = useState<Readonly<Record<string, { url: string; type: string }>>>({});
+  const attachedNow = useRef(attached);
+  attachedNow.current = attached;
+  const host = useMemo((): NoteHost => {
+    const keyOf = (name: string) => `${view.notebook.slug}/${name.normalize('NFC')}`;
+    const taken = (name: string) => notebookHost.keeps?.(name) === true || attachedNow.current[keyOf(name)] !== undefined;
+    return {
+      ...notebookHost,
+      keeps: (name) => notebookHost.keeps?.(name) === true || attached[keyOf(name)] !== undefined,
+      renderAttachment: (request) => {
+        const file = attached[keyOf(request.name)];
+        if (!file) return notebookHost.renderAttachment?.(request);
+        if (file.type.startsWith('image/')) return <img className="attachment-image" src={file.url} alt={request.name} {...(request.width === null ? {} : { width: request.width })} />;
+        return (
+          <a className="attachment-card" href={file.url} download={request.name}>
+            📎 {request.name}
+          </a>
+        );
+      },
+      // The name a file is kept under: its own, or with a number when the notebook already keeps one so named.
+      attach: (file) => {
+        const dot = file.name.lastIndexOf('.');
+        const [stem, extension] = dot > 0 ? [file.name.slice(0, dot), file.name.slice(dot)] : [file.name, ''];
+        let name = file.name;
+        for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`;
+        const url = URL.createObjectURL(file);
+        const saved = save(() => setAttached((all) => ({ ...all, [keyOf(name)]: { url, type: file.type } })));
+        if (!saved) return name;
+        return saved.then(
+          () => name,
+          (error: unknown) => {
+            URL.revokeObjectURL(url);
+            throw error;
+          },
+        );
+      },
+    };
+  }, [notebookHost, attached, view.notebook.slug, view.save, view.delay]);
 
   const body = (
     <article className="pane">

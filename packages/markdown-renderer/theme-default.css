@@ -1218,6 +1218,21 @@
     transform: translateX(3px);
   }
 }
+/* The attach button while the host keeps a file, and when it could not. */
+.markdown .edit-control[data-attach='busy'] {
+  color: var(--ms-accent);
+}
+.markdown .edit-control[data-attach='busy'] > svg {
+  animation: markdown-save-turn 0.9s linear infinite;
+}
+.markdown .edit-control[data-attach='failed'] {
+  color: rgb(var(--ms-callout-stop));
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-control[data-attach='busy'] > svg {
+    animation: none;
+  }
+}
 @keyframes markdown-save-turn {
   to {
     transform: rotate(360deg);
