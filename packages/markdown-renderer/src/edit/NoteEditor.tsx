@@ -13,7 +13,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
@@ -33,6 +33,7 @@ import {
   type Command,
 } from './commands.js';
 import { analysisField, editorEnvironment, livePage } from './live.js';
+import { NoteActions } from '../NoteActions.js';
 import { useEditSaves } from './saves.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
@@ -128,15 +129,11 @@ const shortcuts = (view: () => EditorView | null): Extension =>
 function Toolbar({
   view,
   host,
-  showSource,
-  sourceButton,
   end,
   opened,
 }: {
   view: EditorView | null;
   host: ResolvedHost;
-  showSource: () => void;
-  sourceButton: RefObject<HTMLButtonElement | null>;
   /** What closes the toolbar at its top right: the save's status and the switch (#65). */
   end: ReactNode;
   /** The note as edit mode opened it, with `\n` for its line breaks, which *Undo all changes* gives back (#67). */
@@ -224,89 +221,9 @@ function Toolbar({
           {block('diagram')}
           {block('rule')}
         </span>
-        <span className="edit-toolbar-group">
-          <button
-            ref={sourceButton}
-            type="button"
-            className="edit-control"
-            title={words.markdown}
-            aria-label={words.markdown}
-            aria-haspopup="dialog"
-            disabled={!view}
-            onClick={showSource}
-          >
-            {ICONS.markdown}
-          </button>
-        </span>
       </div>
       {end}
     </div>
-  );
-}
-
-/**
- * The note's Markdown, read-only, as it would be saved (#63): a modal dialog the toolbar opens,
- * closed by Escape, its button or a click outside it, the focus then back on the toolbar's button.
- */
-function SourceDialog({ text, host, onClose, onClosed }: { text: string; host: ResolvedHost; onClose: () => void; onClosed: () => void }) {
-  const words = host.strings.editor;
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [copied, setCopied] = useState<'copied' | 'failed' | null>(null);
-  const closed = useRef(onClosed);
-  closed.current = onClosed;
-  useEffect(() => {
-    const element = dialog.current;
-    if (!element) return;
-    if (typeof element.showModal === 'function') element.showModal();
-    else element.setAttribute('open', '');
-    element.querySelector<HTMLElement>('.edit-source-close')?.focus();
-    return () => {
-      if (element.open && typeof element.close === 'function') element.close();
-      // Only once the dialog is closed may the page behind it take the focus.
-      closed.current();
-    };
-  }, []);
-  const copy = () => {
-    const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
-    if (!clipboard) return setCopied('failed');
-    clipboard.writeText(text).then(
-      () => setCopied('copied'),
-      () => setCopied('failed'),
-    );
-  };
-  return (
-    <dialog
-      ref={dialog}
-      className="edit-source"
-      aria-modal="true"
-      aria-labelledby="edit-source-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      // The dialog has no padding of its own, so a click on it and not on its content is outside.
-      onClick={(event) => event.target === dialog.current && onClose()}
-    >
-      <div className="edit-source-frame">
-        <header className="edit-source-header">
-          <h2 id="edit-source-title" className="edit-source-title">
-            {words.sourceTitle}
-          </h2>
-          <span className="edit-source-copied" role="status">
-            {copied === 'copied' ? words.copied : copied === 'failed' ? words.copyFailed : ''}
-          </span>
-          <button type="button" className="edit-control edit-control-labelled" onClick={copy}>
-            {words.copy}
-          </button>
-          <button type="button" className="edit-control edit-source-close" aria-label={host.strings.close} title={host.strings.close} onClick={onClose}>
-            {ICONS.close}
-          </button>
-        </header>
-        <pre className="edit-source-text" tabIndex={0}>
-          {text}
-        </pre>
-      </div>
-    </dialog>
   );
 }
 
@@ -363,8 +280,6 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
    */
   const handed = useRef<string[]>([]);
   const bar = useRef<HTMLDivElement>(null);
-  const sourceButton = useRef<HTMLButtonElement>(null);
-  const [source, setSource] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [refusals, setRefusals] = useState(0);
   // The note as edit mode opened it, as the editor holds its text: lines joined by `\n`.
@@ -502,8 +417,6 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           <Toolbar
             view={view}
             host={resolved}
-            showSource={() => setSource(true)}
-            sourceButton={sourceButton}
             opened={opened.current}
             end={
               <div
@@ -514,12 +427,12 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
                 key={blocked ? `blocked-${refusals}` : 'corner'}
               >
                 <SaveStatus state={saves.state} blocked={blocked} retry={saves.retry} host={resolved} />
-                {corner}
+                {/* Alone, without NoteBody's switch, the editor keeps the note's Markdown at hand itself (#76). */}
+                {corner ?? <NoteActions text={() => (view ? output(view.state) : given)} />}
               </div>
             }
           />
         </div>
-        {source && view && <SourceDialog text={output(view.state)} host={resolved} onClose={() => setSource(false)} onClosed={() => sourceButton.current?.focus()} />}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}
         <div ref={parent} className="markdown-editor" />
       </div>

@@ -65,11 +65,48 @@ describe('the toolbar and the switch (#62, #65)', () => {
     const toolbar = $('.edit-bar > .edit-toolbar')!;
     const corner = toolbar.lastElementChild!;
     expect(corner.classList.contains('edit-corner')).toBe(true);
-    expect([...corner.children].map((child) => child.className.split(' ')[0])).toEqual(['edit-save', 'mode-switch']);
+    expect([...corner.children].map((child) => child.className.split(' ')[0])).toEqual(['edit-save', 'note-corner']);
+    // The group: Show Markdown, Copy Markdown, the switch (#76).
+    const group = [...corner.querySelector('.note-corner')!.querySelectorAll('button')].map((each) => each.getAttribute('aria-label') ?? each.textContent);
+    expect(group).toEqual(['Show Markdown', 'Copy Markdown', 'View']);
     await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
     await settle();
     expect($('.edit-toolbar')).toBeNull();
     expect($('.edit-bar')).toBeNull();
+  });
+});
+
+describe('Show and Copy Markdown beside the switch (#76)', () => {
+  it('stand beside the switch in view mode, and give the note as the host has it', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mounted = await mount(<NoteBody markdown={NOTE} editable />);
+    const group = [...$('.note-corner')!.querySelectorAll('button')].map((each) => each.getAttribute('aria-label') ?? each.textContent);
+    expect(group).toEqual(['Show Markdown', 'Copy Markdown', 'Edit']);
+
+    const copy = $<HTMLButtonElement>('button[aria-label="Copy Markdown"]')!;
+    await act(async () => copy.click());
+    await settle();
+    expect(writeText).toHaveBeenCalledWith(NOTE);
+    expect(copy.dataset['copied']).toBe('copied');
+    expect($('.note-corner [role="status"]')!.textContent).toBe('Copied');
+
+    const show = $<HTMLButtonElement>('button[aria-label="Show Markdown"]')!;
+    await act(async () => show.click());
+    expect($('.edit-source-text')!.textContent).toBe(NOTE);
+    await act(async () => $<HTMLButtonElement>('.edit-source-close')!.click());
+    expect($('dialog.edit-source')).toBeNull();
+    expect(document.activeElement).toBe(show);
+  });
+
+  it('give in edit mode the last text handed to the host', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mounted = await mount(<NoteBody markdown={NOTE} editable defaultMode="edit" onChange={() => undefined} />);
+    await type(await editor(), 'More.');
+    await act(async () => $<HTMLButtonElement>('button[aria-label="Copy Markdown"]')!.click());
+    await settle();
+    expect(writeText).toHaveBeenCalledWith(`${NOTE}More.`);
   });
 });
 
@@ -81,7 +118,7 @@ describe("the note's Markdown (#63)", () => {
     mounted = await mount(<NoteEditor markdown={crlf} />);
     const view = await editor();
     await type(view, 'More.');
-    const button = $<HTMLButtonElement>('button[aria-label="Markdown"]')!;
+    const button = $<HTMLButtonElement>('button[aria-label="Show Markdown"]')!;
     await act(async () => button.click());
     const dialog = $<HTMLDialogElement>('dialog.edit-source')!;
     expect(dialog.getAttribute('aria-modal')).toBe('true');
@@ -101,7 +138,7 @@ describe("the note's Markdown (#63)", () => {
   it('closes with its button, and with a click outside its frame', async () => {
     mounted = await mount(<NoteEditor markdown={NOTE} />);
     await editor();
-    const open = async () => act(async () => $<HTMLButtonElement>('button[aria-label="Markdown"]')!.click());
+    const open = async () => act(async () => $<HTMLButtonElement>('button[aria-label="Show Markdown"]')!.click());
     await open();
     await act(async () => $<HTMLButtonElement>('.edit-source-close')!.click());
     expect($('dialog.edit-source')).toBeNull();

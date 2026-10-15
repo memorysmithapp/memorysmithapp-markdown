@@ -1082,8 +1082,11 @@
    colours as reading, with the notation the author is in shown dimmed, the
    blocks drawn as on the page, and the editor's own controls kept small and
    neutral so they never read as content. */
-.markdown .mode-switch {
+.markdown .note-corner {
   margin: 0 0 0.5rem 1rem;
+}
+.markdown .mode-switch,
+.markdown .note-action {
   padding: 0.3rem 0.7rem;
   border: 1px solid var(--ms-border);
   border-radius: var(--ms-radius);
@@ -1095,18 +1098,27 @@
   line-height: 1.2;
   cursor: pointer;
 }
-.markdown .mode-switch.mode-switch-icon {
-  padding: 0.3rem;
+.markdown .mode-switch.mode-switch-icon,
+.markdown .note-action {
+  padding: 0.3rem 0.4rem;
+}
+.markdown .note-action {
+  color: var(--ms-text-soft);
+}
+.markdown .note-action[data-copied='copied'] {
+  color: var(--ms-accent);
 }
 .markdown .mode-switch-glyph {
   width: 1.1em;
   height: 1.1em;
 }
-.markdown .mode-switch:hover {
+.markdown .mode-switch:hover,
+.markdown .note-action:hover {
   border-color: var(--ms-accent);
   color: var(--ms-accent);
 }
 .markdown .mode-switch:focus-visible,
+.markdown .note-action:focus-visible,
 .markdown .edit-control:focus-visible,
 .markdown .edit-field:focus-visible {
   outline: 2px solid var(--ms-accent);
@@ -1151,10 +1163,13 @@
     animation: none;
   }
 }
-/* In the toolbar the switch is its last control, as tall as the others. */
-.markdown .edit-corner .mode-switch {
-  height: 1.9rem;
+/* In the toolbar the group is its end, as tall as its other controls. */
+.markdown .edit-corner .note-corner {
   margin: 0;
+}
+.markdown .edit-corner .mode-switch,
+.markdown .edit-corner .note-action {
+  height: 1.9rem;
 }
 @media (max-width: 560px) {
   .markdown .edit-corner {

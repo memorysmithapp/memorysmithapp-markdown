@@ -1,5 +1,6 @@
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ICON_EDIT, ICON_VIEW } from './mode-icons.js';
+import { NoteActions } from './NoteActions.js';
 import { drawSlot } from './slots.js';
 import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type ResolvedHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
@@ -88,13 +89,24 @@ export function NoteBody({
   const [own, setOwn] = useState<NoteMode>(defaultMode);
   // The author asked to go back to reading, and the editor is finishing: a save, the toolbar folding.
   const [leaving, setLeaving] = useState(false);
+  // The last text handed to the host in edit mode, which Show and Copy Markdown give there (#76).
+  const handed = useRef<string | null>(null);
   const current: NoteMode = editable ? (mode ?? own) : 'view';
   if (!editable) return <NoteView {...rest} />;
   const go = (next: NoteMode) => {
     if (mode === undefined) setOwn(next);
     onModeChange?.(next);
   };
-  const toggle = () => (current === 'view' ? go('edit') : setLeaving(true));
+  const toggle = () => {
+    if (current === 'view') {
+      handed.current = null;
+      go('edit');
+    } else setLeaving(true);
+  };
+  const hand = (text: string) => {
+    handed.current = text;
+    return onChange?.(text);
+  };
   const onLeave = (left: boolean) => {
     setLeaving(false);
     if (left) go('view');
@@ -103,16 +115,20 @@ export function NoteBody({
   return (
     <HostOnly host={rest}>
       {(resolved) => {
+        // The switch, with Show and Copy Markdown beside it in both modes (#76).
         const corner = (
           <HostProvider value={resolved}>
-            <ModeSwitch mode={current} display={modeButton} toggle={toggle} />
+            <div className="note-corner">
+              <NoteActions text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />
+              <ModeSwitch mode={current} display={modeButton} toggle={toggle} />
+            </div>
           </HostProvider>
         );
         if (current === 'view') return <NoteView {...rest} corner={corner} />;
         return (
           // While the editor loads, the note stays on the page as it was.
           <Suspense fallback={<NoteView {...rest} corner={corner} />}>
-            <NoteEditor {...host} onChange={onChange} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
+            <NoteEditor {...host} onChange={hand} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
           </Suspense>
         );
       }}

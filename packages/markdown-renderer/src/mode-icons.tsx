@@ -18,3 +18,9 @@ export const ICON_VIEW = svg(
   'M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0',
   'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
 );
+
+// The buttons beside the switch (#76): Lucide's file-code, copy, check and x (ISC).
+export const ICON_MARKDOWN = svg('M10 12.5 8 15l2 2.5', 'm14 12.5 2 2.5-2 2.5', 'M14 2v4a2 2 0 0 0 2 2h4', 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z');
+export const ICON_COPY = svg('M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z', 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2');
+export const ICON_CHECK = svg('M20 6 9 17l-5-5');
+export const ICON_CLOSE = svg('M18 6 6 18', 'm6 6 12 12');
