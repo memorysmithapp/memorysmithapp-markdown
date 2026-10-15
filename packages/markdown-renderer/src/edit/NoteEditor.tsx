@@ -173,9 +173,33 @@ function Toolbar({
   const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) =>
     button(name, command((state) => insertBlock(state, BLOCKS[name].text, BLOCKS[name].cursor)));
   const level = view ? headingLevel(view.state) : 0;
+  /**
+   * A group that starts a row the toolbar wrapped to is marked, so it draws no separator before it
+   * (#80): only the layout knows where a row breaks. The rule turns transparent, its room kept, so
+   * marking a group never moves where the rows break.
+   */
+  const tools = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = tools.current;
+    if (!element) return;
+    const mark = () => {
+      let previous: HTMLElement | null = null;
+      for (const group of element.querySelectorAll<HTMLElement>(':scope > .edit-toolbar-group')) {
+        const starts = previous !== null && group.offsetTop > previous.offsetTop + previous.offsetHeight / 2;
+        if (starts) group.setAttribute('data-row-start', '');
+        else group.removeAttribute('data-row-start');
+        previous = group;
+      }
+    };
+    mark();
+    if (typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(mark);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   return (
     <div className="edit-toolbar" role="toolbar" aria-label={words.toolbar}>
-      <div className="edit-toolbar-tools">
+      <div className="edit-toolbar-tools" ref={tools}>
         <span className="edit-toolbar-group">
           <button
             type="button"

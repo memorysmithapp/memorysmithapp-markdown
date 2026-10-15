@@ -1487,6 +1487,10 @@
   padding-inline-start: 0.25rem;
   border-inline-start: 1px solid var(--ms-border);
 }
+/* A group that starts a row the toolbar wrapped to separates nothing (#80). */
+.markdown .edit-toolbar-group[data-row-start] {
+  border-inline-start-color: transparent;
+}
 .markdown .edit-control {
   min-width: 1.9rem;
   height: 1.9rem;
