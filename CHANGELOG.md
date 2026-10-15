@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-15
+
 ### Added
 
 - A note is edited on the page that draws it (#48). The editor's model is the note's bytes: the page is drawn over them by the reading surface's own parser and components, every change reaches the host whole through `onChange`, and a byte the author did not touch is never rewritten — the frontmatter's order and quoting, a list's marker, a table's spacing, a comment, a construct the specification does not describe. The note is written back with its own line break; one that mixes them opens read-only. CodeMirror 6 is the engine, on the subpath `@memorysmithapp/markdown-renderer/edit` (`NoteEditor`), loaded only when a note is edited; the decision is ADR-006 (#49).
@@ -127,7 +129,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...v0.3.0
