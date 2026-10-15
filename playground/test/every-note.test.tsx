@@ -46,9 +46,9 @@ async function draw(element: React.ReactElement): Promise<HTMLElement> {
   return container;
 }
 
-describe('the two notebooks', () => {
-  it('are both here, with their notes', () => {
-    expect(notebooks.map((notebook) => notebook.slug)).toEqual(['continuity-engineering', 'enologia']);
+describe('the notebooks', () => {
+  it('are all here, with their notes: the two that demonstrate the notation, and the code samples (#84)', () => {
+    expect(notebooks.map((notebook) => notebook.slug)).toEqual(['code-samples', 'continuity-engineering', 'enologia']);
     for (const notebook of notebooks) expect(notebook.notes.length).toBeGreaterThan(5);
   });
 });

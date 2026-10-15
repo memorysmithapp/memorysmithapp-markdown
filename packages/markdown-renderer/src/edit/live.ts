@@ -13,11 +13,12 @@ import katex from 'katex';
 import { createElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
-import { highlightTree } from '../highlight.js';
+import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
 import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { AddProperties, CalloutBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
+import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
 
 /** What the drawn blocks read: the host the note is edited under. */
@@ -42,6 +43,8 @@ export const analysisField = StateField.define<Analysis>({
 
 /** Says the editor took or lost the focus. */
 export const setFocused = StateEffect.define<boolean>();
+/** A grammar a code block names has arrived: its tokens can be coloured now (#84). */
+export const grammarArrived = StateEffect.define<string>();
 
 /** Whether the editor has the focus: a construct is shown as source only to an author who is in it. */
 const focusField = StateField.define<boolean>({
@@ -347,6 +350,17 @@ function build(state: EditorState): DecorationSet {
           break;
         }
         codeLines(construct, out, doc, text);
+        // The language, chosen at the block's top right from every grammar Prism carries (#84).
+        if (construct.open) {
+          const fence = construct.open.from;
+          const language = construct.language;
+          out.push(
+            Decoration.widget({
+              widget: new BlockWidget(`language:${fence}:${language ?? ''}`, host, (view) => createElement(LanguageControl, { view, from: fence, language }), false, true),
+              side: 1,
+            }).range(construct.open.to),
+          );
+        }
         if (diagram) after(to, `diagram-preview:${construct.code}`, () => createElement(Snippet, { text: '```mermaid\n' + construct.code + '\n```' }));
         covered.push(lines);
         break;
@@ -505,7 +519,7 @@ export const decorationsField = StateField.define<DecorationSet>({
   update: (decorations, transaction) =>
     transaction.docChanged ||
     transaction.selection ||
-    transaction.effects.some((effect) => effect.is(setFocused)) ||
+    transaction.effects.some((effect) => effect.is(setFocused) || effect.is(grammarArrived)) ||
     transaction.startState.facet(editorEnvironment) !== transaction.state.facet(editorEnvironment)
       ? build(transaction.state)
       : decorations,
@@ -595,6 +609,35 @@ const follow = EditorView.domEventHandlers({
   },
 });
 
+/**
+ * Fetches the grammar of every code block that names one not registered yet, and has the page
+ * drawn again once it arrives, its tokens coloured (#84).
+ */
+const grammarLoader = ViewPlugin.fromClass(
+  class {
+    private live = true;
+    constructor(readonly view: EditorView) {
+      this.check();
+    }
+    update(update: ViewUpdate): void {
+      if (update.docChanged) this.check();
+    }
+    destroy(): void {
+      this.live = false;
+    }
+    private check(): void {
+      for (const construct of this.view.state.field(analysisField).constructs) {
+        if (construct.kind !== 'code' || !construct.language) continue;
+        const wanted = languageToLoad(`language-${construct.language}`);
+        if (!wanted) continue;
+        void loadGrammar(wanted).then((loaded) => {
+          if (loaded && this.live) this.view.dispatch({ effects: grammarArrived.of(wanted) });
+        });
+      }
+    }
+  },
+);
+
 /** The live page: the analysis, the decorations over it, and what the focus and a modifier-click do. */
 export function livePage(): Extension {
   return [
@@ -603,6 +646,7 @@ export function livePage(): Extension {
     decorationsField,
     EditorView.focusChangeEffect.of((_state, focusing) => setFocused.of(focusing)),
     focusKeeper,
+    grammarLoader,
     blockKeys,
     follow,
   ];

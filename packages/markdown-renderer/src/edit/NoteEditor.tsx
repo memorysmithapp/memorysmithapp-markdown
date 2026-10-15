@@ -36,6 +36,7 @@ import { analysisField, editorEnvironment, livePage } from './live.js';
 import { NoteActions } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
+import { chooseLanguageAt } from './LanguageControl.js';
 import { useEditSaves } from './saves.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
@@ -134,6 +135,21 @@ const menuKeys = (open: (view: EditorView) => boolean): Extension =>
     { key: 'ContextMenu', run: open },
   ]);
 
+/**
+ * Inserts one of the toolbar's blocks; a code block then opens the choice of its language, its
+ * search focused, so the author names the language first (#84).
+ */
+function insertBlockCommand(name: keyof typeof BLOCKS): Command {
+  const insert = command((state) => insertBlock(state, BLOCKS[name].text, BLOCKS[name].cursor));
+  if (name !== 'codeBlock') return insert;
+  return (view) => {
+    if (!insert(view)) return false;
+    const line = view.state.doc.lineAt(view.state.selection.main.head);
+    if (line.number > 1) chooseLanguageAt(view, view.state.doc.line(line.number - 1).from);
+    return true;
+  };
+}
+
 /** Where the files the author attached stand: none in flight, some being kept, or the last one failed. */
 type Attaching = 'idle' | 'busy' | 'failed';
 
@@ -178,8 +194,7 @@ function Toolbar({
       {ICONS[name]}
     </button>
   );
-  const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) =>
-    button(name, command((state) => insertBlock(state, BLOCKS[name].text, BLOCKS[name].cursor)));
+  const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) => button(name, insertBlockCommand(name));
   const level = view ? headingLevel(view.state) : 0;
   return (
     <div className="edit-toolbar" role="toolbar" aria-label={words.toolbar}>
@@ -365,8 +380,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
       shortcut,
       run: () => action(target),
     });
-    const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) =>
-      item(name, command((state) => insertBlock(state, BLOCKS[name].text, BLOCKS[name].cursor)));
+    const block = (name: keyof typeof BLOCKS & keyof typeof ICONS & keyof typeof words) => item(name, insertBlockCommand(name));
     const selection = target.state.selection.main;
     const selected = target.state.sliceDoc(selection.from, selection.to);
     const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;

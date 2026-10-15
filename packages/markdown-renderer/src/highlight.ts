@@ -33,13 +33,14 @@
  * input. `refractor` produces a hast tree, which is converted to React
  * elements, so nothing is ever parsed as markup.
  *
- * **The languages are enumerated rather than bundled.** Prism carries close to
- * three hundred grammars and a knowledge notebook writes in a handful. The list
- * is what a notebook of MemorySmith plausibly holds — the languages of its own
- * repository, the two query languages, the three configuration formats and the
- * two shells — and adding one is a line, which is the point: a bundle nobody
- * chose is a bundle nobody can defend. It is MemorySmith's list, unchanged, so
- * a fence is highlighted here exactly when it is highlighted there.
+ * **Fifteen languages are there at once, and every other one when it is used.**
+ * The fifteen are what a notebook of MemorySmith plausibly holds — the languages
+ * of its own repository, the two query languages, the three configuration
+ * formats and the two shells — MemorySmith's own list, drawn highlighted on the
+ * first paint, a server's included. Every other grammar Prism carries is listed
+ * in `prism-grammars.ts` behind a dynamic import (#84): a fence that names one
+ * is plain code until its grammar arrives, then highlighted, and a page never
+ * downloads a grammar no note of it uses.
  */
 
 import { refractor } from 'refractor/core';
@@ -59,6 +60,7 @@ import toml from 'refractor/toml';
 import tsx from 'refractor/tsx';
 import typescript from 'refractor/typescript';
 import yaml from 'refractor/yaml';
+import { GRAMMARS, type Grammar } from './prism-grammars.js';
 
 for (const language of [
   bash,
@@ -78,6 +80,58 @@ for (const language of [
   yaml,
 ]) {
   refractor.register(language);
+}
+
+// ── Every other grammar, loaded when a note names it (#84) ─────────────────────
+
+/** Each grammar by its identifier and by each alias, lower case. */
+const BY_NAME = new Map<string, Grammar>();
+for (const grammar of GRAMMARS) {
+  for (const name of [grammar.id, ...grammar.aliases]) BY_NAME.set(name.toLowerCase(), grammar);
+}
+
+/** The grammar a fence's info string names, by identifier or alias, or `null`: never `mermaid`'s. */
+export function grammarOf(name: string | null | undefined): Grammar | null {
+  const named = name?.trim().toLowerCase();
+  if (!named || named === 'mermaid') return null;
+  return BY_NAME.get(named) ?? null;
+}
+
+const loading = new Map<string, Promise<boolean>>();
+
+/**
+ * Registers the grammar a name points at, fetching it the first time; answers whether it is
+ * registered. The fifteen above are already, and answer at once.
+ */
+export function loadGrammar(name: string): Promise<boolean> {
+  const grammar = grammarOf(name);
+  if (!grammar) return Promise.resolve(false);
+  if (refractor.registered(grammar.id)) return Promise.resolve(true);
+  let pending = loading.get(grammar.id);
+  if (!pending) {
+    pending = grammar.load().then(
+      (module) => {
+        refractor.register(module.default);
+        return true;
+      },
+      () => {
+        loading.delete(grammar.id);
+        return false;
+      },
+    );
+    loading.set(grammar.id, pending);
+  }
+  return pending;
+}
+
+/**
+ * The language of a fence that a grammar answers but that is not registered yet, which
+ * `loadGrammar` fetches; `null` when there is none to fetch.
+ */
+export function languageToLoad(className: string | undefined): string | null {
+  const match = /(?:^|\s)language-([A-Za-z0-9#+._-]+)/.exec(className ?? '');
+  const grammar = grammarOf(match?.[1]);
+  return grammar && !refractor.registered(grammar.id) ? grammar.id : null;
 }
 
 /**

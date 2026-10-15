@@ -3,6 +3,7 @@ import {
   isValidElement,
   useEffect,
   useMemo,
+  useReducer,
   useState,
   type AnchorHTMLAttributes,
   type HTMLAttributes,
@@ -16,7 +17,7 @@ import rehypeKatex from 'rehype-katex';
 import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
 import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
-import { highlightLanguage, highlightTree } from './highlight.js';
+import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from './highlight.js';
 import { useHost, type KeptFile } from './host.js';
 import { readDimensions, readImageAlt } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
@@ -329,6 +330,18 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
   const { scheme } = useHost();
   const inBlock = useInBlock();
   const inlineSlot = useSlot('inlineCode');
+  // A grammar not among the fifteen is fetched the first time a fence names it, and the block
+  // drawn again highlighted once it is there (#84); until then it is plain code.
+  const toLoad = inBlock ? languageToLoad(className) : null;
+  const [, arrived] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    if (!toLoad) return;
+    let live = true;
+    void loadGrammar(toLoad).then((loaded) => live && loaded && arrived());
+    return () => {
+      live = false;
+    };
+  }, [toLoad]);
   if (className?.includes('language-mermaid')) {
     return <MermaidDiagram code={String(children ?? '').trim()} scheme={scheme} />;
   }

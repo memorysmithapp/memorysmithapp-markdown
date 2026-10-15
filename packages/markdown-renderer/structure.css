@@ -168,6 +168,44 @@
   justify-content: center;
 }
 
+/* A code block's language, at the top right of its first line (#84), and
+   the list it is chosen from, over the lines below. */
+.markdown .markdown-editor .cm-line.cm-ms-code-first {
+  position: relative;
+}
+.markdown .edit-language {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.4rem;
+  z-index: 4;
+  white-space: normal;
+}
+.markdown .edit-language-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-language-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 16rem;
+  max-height: 18rem;
+}
+.markdown .edit-language-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+.markdown .edit-language-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 /* The editing menu of a right-click (#81): over everything, where it was
    opened, its entries a column of rows that scrolls when the window is short. */
 .markdown .edit-menu {

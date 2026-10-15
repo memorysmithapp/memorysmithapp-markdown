@@ -55,6 +55,14 @@ export const DELIBERATE = {
     'A callout title holding bold text: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
   'enologia/02 Protocolos/Vinificação em tinto.md':
     'Two callout titles holding bold text, which MemorySmith lays out as columns and the renderer as one sentence (#42), and a callout of type `atenção`, which MemorySmith draws as a quotation beginning with its marker and the renderer as a callout titled Atenção (#43); one of those titles holds a link, which MemorySmith draws in the colour and weight of the title and the renderer underlines (#45).',
+  'code-samples/02 Loaded on demand/C Sharp.md':
+    'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
+  'code-samples/02 Loaded on demand/Dockerfile.md':
+    'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
+  'code-samples/02 Loaded on demand/Go.md':
+    'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
+  'code-samples/02 Loaded on demand/Rust.md':
+    'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
   'enologia/01 Castas/Índice.md':
     'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
 };

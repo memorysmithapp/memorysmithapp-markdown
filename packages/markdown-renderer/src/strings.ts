@@ -108,6 +108,13 @@ export interface EditorWords {
   readonly attach: string;
   readonly attaching: string;
   readonly attachFailed: string;
+  /** A code block's language, chosen at its top right (#84). */
+  readonly language: string;
+  readonly plainText: string;
+  readonly mermaidDiagram: string;
+  readonly searchLanguages: string;
+  readonly noLanguage: string;
+  readonly notHighlighted: string;
   /** The editing menu of a right-click (#81): its name, its groups, and the clipboard's verbs. */
   readonly menu: string;
   readonly menuFormat: string;
@@ -293,6 +300,12 @@ export const ENGLISH: NoteStrings = {
     attach: 'Attach a file',
     attaching: 'Attaching…',
     attachFailed: 'The file was not attached',
+    language: 'Language',
+    plainText: 'Plain text',
+    mermaidDiagram: 'Mermaid diagram',
+    searchLanguages: 'Search languages',
+    noLanguage: 'No language matches.',
+    notHighlighted: 'not highlighted',
     menu: 'Editing',
     menuFormat: 'Format',
     menuInsert: 'Insert',

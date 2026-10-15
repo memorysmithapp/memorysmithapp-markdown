@@ -1354,6 +1354,75 @@
   }
 }
 
+/* A code block's language (#84): a quiet label until it is pointed at. */
+.markdown .edit-language-button {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.markdown .edit-language-button:hover,
+.markdown .edit-language-button[aria-expanded='true'] {
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+}
+.markdown .edit-language-button:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 1px;
+}
+.markdown .edit-language-caret > svg {
+  width: 0.8em;
+  height: 0.8em;
+}
+.markdown .edit-language-popover {
+  padding: 0.3rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.18);
+  font-family: var(--ms-font-sans);
+  font-size: 0.85rem;
+}
+.markdown .edit-language-search {
+  margin-bottom: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--ms-border);
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font: inherit;
+}
+.markdown .edit-language-search:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 0;
+}
+.markdown .edit-language-option {
+  padding: 0.3rem 0.5rem;
+  border-radius: calc(var(--ms-radius) - 2px);
+  color: var(--ms-text);
+  cursor: pointer;
+}
+.markdown .edit-language-option[data-active] {
+  background: var(--ms-code-bg);
+}
+.markdown .edit-language-option[aria-selected='true'] {
+  font-weight: 600;
+}
+.markdown .edit-language-hint,
+.markdown .edit-language-none {
+  color: var(--ms-text-soft);
+  font-size: 0.78rem;
+}
+.markdown .edit-language-none {
+  padding: 0.3rem 0.5rem;
+}
+
 /* The editing menu (#81): small and neutral, as the toolbar's controls. */
 .markdown .edit-menu {
   min-width: 15rem;
