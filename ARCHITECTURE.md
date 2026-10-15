@@ -101,6 +101,7 @@ The stylesheet is three files. `theme-default.css` is the **default theme**: it 
 | `--markdown-code-border` | The edge of a block of code | the border colour | the border colour |
 | `--markdown-inline-code-bg`, `--markdown-inline-code-padding` | The fill and the padding of a code span | `transparent`, `0` | the same |
 | `--markdown-icon-note`, `--markdown-icon-info`, `--markdown-icon-summary`, `--markdown-icon-tip`, `--markdown-icon-success`, `--markdown-icon-question`, `--markdown-icon-warning`, `--markdown-icon-failure`, `--markdown-icon-danger`, `--markdown-icon-example`, `--markdown-icon-quote` | The icon of each family of callouts, a CSS image used as a mask, so it takes the callout's colour | Lucide's pencil, info, clipboard, flame, check, question, alert, cross, zap, list and quote | the same |
+| `--markdown-icon-chevron` | The chevron at the end of the title of a callout that folds, which turns as it opens (#83) | Lucide's chevron-down | the same |
 | `--markdown-font-size` | The size of the text | `1rem` | the same |
 | `--markdown-line-height`, `--markdown-line-height-tight`, `--markdown-root-line-height` | The line height of a run, of headings and tables, and of the root | `1.5`, `1.3`, `1.45` | the same |
 | `--markdown-paragraph-spacing`, `--markdown-heading-spacing` | The space around a paragraph, a list, a block; the space above a heading | `1rem`, two and a half paragraphs | the same |
@@ -129,7 +130,7 @@ A **theme** (`src/theme.ts`) decides how a note looks, never what its notation m
 
 | Slot | Called with | Where |
 |---|---|---|
-| `callout` | `kind`, `fold` (`+`, `-` or `null`, from `remarkCallouts`'s `data-fold`), `title`, `icon`, `children` | `MarkdownDiv`, for the `div.callout` `remarkCallouts` builds |
+| `callout` | `kind`, `fold` (`+`, `-` or `null`, from `remarkCallouts`'s `data-fold`), `title`, `icon`, `children` | `MarkdownDiv`, for the `div.callout` `remarkCallouts` builds; a callout marked `+` or `-` is `FoldingCallout`, a `details.callout` whose `summary.callout-title` — the title, or its type's word — opens and closes it, open at first for `+` (#83) |
 | `calloutIcon` | `kind`, when `icons` has none for it; the icon is drawn in the title as `.callout-icon` and the stylesheet's mask is hidden | the callout's title |
 | `table` | `align` of each column, read from the first row, and `children` | `MarkdownTable` |
 | `codeBlock` | `language`, `code` as typed, `children` (the highlighted `<code>`), `copy` (the Copy button, which copies `code`) | `MarkdownPre`, for a fence other than a diagram |

@@ -79,6 +79,8 @@ export interface ThemeProperties {
   readonly iconDanger?: string;
   readonly iconExample?: string;
   readonly iconQuote?: string;
+  /** The chevron of a callout that folds (#83), a CSS image used as a mask. */
+  readonly iconChevron?: string;
   // Faces.
   readonly fontSans?: string;
   readonly fontDisplay?: string;
@@ -147,7 +149,7 @@ export const THEME_PROPERTIES = Object.keys({
   calloutInfo: 1, calloutIdea: 1, calloutDone: 1, calloutWarn: 1, calloutStop: 1, calloutAside: 1, calloutQuote: 1,
   calloutTitleLinkDecoration: 1, calloutTitleLinkOffset: 1,
   iconNote: 1, iconInfo: 1, iconSummary: 1, iconTip: 1, iconSuccess: 1, iconQuestion: 1, iconWarning: 1,
-  iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1,
+  iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1, iconChevron: 1,
   fontSans: 1, fontDisplay: 1, fontMono: 1, fontHeading: 1,
   radius: 1, radiusLarge: 1,
   fontSize: 1, lineHeight: 1, lineHeightTight: 1, rootLineHeight: 1, paragraphSpacing: 1, headingSpacing: 1,
