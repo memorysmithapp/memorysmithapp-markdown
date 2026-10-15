@@ -52,16 +52,20 @@ function deferred() {
 }
 
 const status = () => $<HTMLElement>('.edit-save')!;
+/** What whoever hears the page is told of the save. */
+const said = () => $<HTMLElement>('.edit-save [role="status"]')!.textContent;
 
-describe('the toolbar and the switch (#62)', () => {
-  it('draws the toolbar only in edit mode, in one bar that ends with the switch', async () => {
+describe('the toolbar and the switch (#62, #65)', () => {
+  it('draws the toolbar only in edit mode, the switch its last control', async () => {
     mounted = await mount(<NoteBody markdown={NOTE} editable />);
     expect($('.edit-toolbar')).toBeNull();
     await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
     await editor();
-    const bar = $('.edit-bar')!;
-    expect(bar.firstElementChild?.classList.contains('edit-toolbar')).toBe(true);
-    expect(bar.lastElementChild?.querySelector('.mode-switch')).not.toBeNull();
+    // The switch is the toolbar's last control, at its end, the save's status just before it (#65).
+    const toolbar = $('.edit-bar > .edit-toolbar')!;
+    const corner = toolbar.lastElementChild!;
+    expect(corner.classList.contains('edit-corner')).toBe(true);
+    expect([...corner.children].map((child) => child.className.split(' ')[0])).toEqual(['edit-save', 'mode-switch']);
     await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
     await settle();
     expect($('.edit-toolbar')).toBeNull();
@@ -115,7 +119,9 @@ describe('the save of an edit (#64)', () => {
     mounted = await mount(<NoteEditor markdown={NOTE} onChange={() => undefined} />);
     await type(await editor(), 'x');
     expect(status().dataset['save']).toBe('idle');
-    expect(status().textContent).toBe('');
+    expect(said()).toBe('');
+    // The slot of the icon is there, empty, so a status that comes never moves the toolbar.
+    expect($('.edit-save-icon')!.childElementCount).toBe(0);
   });
 
   it('says Saving… and then Saved, for the latest change only', async () => {
@@ -131,14 +137,14 @@ describe('the save of an edit (#64)', () => {
     );
     const view = await editor();
     await type(view, 'a');
-    expect(status().textContent).toBe('Saving…');
+    expect(said()).toBe('Saving…');
     await type(view, 'b');
     // The first save lands while the second is in flight: the last change is not saved yet.
     await act(async () => saves[0]!.resolve());
-    expect(status().textContent).toBe('Saving…');
+    expect(said()).toBe('Saving…');
     await act(async () => saves[1]!.resolve());
     expect(status().dataset['save']).toBe('saved');
-    expect(status().textContent).toBe('Saved');
+    expect(said()).toBe('Saved');
   });
 
   it('says Not saved when the save fails, and hands the last text again on Try again', async () => {
@@ -156,12 +162,12 @@ describe('the save of an edit (#64)', () => {
     await type(await editor(), 'x');
     await settle();
     expect(status().dataset['save']).toBe('failed');
-    expect(status().textContent).toContain('Not saved');
+    expect(said()).toBe('Not saved');
     fail = false;
     await act(async () => $<HTMLButtonElement>('.edit-save-retry')!.click());
     await settle();
     expect(handed).toEqual([`${NOTE}x`, `${NOTE}x`]);
-    expect(status().textContent).toBe('Saved');
+    expect(said()).toBe('Saved');
   });
 
   it('goes back to reading once the save in flight lands', async () => {
@@ -186,7 +192,9 @@ describe('the save of an edit (#64)', () => {
     await settle();
     expect($('.cm-editor')).not.toBeNull();
     expect(onModeChange).not.toHaveBeenCalled();
-    expect(status().textContent).toContain('Not saved: the note stays in edit');
+    expect(said()).toBe('Not saved: the note stays in edit');
+    expect(status().title).toBe('Not saved: the note stays in edit');
+    expect($('.edit-save-icon svg')).not.toBeNull();
   });
 
   it('never takes back what the author typed when the host gives back an older save', async () => {

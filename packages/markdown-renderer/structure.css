@@ -105,10 +105,15 @@
   position: sticky;
   top: 0;
   z-index: 3;
+}
+/* The toolbar's box: its tools, which wrap, and at its top right the corner
+   that holds the save's status and the switch, which it grows out of. */
+.markdown .edit-toolbar {
   display: flex;
   align-items: flex-start;
+  gap: 0.25rem;
 }
-.markdown .edit-toolbar {
+.markdown .edit-toolbar-tools {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
@@ -119,16 +124,18 @@
 .markdown .edit-corner {
   flex: none;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
 }
 .markdown .edit-corner .mode-switch {
   float: none;
 }
-/* On a phone the switch keeps the top right, and the toolbar takes the whole
+/* On a phone the corner keeps the top right, and the tools take the whole
    width under it rather than a narrow column beside it. */
 @media (max-width: 560px) {
-  .markdown .edit-bar {
+  .markdown .edit-toolbar {
     flex-wrap: wrap;
   }
   .markdown .edit-corner {
@@ -137,14 +144,20 @@
   }
 }
 .markdown .edit-save {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  align-items: baseline;
-  column-gap: 0.4em;
+  align-items: center;
+  column-gap: 0.3em;
 }
-.markdown .edit-save[data-save='idle'] {
+.markdown .edit-bar[data-leaving] .edit-save {
   display: none;
+}
+.markdown .edit-save-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
 }
 
 /* The note's Markdown, in a dialog over the page: the dialog has no padding,
@@ -154,11 +167,25 @@
   max-width: min(56rem, calc(100vw - 2rem));
   width: 100%;
   max-height: calc(100vh - 4rem);
+  overflow: hidden;
+}
+/* Only the text scrolls: the frame is as tall as the dialog lets it be. */
+.markdown .edit-source[open] {
+  display: flex;
+  flex-direction: column;
 }
 .markdown .edit-source-frame {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 4rem);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.markdown .edit-source-header {
+  flex: none;
+}
+.markdown .edit-source-text {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .markdown .edit-source-header {
   display: flex;

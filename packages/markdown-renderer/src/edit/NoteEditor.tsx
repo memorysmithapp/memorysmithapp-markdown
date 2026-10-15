@@ -13,7 +13,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
@@ -119,7 +119,20 @@ const shortcuts = (view: () => EditorView | null): Extension =>
   ]);
 
 /** The toolbar of the editor: the marks, the blocks and the history, each a command. */
-function Toolbar({ view, host, showSource, sourceButton }: { view: EditorView | null; host: ResolvedHost; showSource: () => void; sourceButton: RefObject<HTMLButtonElement | null> }) {
+function Toolbar({
+  view,
+  host,
+  showSource,
+  sourceButton,
+  end,
+}: {
+  view: EditorView | null;
+  host: ResolvedHost;
+  showSource: () => void;
+  sourceButton: RefObject<HTMLButtonElement | null>;
+  /** What closes the toolbar at its top right: the save's status and the switch (#65). */
+  end: ReactNode;
+}) {
   const words = host.strings.editor;
   const disabled = !view || view.state.readOnly;
   const run = (action: Command) => () => view && action(view);
@@ -142,68 +155,71 @@ function Toolbar({ view, host, showSource, sourceButton }: { view: EditorView | 
   const level = view ? headingLevel(view.state) : 0;
   return (
     <div className="edit-toolbar" role="toolbar" aria-label={words.toolbar}>
-      <span className="edit-toolbar-group">
-        {button('undo', undo, 'Mod-Z')}
-        {button('redo', redo, 'Mod-Shift-Z')}
-      </span>
-      <span className="edit-toolbar-group">
-        <select
-          className="edit-heading"
-          aria-label={words.heading}
-          title={words.heading}
-          value={level}
-          disabled={disabled}
-          onChange={(event) => view && command((state) => setHeading(state, Number(event.target.value)))(view)}
-        >
-          <option value={0}>{words.paragraph}</option>
-          {[1, 2, 3, 4, 5, 6].map((each) => (
-            <option key={each} value={each}>
-              {`${words.heading} ${each}`}
-            </option>
-          ))}
-        </select>
-      </span>
-      <span className="edit-toolbar-group">
-        {button('bold', command((state) => toggleMark(state, '**')), 'Mod-B')}
-        {button('italic', command((state) => toggleMark(state, '_')), 'Mod-I')}
-        {button('strikethrough', command((state) => toggleMark(state, '~~')), 'Mod-Shift-X')}
-        {button('highlight', command((state) => toggleMark(state, '==')), 'Mod-Shift-H')}
-        {button('code', command((state) => toggleMark(state, '`')), 'Mod-E')}
-      </span>
-      <span className="edit-toolbar-group">
-        {button('link', command(insertLink), 'Mod-K')}
-        {button('wikilink', command(insertWikilink), 'Mod-Shift-K')}
-        {button('footnote', command(insertFootnote))}
-        {button('comment', command(toggleComment), 'Mod-/')}
-      </span>
-      <span className="edit-toolbar-group">
-        {button('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8')}
-        {button('orderedList', command((state) => toggleList(state, 'ordered')), 'Mod-Shift-7')}
-        {button('taskList', command((state) => toggleList(state, 'task')), 'Mod-Shift-9')}
-        {button('quote', command(toggleQuote), 'Mod-Shift-.')}
-      </span>
-      <span className="edit-toolbar-group">
-        {block('callout')}
-        {block('table')}
-        {block('codeBlock')}
-        {block('math')}
-        {block('diagram')}
-        {block('rule')}
-      </span>
-      <span className="edit-toolbar-group">
-        <button
-          ref={sourceButton}
-          type="button"
-          className="edit-control"
-          title={words.markdown}
-          aria-label={words.markdown}
-          aria-haspopup="dialog"
-          disabled={!view}
-          onClick={showSource}
-        >
-          {ICONS.markdown}
-        </button>
-      </span>
+      <div className="edit-toolbar-tools">
+        <span className="edit-toolbar-group">
+          {button('undo', undo, 'Mod-Z')}
+          {button('redo', redo, 'Mod-Shift-Z')}
+        </span>
+        <span className="edit-toolbar-group">
+          <select
+            className="edit-heading"
+            aria-label={words.heading}
+            title={words.heading}
+            value={level}
+            disabled={disabled}
+            onChange={(event) => view && command((state) => setHeading(state, Number(event.target.value)))(view)}
+          >
+            <option value={0}>{words.paragraph}</option>
+            {[1, 2, 3, 4, 5, 6].map((each) => (
+              <option key={each} value={each}>
+                {`${words.heading} ${each}`}
+              </option>
+            ))}
+          </select>
+        </span>
+        <span className="edit-toolbar-group">
+          {button('bold', command((state) => toggleMark(state, '**')), 'Mod-B')}
+          {button('italic', command((state) => toggleMark(state, '_')), 'Mod-I')}
+          {button('strikethrough', command((state) => toggleMark(state, '~~')), 'Mod-Shift-X')}
+          {button('highlight', command((state) => toggleMark(state, '==')), 'Mod-Shift-H')}
+          {button('code', command((state) => toggleMark(state, '`')), 'Mod-E')}
+        </span>
+        <span className="edit-toolbar-group">
+          {button('link', command(insertLink), 'Mod-K')}
+          {button('wikilink', command(insertWikilink), 'Mod-Shift-K')}
+          {button('footnote', command(insertFootnote))}
+          {button('comment', command(toggleComment), 'Mod-/')}
+        </span>
+        <span className="edit-toolbar-group">
+          {button('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8')}
+          {button('orderedList', command((state) => toggleList(state, 'ordered')), 'Mod-Shift-7')}
+          {button('taskList', command((state) => toggleList(state, 'task')), 'Mod-Shift-9')}
+          {button('quote', command(toggleQuote), 'Mod-Shift-.')}
+        </span>
+        <span className="edit-toolbar-group">
+          {block('callout')}
+          {block('table')}
+          {block('codeBlock')}
+          {block('math')}
+          {block('diagram')}
+          {block('rule')}
+        </span>
+        <span className="edit-toolbar-group">
+          <button
+            ref={sourceButton}
+            type="button"
+            className="edit-control"
+            title={words.markdown}
+            aria-label={words.markdown}
+            aria-haspopup="dialog"
+            disabled={!view}
+            onClick={showSource}
+          >
+            {ICONS.markdown}
+          </button>
+        </span>
+      </div>
+      {end}
     </div>
   );
 }
@@ -274,13 +290,21 @@ function SourceDialog({ text, host, onClose, onClosed }: { text: string; host: R
   );
 }
 
-/** Where the save of the author's last change stands, beside the switch, with a retry when it failed. */
+/**
+ * Where the save of the author's last change stands, in the toolbar before the switch: an icon for
+ * each state, in a slot of one size, so the toolbar never moves as the author types; its word is
+ * its title. Whoever hears the page is told the whole of it, why the note stays in edit included.
+ */
 function SaveStatus({ state, blocked, retry, host }: { state: string; blocked: boolean; retry: () => void; host: ResolvedHost }) {
   const words = host.strings.editor;
+  const shown = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
+  const said = state === 'failed' && blocked ? words.stayInEdit : shown;
+  const icon = state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'failed' ? ICONS.notSaved : null;
   return (
-    <div className="edit-save" data-save={state}>
-      <span role="status" aria-live="polite" className="edit-save-text">
-        {state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? (blocked ? words.stayInEdit : host.strings.notSaved) : ''}
+    <div className="edit-save" data-save={state} title={said || undefined}>
+      <span className="edit-save-icon">{icon}</span>
+      <span className="visually-hidden" role="status" aria-live="polite">
+        {said}
       </span>
       {state === 'failed' && (
         <button type="button" className="edit-save-retry" onClick={retry}>
@@ -319,6 +343,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const sourceButton = useRef<HTMLButtonElement>(null);
   const [source, setSource] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [refusals, setRefusals] = useState(0);
   const lineBreak = lineBreakOf(given);
   const readOnly = !editable || lineBreak === null;
   /**
@@ -390,6 +415,24 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     if (change) view.dispatch({ changes: change, annotations: [fromHost.of(true)] });
   }, [view, given]);
 
+  /**
+   * The toolbar grows out of the switch and shrinks back into it (#65): its clip starts and ends
+   * on the corner that holds the switch, measured from the toolbar's top right edge.
+   */
+  useLayoutEffect(() => {
+    const toolbar = bar.current?.querySelector<HTMLElement>('.edit-toolbar');
+    const end = toolbar?.querySelector<HTMLElement>('.edit-corner');
+    if (!toolbar || !end) return;
+    const box = toolbar.getBoundingClientRect();
+    const corner = end.getBoundingClientRect();
+    // With the toolbar's own padding around it, so the corner alone reads as a box.
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(toolbar) : null;
+    const left = parseFloat(style?.paddingLeft ?? '') || 0;
+    const bottom = (parseFloat(style?.paddingBottom ?? '') || 0) + (parseFloat(style?.borderBottomWidth ?? '') || 0);
+    toolbar.style.setProperty('--edit-corner-width', `${Math.max(0, box.right - corner.left + left)}px`);
+    toolbar.style.setProperty('--edit-corner-height', `${Math.max(0, corner.bottom - box.top + bottom)}px`);
+  });
+
   // Going back to reading waits for the save in flight; a failed one keeps the note here.
   const folding = leaving && saves.state !== 'saving' && saves.state !== 'failed';
   useEffect(() => {
@@ -397,6 +440,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     if (!leaving || saves.state === 'saving') return;
     if (saves.state === 'failed') {
       setBlocked(true);
+      setRefusals((count) => count + 1);
       latest.current.onLeave?.(false);
       return;
     }
@@ -430,11 +474,24 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         style={rootStyle(resolved.theme, resolved.scheme)}
       >
         <div ref={bar} className="edit-bar" data-leaving={folding ? '' : undefined}>
-          <Toolbar view={view} host={resolved} showSource={() => setSource(true)} sourceButton={sourceButton} />
-          <div className="edit-corner" aria-busy={leaving && saves.state === 'saving' ? true : undefined}>
-            {corner}
-            <SaveStatus state={saves.state} blocked={blocked} retry={saves.retry} host={resolved} />
-          </div>
+          <Toolbar
+            view={view}
+            host={resolved}
+            showSource={() => setSource(true)}
+            sourceButton={sourceButton}
+            end={
+              <div
+                className="edit-corner"
+                aria-busy={leaving && saves.state === 'saving' ? true : undefined}
+                data-blocked={blocked ? '' : undefined}
+                // A refusal shakes the corner once each time the author asks to leave.
+                key={blocked ? `blocked-${refusals}` : 'corner'}
+              >
+                <SaveStatus state={saves.state} blocked={blocked} retry={saves.retry} host={resolved} />
+                {corner}
+              </div>
+            }
+          />
         </div>
         {source && view && <SourceDialog text={output(view.state)} host={resolved} onClose={() => setSource(false)} onClosed={() => sourceButton.current?.focus()} />}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}
