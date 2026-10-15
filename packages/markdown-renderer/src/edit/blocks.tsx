@@ -700,7 +700,7 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
               // A list with no items is empty to the page, which draws nothing; to the form it is still a list.
               const read = found.shape === 'empty' && entry.form !== 'scalar' ? { ...found, shape: 'list' } : found;
               const kind = typeOf(read.shape);
-              // The property itself is handled at its key — its type, its name, its removal — and its value at the value.
+              // The property itself is handled at its key — its type, its removal, its name — and its value at the value.
               return (
                 <div key={entry.key} className="metadata-property edit-property" data-property-type={kind === 'boolean' ? 'checkbox' : kind}>
                   <span className="metadata-property-key">
@@ -712,6 +712,10 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
                         write(view, retype(front, entry.key, read, to));
                       }}
                     />
+                    {/* Before the name, so it stands in one column whatever the name's length (#72). */}
+                    <Control label={`${words.removeProperty}: ${entry.key}`} onClick={() => write(view, removeEntry(front, entry.key))}>
+                      {ICONS.remove}
+                    </Control>
                     <Field
                       value={entry.key}
                       label={`${words.propertyKey}: ${entry.key}`}
@@ -719,9 +723,6 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
                       size={Math.max(4, entry.key.length + 1)}
                       onCommit={(next) => write(view, renameKey(front, entry.key, next.trim()))}
                     />
-                    <Control label={`${words.removeProperty}: ${entry.key}`} onClick={() => write(view, removeEntry(front, entry.key))}>
-                      {ICONS.remove}
-                    </Control>
                   </span>
                   <span className="metadata-property-value">
                     <ValueField view={view} front={front} entry={read} written={source.slice(entry.valueSpan.from, entry.valueSpan.to)} />
@@ -732,6 +733,10 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
           <div className="metadata-property edit-property edit-property-new" data-property-type={type === 'boolean' ? 'checkbox' : type}>
             <span className="metadata-property-key">
               <TypeChoice value={type} label={`${words.propertyType}: ${words.addProperty}`} onChoose={setType} />
+              {/* The room of a property's remove button, so the new name lines up with the others. */}
+              <span className="edit-control edit-key-spacer" aria-hidden="true">
+                {ICONS.remove}
+              </span>
               <input
                 className="edit-field edit-key"
                 size={Math.max(words.addProperty.length, adding.length + 1)}

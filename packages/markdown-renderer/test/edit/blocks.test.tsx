@@ -151,7 +151,9 @@ describe('the properties form', () => {
       await settle();
     };
     expect(key('tags').querySelector<HTMLSelectElement>('select.edit-type')!.value).toBe('list');
-    expect(key('status').querySelector('button[aria-label="Remove the property: status"]')).not.toBeNull();
+    // The remove button before the name, after the type (#72).
+    const parts = [...key('status').children].map((child) => child.tagName.toLowerCase() + (child.getAttribute('aria-label') ? `:${child.getAttribute('aria-label')}` : ''));
+    expect(parts).toEqual(['select:Type: status', 'button:Remove the property: status', 'input:Key: status']);
 
     // A list as text: its items joined; back as a list: the text its one item.
     await retype('tags', 'text');

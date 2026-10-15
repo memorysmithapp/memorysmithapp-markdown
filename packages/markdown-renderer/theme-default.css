@@ -1571,6 +1571,10 @@
   height: 1.5rem;
   opacity: 0;
 }
+.markdown .edit-key-spacer {
+  flex: none;
+  visibility: hidden;
+}
 /* A property's controls show on hover or focus; the row that adds one and a
    list's button for its next item show always. */
 .markdown .edit-property:hover .edit-control,
