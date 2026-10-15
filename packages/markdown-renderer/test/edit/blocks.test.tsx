@@ -144,6 +144,39 @@ describe('a table', () => {
     expect(document.activeElement).toBe(next);
   });
 
+  it('keeps what was typed in a cell when a control is used before leaving it (#69)', async () => {
+    const changes = await open(NOTE);
+    const edit = async (row: number, column: number) => {
+      const drawn = $<HTMLElement>(`.edit-cell[data-row="${row}"][data-column="${column}"]`)!;
+      await act(async () => drawn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+      await settle();
+      return $<HTMLElement>(`.edit-cell[data-row="${row}"][data-column="${column}"][contenteditable]`)!;
+    };
+    // The control keeps the focus where it is: the cell has not committed when it acts.
+    (await edit(2, 0)).textContent = 'one';
+    await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Align right"]')!.click());
+    await settle();
+    expect(changes.at(-1)).toBe(NOTE.replace('| --- | :-: |', '| ---: | :-: |').replace('| 1 | 2 |', '| one | 2 |'));
+    expect(changes).toHaveLength(1);
+
+    (await edit(2, 1)).textContent = 'two';
+    await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Add a column"]')!.click());
+    await settle();
+    expect(changes.at(-1)).toContain('| one | two |  |');
+  });
+
+  it('acts on the cell the author was in after the table is drawn again (#69)', async () => {
+    const changes = await open(NOTE);
+    const drawn = $<HTMLElement>('.edit-cell[data-row="2"][data-column="1"]')!;
+    await act(async () => drawn.dispatchEvent(new FocusEvent('focus')));
+    await act(async () => drawn.focus());
+    await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Add a column"]')!.click());
+    await settle();
+    await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Align right"]')!.click());
+    await settle();
+    expect(changes.at(-1)).toContain('| --- | ---: | --- |');
+  });
+
   it('adds a row and aligns a column from its controls', async () => {
     const changes = await open(NOTE);
     await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Add a row"]')!.click());

@@ -8,6 +8,7 @@
  * keeps a copy of the note.
  */
 
+import { ChangeSet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useHost } from '../host.js';
@@ -36,6 +37,7 @@ import {
   removeRow,
   setCell,
   type Alignment,
+  type Table,
   type TextChange,
 } from './table.js';
 
@@ -50,11 +52,12 @@ let writing = false;
  * second time, inside that update. That second commit is the first one again, so it is dropped —
  * and so is any commit that arrives while the editor is updating for another reason.
  */
-function write(view: EditorView, changes: readonly TextChange[], event = 'input.form'): void {
-  if (changes.length === 0 || view.state.readOnly || writing) return;
+function write(view: EditorView, changes: readonly TextChange[] | ChangeSet, event = 'input.form'): void {
+  const empty = changes instanceof ChangeSet ? changes.empty : changes.length === 0;
+  if (empty || view.state.readOnly || writing) return;
   writing = true;
   try {
-    view.dispatch({ changes: [...changes], userEvent: event });
+    view.dispatch({ changes: changes instanceof ChangeSet ? changes : [...changes], userEvent: event });
   } catch (error) {
     if (!(error instanceof Error && /update is in progress/.test(error.message))) throw error;
   } finally {
@@ -149,6 +152,11 @@ export function CalloutBlock({ view, text, marker }: { view: EditorView; text: s
 
 /** Where the focus goes back to when a table is drawn again after an edit of one of its cells. */
 let pendingFocus: { from: number; row: number; column: number } | null = null;
+/**
+ * The cell a table's controls act on, kept across the table being drawn again: adding a column
+ * redraws it, and the alignment chosen next is for the cell the author was in, not the first (#69).
+ */
+const chosenCells = new WeakMap<EditorView, { from: number; row: number; column: number }>();
 
 /**
  * A table whose cells are edited where they stand. A cell commits its text when it loses the focus,
@@ -162,7 +170,16 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
   const source = view.state.doc.sliceString(0, view.state.doc.length, '\n');
   const table = readTable(source, from, to);
   const width = columnCount(table);
-  const [focus, setFocus] = useState<{ row: number; column: number }>({ row: table.rows.length > 2 ? 2 : 0, column: 0 });
+  const [focus, setFocused] = useState<{ row: number; column: number }>(() => {
+    const chosen = chosenCells.get(view);
+    return chosen && chosen.from === table.from && chosen.row < table.rows.length && chosen.column < width
+      ? { row: chosen.row, column: chosen.column }
+      : { row: table.rows.length > 2 ? 2 : 0, column: 0 };
+  });
+  const setFocus = (cell: { row: number; column: number }) => {
+    chosenCells.set(view, { from: table.from, ...cell });
+    setFocused(cell);
+  };
   // The cell being edited shows its source; every other one is drawn as the page draws it.
   const [editing, setEditing] = useState<{ row: number; column: number } | null>(null);
   const root = useRef<HTMLTableElement>(null);
@@ -294,22 +311,37 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
     );
   };
 
-  const align = (alignment: Alignment) => write(view, alignColumn(table, focus.column, alignment));
+  /**
+   * What a control of the table does, after the text of the cell being edited: the control keeps
+   * the focus where it is, so the cell has not committed, and its text would go with the table
+   * drawn again (#69). Both are one change, which one Undo takes back.
+   */
+  const act = (control: (current: Table) => readonly TextChange[]) => {
+    const open = editing && root.current?.querySelector<HTMLElement>(`[data-row="${editing.row}"][data-column="${editing.column}"][contenteditable]`);
+    const typed = open && editing ? setCell(table, editing.row, editing.column, open.textContent ?? '') : [];
+    setEditing(null);
+    if (typed.length === 0) return write(view, control(table));
+    const first = view.state.changes([...typed]);
+    const next = view.state.update({ changes: first }).state;
+    const fresh = readTable(next.doc.sliceString(0, next.doc.length, '\n'), first.mapPos(table.from), first.mapPos(table.to));
+    write(view, first.compose(next.changes([...control(fresh)])));
+  };
+  const align = (alignment: Alignment) => act((current) => alignColumn(current, focus.column, alignment));
   const bodyRows = table.rows.slice(2);
 
   return (
     <div className="edit-block edit-table">
       <div className="edit-block-controls" data-ms-control="">
-        <Control label={words.addRow} onClick={() => write(view, addRow(table, focus.row))}>
+        <Control label={words.addRow} onClick={() => act((current) => addRow(current, focus.row))}>
           {ICONS.rowAdd}
         </Control>
-        <Control label={words.removeRow} onClick={() => write(view, removeRow(table, focus.row))}>
+        <Control label={words.removeRow} onClick={() => act((current) => removeRow(current, focus.row))}>
           {ICONS.rowRemove}
         </Control>
-        <Control label={words.addColumn} onClick={() => write(view, addColumn(table, focus.column))}>
+        <Control label={words.addColumn} onClick={() => act((current) => addColumn(current, focus.column))}>
           {ICONS.columnAdd}
         </Control>
-        <Control label={words.removeColumn} onClick={() => write(view, removeColumn(table, focus.column))}>
+        <Control label={words.removeColumn} onClick={() => act((current) => removeColumn(current, focus.column))}>
           {ICONS.columnRemove}
         </Control>
         <Control label={words.alignLeft} pressed={table.align[focus.column] === 'left'} onClick={() => align(table.align[focus.column] === 'left' ? null : 'left')}>
@@ -321,7 +353,13 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
         <Control label={words.alignRight} pressed={table.align[focus.column] === 'right'} onClick={() => align(table.align[focus.column] === 'right' ? null : 'right')}>
           {ICONS.alignRight}
         </Control>
-        <Control label={words.source} onClick={() => reveal(view, table.from)}>
+        <Control
+          label={words.source}
+          onClick={() => {
+            act(() => []);
+            reveal(view, table.from);
+          }}
+        >
           {ICONS.source}
         </Control>
       </div>
