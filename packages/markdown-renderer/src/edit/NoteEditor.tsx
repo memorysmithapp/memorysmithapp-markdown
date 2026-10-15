@@ -13,7 +13,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
@@ -34,6 +34,7 @@ import {
 } from './commands.js';
 import { analysisField, editorEnvironment, livePage } from './live.js';
 import { NoteActions } from '../NoteActions.js';
+import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { useEditSaves } from './saves.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
@@ -139,6 +140,7 @@ function Toolbar({
   opened,
   onAttach,
   attaching,
+  attachButton,
 }: {
   view: EditorView | null;
   host: ResolvedHost;
@@ -146,9 +148,10 @@ function Toolbar({
   end: ReactNode;
   /** The note as edit mode opened it, with `\n` for its line breaks, which *Undo all changes* gives back (#67). */
   opened: string;
-  /** Opens the file picker, when the host keeps attached files (#75). */
-  onAttach: (() => void) | null;
+  /** Opens the attach dialog (#75, #78). */
+  onAttach: () => void;
   attaching: Attaching;
+  attachButton: RefObject<HTMLButtonElement | null>;
 }) {
   const words = host.strings.editor;
   const disabled = !view || view.state.readOnly;
@@ -217,21 +220,20 @@ function Toolbar({
           {button('wikilink', command(insertWikilink), 'Mod-Shift-K')}
           {button('footnote', command(insertFootnote))}
           {button('comment', command(toggleComment), 'Mod-/')}
-          {onAttach && (
-            <button
-              type="button"
-              className="edit-control"
-              title={attaching === 'busy' ? words.attaching : attaching === 'failed' ? words.attachFailed : words.attach}
-              aria-label={words.attach}
-              aria-busy={attaching === 'busy' ? true : undefined}
-              data-attach={attaching}
-              disabled={disabled}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onAttach}
-            >
-              {attaching === 'busy' ? ICONS.saving : attaching === 'failed' ? ICONS.notSaved : ICONS.attach}
-            </button>
-          )}
+          <button
+            ref={attachButton}
+            type="button"
+            className="edit-control"
+            title={attaching === 'busy' ? words.attaching : attaching === 'failed' ? words.attachFailed : words.attach}
+            aria-label={words.attach}
+            aria-busy={attaching === 'busy' ? true : undefined}
+            data-attach={attaching}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onAttach}
+          >
+            {attaching === 'busy' ? ICONS.saving : attaching === 'failed' ? ICONS.notSaved : ICONS.attach}
+          </button>
         </span>
         <span className="edit-toolbar-group">
           {button('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8')}
@@ -309,14 +311,13 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const [blocked, setBlocked] = useState(false);
   const [refusals, setRefusals] = useState(0);
   const editorView = useRef<EditorView | null>(null);
-  const picker = useRef<HTMLInputElement>(null);
   const [attaching, setAttaching] = useState<Attaching>('idle');
   /**
    * Hands each file to the host's `attach`, one after the other, and embeds it as `![[name]]` on a
    * line of its own where the cursor is once the host answered its name; a file the host could not
    * keep writes nothing, and the button says so for a moment (#75).
    */
-  const attachFiles = useRef<(files: readonly File[], at?: number) => void>(() => undefined);
+  const attachFiles = useRef<(files: readonly ChosenFile[], at?: number) => void>(() => undefined);
   attachFiles.current = (files, at) => {
     const attach = resolved.attach;
     const target = editorView.current;
@@ -325,12 +326,10 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     setAttaching('busy');
     void (async () => {
       let failed = false;
-      for (const file of files) {
+      for (const { file, name: wanted, description } of files) {
         try {
-          const name = await attach(file);
-          const embed = `![[${name}]]`;
-          const current = editorView.current;
-          if (current) command((state) => insertBlock(state, embed, embed.length + 1))(current);
+          const name = await attach(file, { name: wanted, description });
+          insertLine(`![[${name}]]`);
         } catch {
           failed = true;
         }
@@ -338,6 +337,15 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
       if (editorView.current) setAttaching(failed ? 'failed' : 'idle');
     })();
   };
+  /** A line of its own at the cursor: an embed, or an image of the web (#78). */
+  const insertLine = (text: string) => {
+    const current = editorView.current;
+    if (current) command((state) => insertBlock(state, text, text.length + 1))(current);
+  };
+  const attachButton = useRef<HTMLButtonElement>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+  /** A pasted or dropped file, kept under its own name and with no description. */
+  const asChosen = (files: readonly File[]): ChosenFile[] => files.map((file) => ({ file, name: file.name, description: '' }));
   useEffect(() => {
     if (attaching !== 'failed') return;
     const timer = setTimeout(() => setAttaching('idle'), ATTACH_FAILED_MS);
@@ -379,14 +387,14 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
               const files = [...(event.clipboardData?.files ?? [])];
               if (files.length === 0 || !latest.current.host.attach) return false;
               event.preventDefault();
-              attachFiles.current(files);
+              attachFiles.current(asChosen(files));
               return true;
             },
             drop: (event, target) => {
               const files = [...(event.dataTransfer?.files ?? [])];
               if (files.length === 0 || !latest.current.host.attach) return false;
               event.preventDefault();
-              attachFiles.current(files, target.posAtCoords({ x: event.clientX, y: event.clientY }) ?? undefined);
+              attachFiles.current(asChosen(files), target.posAtCoords({ x: event.clientX, y: event.clientY }) ?? undefined);
               return true;
             },
           }),
@@ -500,8 +508,9 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             view={view}
             host={resolved}
             opened={opened.current}
-            onAttach={resolved.attach ? () => picker.current?.click() : null}
+            onAttach={() => setAttachOpen(true)}
             attaching={attaching}
+            attachButton={attachButton}
             end={
               <div
                 className="edit-corner"
@@ -517,17 +526,13 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             }
           />
         </div>
-        {resolved.attach && (
-          <input
-            ref={picker}
-            type="file"
-            multiple
-            hidden
-            data-ms-control=""
-            onChange={(event) => {
-              attachFiles.current([...(event.target.files ?? [])]);
-              event.target.value = '';
-            }}
+        {attachOpen && (
+          <AttachDialog
+            onClose={() => setAttachOpen(false)}
+            onClosed={(inserted) => !inserted && attachButton.current?.focus()}
+            onAttach={(files) => attachFiles.current(files)}
+            onEmbed={(name) => insertLine(`![[${name}]]`)}
+            onLink={(name, address) => insertLine(webImage(name, address))}
           />
         )}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}

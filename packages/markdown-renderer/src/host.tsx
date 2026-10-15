@@ -67,11 +67,18 @@ export interface NoteHost {
    */
   readonly suggest?: (query: string) => readonly string[] | PromiseLike<readonly string[]>;
   /**
-   * Keeps a file the author attached in edit mode — from the toolbar, pasted or dropped — in the
-   * notebook, and answers the name it is kept under, which the editor embeds as `![[name]]` (#75).
-   * The package never stores a file. Without it, the editor offers no attaching.
+   * Keeps a file the author attached in edit mode — from the attach dialog, pasted or dropped — in
+   * the notebook, under the name and with the description the author gave (a pasted or dropped file
+   * has its own name and none), and answers the name it is kept under, which the editor embeds as
+   * `![[name]]` (#75, #78). The package never stores a file. Without it, the editor offers no file
+   * from the computer.
    */
-  readonly attach?: (file: File) => string | PromiseLike<string>;
+  readonly attach?: (file: File, attributes: AttachAttributes) => string | PromiseLike<string>;
+  /**
+   * The files the notebook keeps, with their names, which the attach dialog lists for the author to
+   * embed one (#78). Without it, the dialog offers no file of the notebook.
+   */
+  readonly files?: () => readonly KeptFileEntry[] | PromiseLike<readonly KeptFileEntry[]>;
   /**
    * What the notebook knows of a file it keeps (#77): its media type, its size and where its bytes
    * are. With it, the package draws the file as MemorySmith does, by its type — an image, an audio,
@@ -150,6 +157,18 @@ export interface KeptFile {
   readonly description?: string;
 }
 
+/** A kept file with the name it is kept under, as `files` lists it (#78). */
+export interface KeptFileEntry extends KeptFile {
+  readonly name: string;
+}
+
+/** What the author said of a file they attach (#78). */
+export interface AttachAttributes {
+  /** The name to keep it under; the host may answer another, when that one is taken. */
+  readonly name: string;
+  readonly description: string;
+}
+
 export interface AttachmentRequest {
   readonly name: string;
   readonly width: number | null;
@@ -179,6 +198,7 @@ export const HOST_KEYS = Object.keys({
   keeps: 1,
   suggest: 1,
   attach: 1,
+  files: 1,
   fileOf: 1,
   renderAttachment: 1,
   renderLink: 1,
@@ -199,7 +219,8 @@ export interface ResolvedHost {
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
-  readonly attach: ((file: File) => string | PromiseLike<string>) | null;
+  readonly attach: ((file: File, attributes: AttachAttributes) => string | PromiseLike<string>) | null;
+  readonly files: (() => readonly KeptFileEntry[] | PromiseLike<readonly KeptFileEntry[]>) | null;
   readonly fileOf: ((name: string) => KeptFile | null | PromiseLike<KeptFile | null>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
@@ -238,6 +259,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,
+    files: host.files ?? null,
     fileOf: host.fileOf ?? null,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,

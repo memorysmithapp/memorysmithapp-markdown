@@ -108,6 +108,22 @@ export interface EditorWords {
   readonly attach: string;
   readonly attaching: string;
   readonly attachFailed: string;
+  /** The attach dialog (#78): its title, its three ways in, and what each one asks and says. */
+  readonly attachTitle: string;
+  readonly fromComputer: string;
+  readonly fromNotebook: string;
+  readonly fromWeb: string;
+  readonly chooseFiles: string;
+  readonly fileName: string;
+  readonly fileDescription: string;
+  readonly attachConfirm: string;
+  readonly searchFiles: string;
+  readonly noFiles: string;
+  readonly noMatch: string;
+  readonly webAddress: string;
+  readonly webName: string;
+  readonly webInsert: string;
+  readonly webInvalid: string;
   /** The control that shows a block as the text it is written in. */
   readonly source: string;
   readonly title: string;
@@ -270,6 +286,21 @@ export const ENGLISH: NoteStrings = {
     attach: 'Attach a file',
     attaching: 'Attaching…',
     attachFailed: 'The file was not attached',
+    attachTitle: 'Attach',
+    fromComputer: 'From the computer',
+    fromNotebook: 'From the notebook',
+    fromWeb: 'From the web',
+    chooseFiles: 'Choose files',
+    fileName: 'Name',
+    fileDescription: 'Description',
+    attachConfirm: 'Attach',
+    searchFiles: "Search the notebook's files",
+    noFiles: 'The notebook keeps no file yet.',
+    noMatch: 'No file matches.',
+    webAddress: 'Address',
+    webName: 'Name',
+    webInsert: 'Insert',
+    webInvalid: 'An address on the web starts with https:// or http://.',
     source: 'Source',
     title: 'Title',
     addProperties: 'Add properties',

@@ -168,6 +168,73 @@
   justify-content: center;
 }
 
+/* The attach dialog (#78): its ways in as tabs, a panel that alone scrolls,
+   and the files of the notebook as a list of buttons. */
+/* One height for every way in, so the dialog does not jump between them. */
+.markdown .edit-attach .edit-source-frame {
+  height: min(34rem, calc(100vh - 4rem));
+}
+.markdown .edit-attach-ways {
+  display: flex;
+  flex: none;
+}
+.markdown .edit-attach-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.markdown .edit-attach-form,
+.markdown .edit-attach-files {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-attach-form label {
+  display: flex;
+  flex-direction: column;
+}
+.markdown .edit-attach-file {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+.markdown .edit-attach-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.markdown .edit-attach-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+}
+.markdown .edit-attach-item-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.markdown .edit-attach-preview {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.markdown .edit-attach-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.markdown .edit-attach-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 560px) {
+  .markdown .edit-attach-file {
+    grid-template-columns: 1fr auto;
+  }
+}
+
 /* The note's Markdown, in a dialog over the page: the dialog has no padding,
    so a click on it and not on its frame is a click outside. */
 .markdown .edit-source {

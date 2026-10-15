@@ -2,6 +2,7 @@ import { NoteBody, toggleTaskAt, type NoteHost } from '@memorysmithapp/markdown-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
+import { forgetKept, readKept, writeKept } from './kept.js';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
 import { schemesOf, themeNamed, THEMES, type PlaygroundTheme } from './themes/index.js';
@@ -100,7 +101,7 @@ export function App() {
   const [view, setView] = useState(readView);
   // The notes as the reader left them: a ticked box changes one character of
   // the note in memory, which is what a host writes back.
-  const [edited, setEdited] = useState<Record<string, string>>({});
+  const [edited, setEdited] = useState<Record<string, string>>(() => ({ ...readKept().notes }));
   /** A save as the address asks for it: `write` runs at once, or when the simulated save lands. */
   const save = (write: () => void): Promise<void> | undefined => {
     if (view.save === 'instant') return void write();
@@ -132,7 +133,14 @@ export function App() {
   const markdown = edited[key] ?? view.note.markdown;
   // The files each notebook keeps, with MemorySmith's attributes and their bytes in base64; a file
   // attached in edit mode joins them for the session (#75, #77).
-  const [stored, setStored] = useState(STARTING_FILES);
+  // The files attached are kept in this browser with the notes' saved text, so both survive a reload (#78).
+  const [attached, setAttached] = useState<Record<string, Record<string, StoredFile>>>(() => ({ ...readKept().files }) as Record<string, Record<string, StoredFile>>);
+  const [keptAll, setKeptAll] = useState(true);
+  useEffect(() => setKeptAll(writeKept({ notes: edited, files: attached })), [edited, attached]);
+  const stored = useMemo(
+    () => Object.fromEntries(Object.entries(STARTING_FILES).map(([slug, files]) => [slug, { ...files, ...attached[slug] }])),
+    [attached],
+  );
   const storedNow = useRef(stored);
   storedNow.current = stored;
   const host = useMemo((): NoteHost => {
@@ -147,15 +155,19 @@ export function App() {
       ...base,
       keeps: (name) => own(name) !== null,
       // The name a file is kept under: its own, or with a number when the notebook already keeps one so named.
-      attach: async (file) => {
-        const dot = file.name.lastIndexOf('.');
-        const [stem, extension] = dot > 0 ? [file.name.slice(0, dot), file.name.slice(dot)] : [file.name, ''];
-        const taken = (name: string) => storedNow.current[slug]?.[name.normalize('NFC')] !== undefined;
-        let name = file.name.normalize('NFC');
+      // Everything the notebook keeps, for the attach dialog to list (#78).
+      files: () => Object.values(storedNow.current[slug] ?? {}),
+      // Kept under the name the author gave, with a number when the notebook already keeps one so named.
+      attach: async (file, attributes) => {
+        const wanted = (attributes.name.trim() || file.name).normalize('NFC');
+        const dot = wanted.lastIndexOf('.');
+        const [stem, extension] = dot > 0 ? [wanted.slice(0, dot), wanted.slice(dot)] : [wanted, ''];
+        const taken = (name: string) => storedNow.current[slug]?.[name] !== undefined;
+        let name = wanted;
         for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`.normalize('NFC');
         const url = await readAsDataUrl(file);
-        const kept: StoredFile = { name, mimeType: file.type || 'application/octet-stream', bytes: file.size, url, description: '' };
-        await save(() => setStored((all) => ({ ...all, [slug]: { ...all[slug], [name]: kept } })));
+        const kept: StoredFile = { name, mimeType: file.type || 'application/octet-stream', bytes: file.size, url, description: attributes.description };
+        await save(() => setAttached((all) => ({ ...all, [slug]: { ...all[slug], [name]: kept } })));
         return name;
       },
     };
@@ -215,6 +227,25 @@ export function App() {
               {mode}
             </a>
           ))}
+        </div>
+        <div className="controls saves">
+          <span>Kept in this browser</span>
+          <span className={keptAll ? undefined : 'warning'}>
+            {keptAll
+              ? `${Object.keys(edited).length} notes, ${Object.values(attached).reduce((count, files) => count + Object.keys(files).length, 0)} files`
+              : 'Storage full: the last save lasts until the page reloads'}
+          </span>
+          <button
+            type="button"
+            disabled={Object.keys(edited).length === 0 && Object.keys(attached).length === 0}
+            onClick={() => {
+              forgetKept();
+              setEdited({});
+              setAttached({});
+            }}
+          >
+            Discard
+          </button>
         </div>
         <div className="controls themes">
           <label>

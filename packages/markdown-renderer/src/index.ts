@@ -1,6 +1,6 @@
 // The entry point of @memorysmithapp/markdown-renderer.
 export { NoteBody, type NoteBodyProps, type NoteMode } from './NoteBody.js';
-export type { AttachmentRequest, EmbeddedNote, KeptFile, LinkChoiceNote, LinkChoices, LinkRequest, NoteHost } from './host.js';
+export type { AttachAttributes, AttachmentRequest, EmbeddedNote, KeptFile, KeptFileEntry, LinkChoiceNote, LinkChoices, LinkRequest, NoteHost } from './host.js';
 export { ENGLISH, type EditorWords, type NoteStrings, type NoteStringsInput } from './strings.js';
 export {
   customPropertyOf,
