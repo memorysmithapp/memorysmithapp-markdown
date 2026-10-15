@@ -1112,12 +1112,132 @@
   outline: 2px solid var(--ms-accent);
   outline-offset: 2px;
 }
-.markdown .edit-toolbar {
+.markdown .edit-bar {
   margin: 0 0 1rem;
+  background: var(--ms-bg);
+}
+.markdown .edit-corner .mode-switch {
+  margin-bottom: 0;
+}
+@media (max-width: 560px) {
+  .markdown .edit-corner {
+    margin-bottom: 0.5rem;
+  }
+}
+/* The toolbar unfolds out of the switch, from right to left, and folds back
+   into it when the note goes back to reading. */
+.markdown .edit-toolbar {
   padding: 0.35rem 0.4rem;
   border: 1px solid var(--ms-border);
   border-radius: var(--ms-radius);
   background: var(--ms-surface);
+  animation: markdown-toolbar-unfold 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.markdown .edit-bar[data-leaving] .edit-toolbar {
+  animation: markdown-toolbar-fold 200ms ease-in forwards;
+}
+@keyframes markdown-toolbar-unfold {
+  from {
+    clip-path: inset(0 0 0 100% round var(--ms-radius));
+    opacity: 0.3;
+  }
+  to {
+    clip-path: inset(0 0 0 0 round var(--ms-radius));
+    opacity: 1;
+  }
+}
+@keyframes markdown-toolbar-fold {
+  from {
+    clip-path: inset(0 0 0 0 round var(--ms-radius));
+    opacity: 1;
+  }
+  to {
+    clip-path: inset(0 0 0 100% round var(--ms-radius));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-toolbar,
+  .markdown .edit-bar[data-leaving] .edit-toolbar {
+    animation: none;
+  }
+}
+
+/* Where the save of the last change stands, under the switch. */
+.markdown .edit-save {
+  max-width: 9.5rem;
+  margin-top: 0.35rem;
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-display);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  text-align: end;
+}
+.markdown .edit-save-text::before {
+  content: '';
+  display: inline-block;
+  margin-inline-end: 0.4em;
+  vertical-align: 0.08em;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.markdown .edit-save[data-save='saving'] {
+  color: var(--ms-accent);
+}
+.markdown .edit-save[data-save='saving'] .edit-save-text::before {
+  animation: markdown-task-breathe 1.2s ease-in-out infinite;
+}
+.markdown .edit-save[data-save='failed'] {
+  color: rgb(var(--ms-callout-stop));
+}
+.markdown .edit-save-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown .edit-save[data-save='saving'] .edit-save-text::before {
+    animation: none;
+  }
+}
+
+/* The note's Markdown, over the page. */
+.markdown .edit-source {
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);
+}
+.markdown .edit-source::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.markdown .edit-source-header {
+  padding: 0.6rem 0.75rem 0.6rem 1rem;
+  border-bottom: 1px solid var(--ms-border);
+}
+.markdown .edit-source-title {
+  font-family: var(--ms-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.markdown .edit-source-copied {
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+}
+.markdown .edit-source-text {
+  padding: 1rem;
+  background: var(--ms-code-bg);
+  font-family: var(--ms-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
 }
 .markdown .edit-toolbar-group + .edit-toolbar-group {
   padding-inline-start: 0.25rem;

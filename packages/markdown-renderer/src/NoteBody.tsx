@@ -34,9 +34,10 @@ export interface NoteBodyProps extends NoteHost {
   readonly onModeChange?: (mode: NoteMode) => void;
   /**
    * The note after each change made in edit mode, byte for byte the original wherever it was not
-   * edited. The package never saves it.
+   * edited. The package never saves it; a host that answers with the promise of its save has the
+   * editor say whether it was saved, and going back to reading wait for it (#64).
    */
-  readonly onChange?: (markdown: string) => void;
+  readonly onChange?: (markdown: string) => unknown;
   /** Whether the switch shows its icon alone or its icon and its word. Defaults to `label`. */
   readonly modeButton?: 'icon' | 'label';
 }
@@ -85,12 +86,18 @@ export function NoteBody({
   ...rest
 }: NoteBodyProps) {
   const [own, setOwn] = useState<NoteMode>(defaultMode);
+  // The author asked to go back to reading, and the editor is finishing: a save, the toolbar folding.
+  const [leaving, setLeaving] = useState(false);
   const current: NoteMode = editable ? (mode ?? own) : 'view';
   if (!editable) return <NoteView {...rest} />;
-  const toggle = () => {
-    const next: NoteMode = current === 'view' ? 'edit' : 'view';
+  const go = (next: NoteMode) => {
     if (mode === undefined) setOwn(next);
     onModeChange?.(next);
+  };
+  const toggle = () => (current === 'view' ? go('edit') : setLeaving(true));
+  const onLeave = (left: boolean) => {
+    setLeaving(false);
+    if (left) go('view');
   };
   const { writable: _writable, onToggleTask: _toggle, ...host } = rest;
   return (
@@ -105,7 +112,7 @@ export function NoteBody({
         return (
           // While the editor loads, the note stays on the page as it was.
           <Suspense fallback={<NoteView {...rest} corner={corner} />}>
-            <NoteEditor {...host} onChange={onChange} corner={corner} autoFocus />
+            <NoteEditor {...host} onChange={onChange} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
           </Suspense>
         );
       }}

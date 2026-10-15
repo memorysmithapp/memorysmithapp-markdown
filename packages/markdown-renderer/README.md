@@ -76,17 +76,19 @@ Import `structure.css` instead of `styles.css` for a theme that draws everything
 
 ## Edit
 
-A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves.
+A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar unfolds from the switch, and its last button shows the note's Markdown, as you would receive it, in a dialog.
 
 ```tsx
 <NoteBody
   markdown={note}
   editable                                        // the switch, at the top right
-  onChange={(next) => setNote(next)}              // after every change; you decide when to save
+  onChange={(next) => save(next)}                 // after every change; return the save's promise
   suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
   modeButton="icon"                               // or "label", the icon and its word
 />
 ```
+
+When `onChange` returns the promise of its save, the editor says beside the switch whether the last change is *Saving…*, *Saved* or *Not saved*, with *Try again*, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
 
 `mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
 

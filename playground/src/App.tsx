@@ -1,5 +1,4 @@
-import { NoteBody, toggleTaskAt, type NoteMode } from '@memorysmithapp/markdown-renderer';
-import { SourcePane } from './SourcePane.js';
+import { NoteBody, toggleTaskAt } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useState } from 'react';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
@@ -32,7 +31,7 @@ interface View {
   readonly lang: 'en' | 'pt';
   /** Only the note, in its column: what the comparison screenshots. */
   readonly bare: boolean;
-  /** How a ticked box is saved: at once, as before, or after a delay that may fail. */
+  /** How a ticked box or an edit is saved: at once, as before, or after a delay that may fail. */
   readonly save: SaveMode;
   /** The delay of a simulated save, in milliseconds. */
   readonly delay: number;
@@ -43,9 +42,10 @@ interface View {
 }
 
 /**
- * The saves the playground simulates (#47): `instant` writes at once and answers nothing, as a
- * host did before; the others answer with a promise that settles after the delay — `slow` always
- * resolves, `fail` always rejects, `random` rejects about one save in three.
+ * The saves the playground simulates, of a tick (#47) and of an edit (#64): `instant` writes at
+ * once and answers nothing, as a host did before; the others answer with a promise that settles
+ * after the delay — `slow` always resolves, `fail` always rejects, `random` rejects about one save
+ * in three — and write only when it resolves.
  */
 type SaveMode = 'instant' | 'slow' | 'fail' | 'random';
 const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random'];
@@ -90,8 +90,18 @@ export function App() {
   // The notes as the reader left them: a ticked box changes one character of
   // the note in memory, which is what a host writes back.
   const [edited, setEdited] = useState<Record<string, string>>({});
-  // Whether the note is being edited, observed only: the switch keeps its own mode (#51).
-  const [mode, setMode] = useState<NoteMode>('view');
+  /** A save as the address asks for it: `write` runs at once, or when the simulated save lands. */
+  const save = (write: () => void): Promise<void> | undefined => {
+    if (view.save === 'instant') return void write();
+    return new Promise<void>((resolve, reject) =>
+      setTimeout(() => {
+        const fails = view.save === 'fail' || (view.save === 'random' && Math.random() < 1 / 3);
+        if (fails) return reject(new Error('The playground failed this save on purpose.'));
+        write();
+        resolve();
+      }, view.delay),
+    );
+  };
 
   useEffect(() => {
     const update = () => setView(readView());
@@ -108,8 +118,6 @@ export function App() {
   }, [view.theme, view.scheme]);
 
   const key = `${view.notebook.slug}/${view.note.path}`;
-  // Another note opens in reading, as the switch of its own NoteBody does.
-  useEffect(() => setMode('view'), [key]);
   const markdown = edited[key] ?? view.note.markdown;
   const host = useMemo(
     () =>
@@ -136,24 +144,15 @@ export function App() {
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         editable={view.editable}
         modeButton={view.button}
-        onModeChange={setMode}
-        onChange={(next) => setEdited((all) => ({ ...all, [key]: next }))}
+        onChange={(next) => save(() => setEdited((all) => ({ ...all, [key]: next })))}
         writable
         onToggleTask={(ordinal) => {
           // Applied to the note as it is when the save lands, as a host applies a tick to its latest bytes.
-          const write = () =>
+          return save(() =>
             setEdited((all) => {
               const next = toggleTaskAt(all[key] ?? view.note.markdown, ordinal);
               return next === null ? all : { ...all, [key]: next };
-            });
-          if (view.save === 'instant') return void write();
-          return new Promise<void>((resolve, reject) =>
-            setTimeout(() => {
-              const fails = view.save === 'fail' || (view.save === 'random' && Math.random() < 1 / 3);
-              if (fails) return reject(new Error('The playground failed this save on purpose.'));
-              write();
-              resolve();
-            }, view.delay),
+            }),
           );
         }}
       />
@@ -162,8 +161,9 @@ export function App() {
 
   if (view.bare) return <main className="bare">{body}</main>;
 
-  // In edit mode the bytes the editor would save sit beside the note, the lines it changed marked (#50).
-  const editing = view.editable && mode === 'edit';
+  // The note as the playground saved it, against the one in the notebook (#50); its Markdown is in
+  // the editor's own dialog (#63).
+  const changed = markdown !== view.note.markdown;
 
   return (
     <div className="layout">
@@ -184,12 +184,28 @@ export function App() {
           ))}
         </div>
         <div className="controls saves">
-          <span>Save a tick</span>
+          <span>Save</span>
           {SAVE_MODES.map((mode) => (
             <a key={mode} className={mode === view.save ? 'current' : undefined} href={withQuery({ save: mode })}>
               {mode}
             </a>
           ))}
+        </div>
+        <div className="controls saves">
+          <span>Note</span>
+          <span className={changed ? 'changed' : undefined}>{changed ? 'saved with changes' : 'as in the notebook'}</span>
+          <button
+            type="button"
+            disabled={!changed}
+            onClick={() =>
+              setEdited((all) => {
+                const { [key]: _dropped, ...rest } = all;
+                return rest;
+              })
+            }
+          >
+            Restore the original
+          </button>
         </div>
         <div className="controls themes">
           <label>
@@ -241,21 +257,7 @@ export function App() {
           </section>
         ))}
       </nav>
-      <main className={editing ? 'content editing' : 'content'}>
-        {body}
-        {editing && (
-          <SourcePane
-            original={view.note.markdown}
-            current={markdown}
-            onRestore={() =>
-              setEdited((all) => {
-                const { [key]: _dropped, ...rest } = all;
-                return rest;
-              })
-            }
-          />
-        )}
-      </main>
+      <main className="content">{body}</main>
     </div>
   );
 }

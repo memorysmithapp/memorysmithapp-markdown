@@ -119,6 +119,17 @@ export interface EditorWords {
   readonly alignLeft: string;
   readonly alignCenter: string;
   readonly alignRight: string;
+  /** The toolbar's button that shows the note's Markdown, and the dialog it opens (#63). */
+  readonly markdown: string;
+  readonly sourceTitle: string;
+  readonly copy: string;
+  readonly copied: string;
+  readonly copyFailed: string;
+  /** Where the save of the last change stands (#64); `saved` and `notSaved` are the page's own. */
+  readonly saving: string;
+  readonly retry: string;
+  /** Said when the author asked to go back to reading and the last change is not saved. */
+  readonly stayInEdit: string;
 }
 
 /** The callout titles of MemorySmith, in English. */
@@ -238,6 +249,14 @@ export const ENGLISH: NoteStrings = {
     alignLeft: 'Align left',
     alignCenter: 'Center',
     alignRight: 'Align right',
+    markdown: 'Markdown',
+    sourceTitle: 'The note in Markdown',
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Could not copy',
+    saving: 'Saving…',
+    retry: 'Try again',
+    stayInEdit: 'Not saved: the note stays in edit',
   },
   loading: 'Loading…',
   failed: 'Something went wrong.',

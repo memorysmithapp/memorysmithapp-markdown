@@ -13,7 +13,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
@@ -33,18 +33,29 @@ import {
   type Command,
 } from './commands.js';
 import { analysisField, editorEnvironment, livePage } from './live.js';
+import { useEditSaves } from './saves.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
   /** The note as the host keeps it, frontmatter included. A new value that differs from the editor's is taken in. */
   readonly markdown: string;
-  /** The note after each change the author makes, byte for byte the original wherever it was not edited. */
-  readonly onChange?: (markdown: string) => void;
+  /**
+   * The note after each change the author makes, byte for byte the original wherever it was not
+   * edited. A promise answered is the save of that change, which the editor reports (#64).
+   */
+  readonly onChange?: (markdown: string) => unknown;
   /** Whether the author may change the note. Defaults to `true`. */
   readonly editable?: boolean;
   /** What sits at the top right of the note, such as the switch back to reading. */
   readonly corner?: ReactNode;
   /** Whether the editor takes the focus when it opens. */
   readonly autoFocus?: boolean;
+  /**
+   * The author asked to go back to reading. The editor waits for a save in flight, folds its
+   * toolbar into the corner, and answers through `onLeave`: `true` once it may go, `false` when
+   * the last save failed and the note stays in edit.
+   */
+  readonly leaving?: boolean;
+  readonly onLeave?: (left: boolean) => void;
 }
 
 /**
@@ -108,7 +119,7 @@ const shortcuts = (view: () => EditorView | null): Extension =>
   ]);
 
 /** The toolbar of the editor: the marks, the blocks and the history, each a command. */
-function Toolbar({ view, host }: { view: EditorView | null; host: ResolvedHost }) {
+function Toolbar({ view, host, showSource, sourceButton }: { view: EditorView | null; host: ResolvedHost; showSource: () => void; sourceButton: RefObject<HTMLButtonElement | null> }) {
   const words = host.strings.editor;
   const disabled = !view || view.state.readOnly;
   const run = (action: Command) => () => view && action(view);
@@ -179,6 +190,103 @@ function Toolbar({ view, host }: { view: EditorView | null; host: ResolvedHost }
         {block('diagram')}
         {block('rule')}
       </span>
+      <span className="edit-toolbar-group">
+        <button
+          ref={sourceButton}
+          type="button"
+          className="edit-control"
+          title={words.markdown}
+          aria-label={words.markdown}
+          aria-haspopup="dialog"
+          disabled={!view}
+          onClick={showSource}
+        >
+          {ICONS.markdown}
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The note's Markdown, read-only, as it would be saved (#63): a modal dialog the toolbar opens,
+ * closed by Escape, its button or a click outside it, the focus then back on the toolbar's button.
+ */
+function SourceDialog({ text, host, onClose, onClosed }: { text: string; host: ResolvedHost; onClose: () => void; onClosed: () => void }) {
+  const words = host.strings.editor;
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [copied, setCopied] = useState<'copied' | 'failed' | null>(null);
+  const closed = useRef(onClosed);
+  closed.current = onClosed;
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (typeof element.showModal === 'function') element.showModal();
+    else element.setAttribute('open', '');
+    element.querySelector<HTMLElement>('.edit-source-close')?.focus();
+    return () => {
+      if (element.open && typeof element.close === 'function') element.close();
+      // Only once the dialog is closed may the page behind it take the focus.
+      closed.current();
+    };
+  }, []);
+  const copy = () => {
+    const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    if (!clipboard) return setCopied('failed');
+    clipboard.writeText(text).then(
+      () => setCopied('copied'),
+      () => setCopied('failed'),
+    );
+  };
+  return (
+    <dialog
+      ref={dialog}
+      className="edit-source"
+      aria-modal="true"
+      aria-labelledby="edit-source-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      // The dialog has no padding of its own, so a click on it and not on its content is outside.
+      onClick={(event) => event.target === dialog.current && onClose()}
+    >
+      <div className="edit-source-frame">
+        <header className="edit-source-header">
+          <h2 id="edit-source-title" className="edit-source-title">
+            {words.sourceTitle}
+          </h2>
+          <span className="edit-source-copied" role="status">
+            {copied === 'copied' ? words.copied : copied === 'failed' ? words.copyFailed : ''}
+          </span>
+          <button type="button" className="edit-control edit-control-labelled" onClick={copy}>
+            {words.copy}
+          </button>
+          <button type="button" className="edit-control edit-source-close" aria-label={host.strings.close} title={host.strings.close} onClick={onClose}>
+            {ICONS.close}
+          </button>
+        </header>
+        <pre className="edit-source-text" tabIndex={0}>
+          {text}
+        </pre>
+      </div>
+    </dialog>
+  );
+}
+
+/** Where the save of the author's last change stands, beside the switch, with a retry when it failed. */
+function SaveStatus({ state, blocked, retry, host }: { state: string; blocked: boolean; retry: () => void; host: ResolvedHost }) {
+  const words = host.strings.editor;
+  return (
+    <div className="edit-save" data-save={state}>
+      <span role="status" aria-live="polite" className="edit-save-text">
+        {state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? (blocked ? words.stayInEdit : host.strings.notSaved) : ''}
+      </span>
+      {state === 'failed' && (
+        <button type="button" className="edit-save-retry" onClick={retry}>
+          {words.retry}
+        </button>
+      )}
     </div>
   );
 }
@@ -187,7 +295,7 @@ function Toolbar({ view, host }: { view: EditorView | null; host: ResolvedHost }
  * Edits a note on the page that draws it. Exported at `@memorysmithapp/markdown-renderer/edit`
  * for a host that edits without the switch of `NoteBody`; `NoteBody` loads it on demand.
  */
-export function NoteEditor({ markdown: given, onChange, editable = true, corner, autoFocus = false, ...host }: NoteEditorProps) {
+export function NoteEditor({ markdown: given, onChange, editable = true, corner, autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
   const resolved = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
@@ -198,8 +306,19 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const [, redraw] = useReducer((count: number) => count + 1, 0);
   const environment = useRef(new Compartment());
   const access = useRef(new Compartment());
-  const latest = useRef({ onChange, host: resolved });
-  latest.current = { onChange, host: resolved };
+  const saves = useEditSaves(onChange);
+  const latest = useRef({ hand: saves.hand, host: resolved, onLeave });
+  latest.current = { hand: saves.hand, host: resolved, onLeave };
+  /**
+   * The texts handed to the host that it has not given back yet. A host that saves before it
+   * passes the note again gives back a text the editor has since moved past; that echo is not a
+   * change, and is never applied over what the author wrote after it.
+   */
+  const handed = useRef<string[]>([]);
+  const bar = useRef<HTMLDivElement>(null);
+  const sourceButton = useRef<HTMLButtonElement>(null);
+  const [source, setSource] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const lineBreak = lineBreakOf(given);
   const readOnly = !editable || lineBreak === null;
   /**
@@ -230,7 +349,10 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(fromHost))) {
-              latest.current.onChange?.(output(update.state));
+              const text = output(update.state);
+              handed.current.push(text);
+              if (handed.current.length > 100) handed.current.shift();
+              latest.current.hand(text);
             }
             if (update.docChanged || update.selectionSet || update.focusChanged) redraw();
           }),
@@ -258,9 +380,47 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   // A note the host changed — a tick saved, another device — is taken in as the change it is.
   useEffect(() => {
     if (!view) return;
+    const echo = handed.current.indexOf(given);
+    if (echo !== -1) {
+      handed.current.splice(0, echo + 1);
+      return;
+    }
+    handed.current = [];
     const change = difference(output(view.state), given);
     if (change) view.dispatch({ changes: change, annotations: [fromHost.of(true)] });
   }, [view, given]);
+
+  // Going back to reading waits for the save in flight; a failed one keeps the note here.
+  const folding = leaving && saves.state !== 'saving' && saves.state !== 'failed';
+  useEffect(() => {
+    if (saves.state !== 'failed') setBlocked(false);
+    if (!leaving || saves.state === 'saving') return;
+    if (saves.state === 'failed') {
+      setBlocked(true);
+      latest.current.onLeave?.(false);
+      return;
+    }
+    const toolbar = bar.current?.querySelector<HTMLElement>('.edit-toolbar');
+    const animation = toolbar && typeof getComputedStyle === 'function' ? getComputedStyle(toolbar).animationName : '';
+    let done = false;
+    const leave = () => {
+      if (done) return;
+      done = true;
+      latest.current.onLeave?.(true);
+    };
+    // A theme that does not fold the toolbar, or a reader who asked for less motion, goes at once.
+    if (!toolbar || !animation || animation === 'none') {
+      leave();
+      return;
+    }
+    toolbar.addEventListener('animationend', leave);
+    const timer = setTimeout(leave, 600);
+    return () => {
+      toolbar.removeEventListener('animationend', leave);
+      clearTimeout(timer);
+    };
+  }, [leaving, saves.state]);
+
 
   return (
     <HostProvider value={resolved}>
@@ -269,8 +429,14 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         data-theme={resolved.scheme}
         style={rootStyle(resolved.theme, resolved.scheme)}
       >
-        {corner}
-        <Toolbar view={view} host={resolved} />
+        <div ref={bar} className="edit-bar" data-leaving={folding ? '' : undefined}>
+          <Toolbar view={view} host={resolved} showSource={() => setSource(true)} sourceButton={sourceButton} />
+          <div className="edit-corner" aria-busy={leaving && saves.state === 'saving' ? true : undefined}>
+            {corner}
+            <SaveStatus state={saves.state} blocked={blocked} retry={saves.retry} host={resolved} />
+          </div>
+        </div>
+        {source && view && <SourceDialog text={output(view.state)} host={resolved} onClose={() => setSource(false)} onClosed={() => sourceButton.current?.focus()} />}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}
         <div ref={parent} className="markdown-editor" />
       </div>

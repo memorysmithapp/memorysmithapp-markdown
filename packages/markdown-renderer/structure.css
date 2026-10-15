@@ -87,8 +87,9 @@
 }
 
 /* The switch between reading and editing sits at the top right of the note,
-   and the text of a title flows around it; in edit mode it ends the toolbar,
-   which stays at the top of the note while it scrolls. */
+   and the text of a title flows around it. In edit mode it stays there, at
+   the end of a bar that holds the toolbar to its left and the save's status
+   under it, and the bar stays at the top of the note while it scrolls. */
 .markdown .mode-switch {
   float: right;
   position: relative;
@@ -100,18 +101,79 @@
 .markdown .mode-switch-glyph {
   flex: none;
 }
-.markdown .edit-toolbar {
+.markdown .edit-bar {
   position: sticky;
   top: 0;
   z-index: 3;
+  display: flex;
+  align-items: flex-start;
+}
+.markdown .edit-toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
 }
-.markdown .edit-toolbar .mode-switch {
+.markdown .edit-corner {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.markdown .edit-corner .mode-switch {
   float: none;
-  margin-inline-start: auto;
+}
+/* On a phone the switch keeps the top right, and the toolbar takes the whole
+   width under it rather than a narrow column beside it. */
+@media (max-width: 560px) {
+  .markdown .edit-bar {
+    flex-wrap: wrap;
+  }
+  .markdown .edit-corner {
+    order: -1;
+    flex-basis: 100%;
+  }
+}
+.markdown .edit-save {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  column-gap: 0.4em;
+}
+.markdown .edit-save[data-save='idle'] {
+  display: none;
+}
+
+/* The note's Markdown, in a dialog over the page: the dialog has no padding,
+   so a click on it and not on its frame is a click outside. */
+.markdown .edit-source {
+  padding: 0;
+  max-width: min(56rem, calc(100vw - 2rem));
+  width: 100%;
+  max-height: calc(100vh - 4rem);
+}
+.markdown .edit-source-frame {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 4rem);
+}
+.markdown .edit-source-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown .edit-source-title {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.markdown .edit-source-text {
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .markdown .edit-toolbar-group {
   display: inline-flex;

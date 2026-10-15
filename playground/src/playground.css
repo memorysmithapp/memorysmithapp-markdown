@@ -60,6 +60,22 @@ body {
   border-radius: 6px;
   padding: 0.15rem 0.3rem;
 }
+.sidebar .controls button {
+  font: inherit;
+  color: var(--page-text);
+  background: var(--page-bg);
+  border: 1px solid var(--page-line);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+}
+.sidebar .controls button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.sidebar .controls .changed {
+  color: var(--page-accent);
+}
 .sidebar .controls select:disabled {
   opacity: 0.55;
 }
@@ -116,78 +132,3 @@ body {
   }
 }
 
-/* Edit mode: the note and the bytes it would save, side by side (#50). */
-.content.editing {
-  display: grid;
-  grid-template-columns: minmax(0, 48.75rem) minmax(18rem, 1fr);
-  align-items: start;
-}
-.content.editing .pane {
-  margin: 0;
-}
-.source-pane {
-  position: sticky;
-  top: 0;
-  max-height: 100vh;
-  overflow: auto;
-  border-left: 1px solid var(--page-line);
-  font-size: 0.78rem;
-}
-.source-pane header {
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--page-bg);
-  border-bottom: 1px solid var(--page-line);
-}
-.source-pane .source-status {
-  color: var(--page-soft);
-}
-.source-pane .source-status[data-same='false'] {
-  color: var(--page-accent);
-}
-.source-pane button {
-  margin-left: auto;
-  font: inherit;
-  color: var(--page-text);
-  background: var(--page-bg);
-  border: 1px solid var(--page-line);
-  border-radius: 6px;
-  padding: 0.2rem 0.5rem;
-  cursor: pointer;
-}
-.source-pane button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.source-pane ol {
-  margin: 0;
-  padding: 0.5rem 0 2rem 3rem;
-  color: var(--page-soft);
-}
-.source-pane li {
-  padding-right: 1rem;
-}
-.source-pane li code {
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--page-text);
-}
-.source-pane li.changed {
-  background: color-mix(in srgb, var(--page-accent) 16%, transparent);
-}
-@media (max-width: 1180px) {
-  .content.editing {
-    grid-template-columns: 1fr;
-  }
-  .source-pane {
-    position: static;
-    max-height: none;
-    border-left: 0;
-    border-top: 1px solid var(--page-line);
-  }
-}
