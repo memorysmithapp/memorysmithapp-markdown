@@ -138,24 +138,35 @@ export function remarkMathDollarRule() {
         const { start, end } = (child as Positioned).position ?? {};
         if (start?.offset === undefined || end?.offset === undefined) return child;
 
-        const raw = source.slice(start.offset, end.offset);
-        const inner = raw.replace(/^\$+/, '').replace(/\$+$/, '');
-        if (inner.length === 0) return { type: 'text', value: raw };
-
-        // The outside edges: what sits just inside each delimiter.
-        if (/^\s/.test(inner) || /\s$/.test(inner)) return { type: 'text', value: raw };
-
-        // The inside edges: what sits just OUTSIDE each delimiter, which is
-        // the half `R$100 e o frete R$200` is decided by.
-        const before = start.offset > 0 ? (source[start.offset - 1] ?? '') : '';
-        const after = source[end.offset] ?? '';
-        if (before !== '' && /[0-9A-Za-z]/.test(before)) return { type: 'text', value: raw };
-        if (after !== '' && /[0-9]/.test(after)) return { type: 'text', value: raw };
+        if (breaksDollarRule(source, start.offset, end.offset)) {
+          return { type: 'text', value: source.slice(start.offset, end.offset) };
+        }
 
         return child;
       });
     });
   };
+}
+
+/**
+ * Whether the inline formula the source holds between these offsets, delimiters included, breaks
+ * the dollar rule of §7.8 and is text: the reading surface and the editor decide it alike.
+ */
+export function breaksDollarRule(source: string, start: number, end: number): boolean {
+  const raw = source.slice(start, end);
+  const inner = raw.replace(/^\$+/, '').replace(/\$+$/, '');
+  if (inner.length === 0) return true;
+
+  // The outside edges: what sits just inside each delimiter.
+  if (/^\s/.test(inner) || /\s$/.test(inner)) return true;
+
+  // The inside edges: what sits just OUTSIDE each delimiter, which is
+  // the half `R$100 e o frete R$200` is decided by.
+  const before = start > 0 ? (source[start - 1] ?? '') : '';
+  const after = source[end] ?? '';
+  if (before !== '' && /[0-9A-Za-z]/.test(before)) return true;
+  if (after !== '' && /[0-9]/.test(after)) return true;
+  return false;
 }
 
 /** Cuts a text node on a pattern, keeping the parts between the matches. */

@@ -1,4 +1,5 @@
-import { NoteBody, toggleTaskAt } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type NoteMode } from '@memorysmithapp/markdown-renderer';
+import { SourcePane } from './SourcePane.js';
 import { useEffect, useMemo, useState } from 'react';
 import { addressOf, buildNotebooks, hostOf, noteAt, type Note, type Notebook } from './notebooks.js';
 import { PORTUGUESE } from './strings.js';
@@ -35,6 +36,10 @@ interface View {
   readonly save: SaveMode;
   /** The delay of a simulated save, in milliseconds. */
   readonly delay: number;
+  /** Whether the note offers the switch to edit it: every note does, unless `?editable=0` or `?bare=1`. */
+  readonly editable: boolean;
+  /** The switch drawn as its icon alone, or its icon and its word (`?button=icon` or `label`). */
+  readonly button: 'icon' | 'label';
 }
 
 /**
@@ -59,6 +64,9 @@ function readView(): View {
     bare: query.get('bare') === '1',
     save: SAVE_MODES.find((mode) => mode === query.get('save')) ?? 'instant',
     delay: Math.max(0, Number(query.get('delay') ?? '') || 2000),
+    // The note alone is what the comparison screenshots, and MemorySmith's page has no switch.
+    editable: query.get('editable') !== '0' && query.get('bare') !== '1',
+    button: query.get('button') === 'icon' ? 'icon' : 'label',
   };
 }
 
@@ -82,6 +90,8 @@ export function App() {
   // The notes as the reader left them: a ticked box changes one character of
   // the note in memory, which is what a host writes back.
   const [edited, setEdited] = useState<Record<string, string>>({});
+  // Whether the note is being edited, observed only: the switch keeps its own mode (#51).
+  const [mode, setMode] = useState<NoteMode>('view');
 
   useEffect(() => {
     const update = () => setView(readView());
@@ -98,6 +108,8 @@ export function App() {
   }, [view.theme, view.scheme]);
 
   const key = `${view.notebook.slug}/${view.note.path}`;
+  // Another note opens in reading, as the switch of its own NoteBody does.
+  useEffect(() => setMode('view'), [key]);
   const markdown = edited[key] ?? view.note.markdown;
   const host = useMemo(
     () =>
@@ -122,6 +134,10 @@ export function App() {
         theme={view.theme.theme}
         scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
+        editable={view.editable}
+        modeButton={view.button}
+        onModeChange={setMode}
+        onChange={(next) => setEdited((all) => ({ ...all, [key]: next }))}
         writable
         onToggleTask={(ordinal) => {
           // Applied to the note as it is when the save lands, as a host applies a tick to its latest bytes.
@@ -146,12 +162,26 @@ export function App() {
 
   if (view.bare) return <main className="bare">{body}</main>;
 
+  // In edit mode the bytes the editor would save sit beside the note, the lines it changed marked (#50).
+  const editing = view.editable && mode === 'edit';
+
   return (
     <div className="layout">
       <nav className="sidebar">
         <p className="brand">memorysmithapp-markdown</p>
         <div className="controls">
           <a href={withQuery({ lang: view.lang === 'pt' ? 'en' : 'pt' })}>{view.lang === 'pt' ? 'English' : 'Português'}</a>
+        </div>
+        <div className="controls saves">
+          <span>Edit switch</span>
+          <a className={!view.editable ? 'current' : undefined} href={withQuery({ editable: view.editable ? '0' : '1' })}>
+            {view.editable ? 'hide' : 'show'}
+          </a>
+          {(['label', 'icon'] as const).map((button) => (
+            <a key={button} className={button === view.button ? 'current' : undefined} href={withQuery({ button })}>
+              {button}
+            </a>
+          ))}
         </div>
         <div className="controls saves">
           <span>Save a tick</span>
@@ -211,7 +241,21 @@ export function App() {
           </section>
         ))}
       </nav>
-      <main className="content">{body}</main>
+      <main className={editing ? 'content editing' : 'content'}>
+        {body}
+        {editing && (
+          <SourcePane
+            original={view.note.markdown}
+            current={markdown}
+            onRestore={() =>
+              setEdited((all) => {
+                const { [key]: _dropped, ...rest } = all;
+                return rest;
+              })
+            }
+          />
+        )}
+      </main>
     </div>
   );
 }

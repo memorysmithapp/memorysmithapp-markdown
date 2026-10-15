@@ -53,6 +53,14 @@ export interface NoteStrings {
   readonly saved: string;
   /** What a task item says for a moment when the host failed to save its tick. */
   readonly notSaved: string;
+  /** The switch to edit mode, which says the action. */
+  readonly edit: string;
+  /** The switch back to reading, which says the action. */
+  readonly view: string;
+  /** What edit mode says of a note it cannot keep byte for byte, and so opens read-only. */
+  readonly editUnavailable: string;
+  /** The words of the editor: its toolbar, its forms and its controls. */
+  readonly editor: EditorWords;
   /** What a region says while it waits for the host. */
   readonly loading: string;
   /** What a region says when the host failed to answer. */
@@ -61,6 +69,56 @@ export interface NoteStrings {
   readonly close: string;
   /** The button that dismisses the choice. */
   readonly cancel: string;
+}
+
+/** The words of the editor (`./edit`), each a label a control shows or is named by. */
+export interface EditorWords {
+  readonly toolbar: string;
+  readonly undo: string;
+  readonly redo: string;
+  readonly paragraph: string;
+  readonly heading: string;
+  readonly bold: string;
+  readonly italic: string;
+  readonly strikethrough: string;
+  readonly highlight: string;
+  readonly code: string;
+  readonly link: string;
+  readonly wikilink: string;
+  readonly bulletList: string;
+  readonly orderedList: string;
+  readonly taskList: string;
+  readonly quote: string;
+  readonly callout: string;
+  readonly table: string;
+  readonly codeBlock: string;
+  readonly math: string;
+  readonly diagram: string;
+  readonly rule: string;
+  readonly footnote: string;
+  readonly comment: string;
+  /** The control that shows a block as the text it is written in. */
+  readonly source: string;
+  readonly title: string;
+  readonly addProperties: string;
+  readonly addProperty: string;
+  readonly removeProperty: string;
+  readonly propertyKey: string;
+  readonly propertyValue: string;
+  readonly addItem: string;
+  readonly removeItem: string;
+  readonly calloutType: string;
+  readonly fold: string;
+  readonly foldNone: string;
+  readonly foldOpen: string;
+  readonly foldClosed: string;
+  readonly addRow: string;
+  readonly addColumn: string;
+  readonly removeRow: string;
+  readonly removeColumn: string;
+  readonly alignLeft: string;
+  readonly alignCenter: string;
+  readonly alignRight: string;
 }
 
 /** The callout titles of MemorySmith, in English. */
@@ -130,6 +188,57 @@ export const ENGLISH: NoteStrings = {
   updating: 'Updating…',
   saved: 'Saved',
   notSaved: 'Not saved',
+  edit: 'Edit',
+  view: 'View',
+  editUnavailable:
+    'This note mixes line endings, which the editor cannot keep byte for byte, so it opens read-only.',
+  editor: {
+    toolbar: 'Formatting',
+    undo: 'Undo',
+    redo: 'Redo',
+    paragraph: 'Paragraph',
+    heading: 'Heading',
+    bold: 'Bold',
+    italic: 'Italic',
+    strikethrough: 'Strikethrough',
+    highlight: 'Highlight',
+    code: 'Code',
+    link: 'Link',
+    wikilink: 'Link to a note',
+    bulletList: 'Bulleted list',
+    orderedList: 'Numbered list',
+    taskList: 'Task list',
+    quote: 'Quotation',
+    callout: 'Callout',
+    table: 'Table',
+    codeBlock: 'Code block',
+    math: 'Formula',
+    diagram: 'Diagram',
+    rule: 'Divider',
+    footnote: 'Footnote',
+    comment: 'Comment',
+    source: 'Source',
+    title: 'Title',
+    addProperties: 'Add properties',
+    addProperty: 'Add a property',
+    removeProperty: 'Remove the property',
+    propertyKey: 'Key',
+    propertyValue: 'Value',
+    addItem: 'Add',
+    removeItem: 'Remove',
+    calloutType: 'Type',
+    fold: 'Folding',
+    foldNone: 'Not foldable',
+    foldOpen: 'Folds, open',
+    foldClosed: 'Folds, closed',
+    addRow: 'Add a row',
+    addColumn: 'Add a column',
+    removeRow: 'Remove the row',
+    removeColumn: 'Remove the column',
+    alignLeft: 'Align left',
+    alignCenter: 'Center',
+    alignRight: 'Align right',
+  },
   loading: 'Loading…',
   failed: 'Something went wrong.',
   close: 'Close',
@@ -137,6 +246,10 @@ export const ENGLISH: NoteStrings = {
 };
 
 /** The host's words over the English ones, key by key. */
-export function withDefaults(strings: Partial<NoteStrings> | undefined): NoteStrings {
-  return { ...ENGLISH, ...strings };
+export function withDefaults(strings: NoteStringsInput | undefined): NoteStrings {
+  // The editor's words are merged one by one too, so a host may translate some and keep the rest.
+  return { ...ENGLISH, ...strings, editor: { ...ENGLISH.editor, ...strings?.editor } };
 }
+
+/** The words a host gives: any of them, and any of the editor's. */
+export type NoteStringsInput = Partial<Omit<NoteStrings, 'editor'>> & { readonly editor?: Partial<EditorWords> };

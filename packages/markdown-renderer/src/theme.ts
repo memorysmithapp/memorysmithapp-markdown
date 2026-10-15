@@ -296,6 +296,23 @@ export interface PropertiesSlotProps {
   readonly value: (text: string) => ReactNode;
 }
 
+/**
+ * The switch between reading and editing a note, at its top right (#51). It is drawn only when the
+ * host made the note `editable`; a theme decides how it looks, never whether editing is allowed.
+ */
+export interface ModeSwitchSlotProps {
+  /** The mode the note is in. */
+  readonly mode: 'view' | 'edit';
+  /** The word of the action the switch takes, in the reader's language: `strings.edit` or `strings.view`. */
+  readonly label: string;
+  /** The default theme's icon of that action: a pencil to edit, an eye to read. */
+  readonly icon: ReactNode;
+  /** Whether the host asked for the icon alone or the icon and its word. */
+  readonly display: 'icon' | 'label';
+  /** Switches to the other mode. */
+  readonly toggle: () => void;
+}
+
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */
 export interface ThemeComponents {
   readonly callout: (props: CalloutSlotProps) => ReactNode;
@@ -311,12 +328,13 @@ export interface ThemeComponents {
   readonly wikilink: (props: WikilinkSlotProps) => ReactNode;
   readonly diagram: (props: DiagramSlotProps) => ReactNode;
   readonly properties: (props: PropertiesSlotProps) => ReactNode;
+  readonly modeSwitch: (props: ModeSwitchSlotProps) => ReactNode;
 }
 
 /** The names of the slots, in the order the documentation lists them. */
 export const THEME_SLOTS = Object.keys({
   callout: 1, calloutIcon: 1, table: 1, codeBlock: 1, inlineCode: 1, heading: 1, blockquote: 1,
-  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1,
+  embed: 1, footnotes: 1, taskBox: 1, wikilink: 1, diagram: 1, properties: 1, modeSwitch: 1,
 } satisfies Record<keyof ThemeComponents, 1>) as (keyof ThemeComponents)[];
 
 export interface Theme {

@@ -85,3 +85,74 @@
   z-index: 1;
   pointer-events: none;
 }
+
+/* The switch between reading and editing sits at the top right of the note,
+   and the text of a title flows around it; in edit mode it ends the toolbar,
+   which stays at the top of the note while it scrolls. */
+.markdown .mode-switch {
+  float: right;
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.markdown .edit-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-toolbar .mode-switch {
+  float: none;
+  margin-inline-start: auto;
+}
+.markdown .edit-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+.markdown .edit-control,
+.markdown .edit-toolbar select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.markdown .markdown-editor .cm-editor {
+  outline: none;
+}
+.markdown .markdown-editor .cm-scroller {
+  overflow: visible;
+}
+.markdown .cm-ms-block,
+.markdown .edit-block {
+  position: relative;
+}
+/* A drawn block is laid out as the page lays it out, not as the editor's text,
+   and holds the margins of what it draws: a margin that collapsed through it
+   would be space the editor does not count, and every click below it would
+   land a line off. */
+.markdown .cm-ms-block,
+.markdown .cm-ms-inline-block {
+  white-space: normal;
+}
+.markdown .cm-ms-block,
+.markdown .cm-ms-rule,
+.markdown .cm-ms-math-block {
+  display: flow-root;
+}
+.markdown .edit-block-controls {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.15rem;
+}
+.markdown .cm-ms-image {
+  max-width: 100%;
+  vertical-align: middle;
+}

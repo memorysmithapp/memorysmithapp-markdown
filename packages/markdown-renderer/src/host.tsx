@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { withDefaults, type NoteStrings } from './strings.js';
+import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 
 /**
@@ -62,6 +62,11 @@ export interface NoteHost {
   /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
   readonly keeps?: (name: string) => boolean;
   /**
+   * The names of notes that start with, or contain, what an author typed after `[[` in edit mode,
+   * best first. Without it, the editor suggests nothing.
+   */
+  readonly suggest?: (query: string) => readonly string[] | PromiseLike<readonly string[]>;
+  /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
    * dimensions are the ones the embed declared, in CSS pixels, or `null`.
    */
@@ -69,7 +74,7 @@ export interface NoteHost {
   /** Draws a link to an internal address, through the host's router. */
   readonly renderLink?: (link: LinkRequest) => ReactNode;
   /** The words the page shows, in the reader's language; each one left out is MemorySmith's English. */
-  readonly strings?: Partial<NoteStrings>;
+  readonly strings?: NoteStringsInput;
   /**
    * How the note looks: a theme (`defineTheme`), or `light` or `dark`, which are the default
    * theme — MemorySmith's look — in that scheme. Defaults to the default theme.
@@ -146,6 +151,7 @@ export const HOST_KEYS = Object.keys({
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
+  suggest: 1,
   renderAttachment: 1,
   renderLink: 1,
   strings: 1,
@@ -164,6 +170,7 @@ export interface ResolvedHost {
   readonly remoteNotice: boolean;
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
+  readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;
   readonly renderLink: (link: LinkRequest) => ReactNode;
   readonly strings: NoteStrings;
@@ -199,6 +206,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     remoteNotice: host.remoteNotice ?? true,
     loadNote: host.loadNote ?? null,
     keeps: host.keeps ?? never,
+    suggest: host.suggest ?? null,
     renderAttachment: host.renderAttachment ?? null,
     renderLink: host.renderLink ?? plainLink,
     strings: withDefaults(host.strings),

@@ -121,7 +121,7 @@ describe('level 3: slots', () => {
   it('lists every slot it calls', () => {
     expect(THEME_SLOTS).toEqual([
       'callout', 'calloutIcon', 'table', 'codeBlock', 'inlineCode', 'heading', 'blockquote',
-      'embed', 'footnotes', 'taskBox', 'wikilink', 'diagram', 'properties',
+      'embed', 'footnotes', 'taskBox', 'wikilink', 'diagram', 'properties', 'modeSwitch',
     ]);
   });
 
@@ -134,7 +134,7 @@ describe('level 3: slots', () => {
     const theme = defineTheme({
       name: 'spy',
       components: Object.fromEntries(
-        THEME_SLOTS.filter((name) => name !== 'calloutIcon' && name !== 'diagram').map((name) => [name, spy(name)]),
+        THEME_SLOTS.filter((name) => name !== 'calloutIcon' && name !== 'diagram' && name !== 'modeSwitch').map((name) => [name, spy(name)]),
       ),
     });
     const host = notebook({ Known: 'Known body.' });

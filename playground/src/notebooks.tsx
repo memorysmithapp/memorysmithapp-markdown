@@ -117,6 +117,14 @@ export function hostOf(notebook: Notebook, assets: (name: string) => string, go:
       return note ? { markdown: note.markdown, name: note.name, address: addressOf(note) } : null;
     },
     keeps: (name) => notebook.files.includes(name.normalize('NFC')),
+    // What the editor suggests after `[[`: names that start with what was typed, then the rest that hold it.
+    suggest: (query) => {
+      const typed = query.normalize('NFC').toLowerCase();
+      const names = [...new Set(notebook.notes.flatMap((note) => [note.name, ...note.aliases]).filter((name): name is string => name !== null))];
+      const starts = names.filter((name) => name.toLowerCase().startsWith(typed));
+      const holds = names.filter((name) => !starts.includes(name) && name.toLowerCase().includes(typed));
+      return [...starts, ...holds].slice(0, 12);
+    },
     navigate: go,
     renderLink: ({ href, className, children }) => (
       <a

@@ -64,7 +64,7 @@ const acme = defineTheme({
 
 - **Properties** name every value the stylesheet reads — colours, faces, sizes, spacing, headings, quotations, tables, callout hues and icons — and are written on the root as `--markdown-*`, so your CSS may set them too.
 - **Your CSS** is scoped by `.markdown-theme-<name>`, and reaches the note and nothing else.
-- **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
+- **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties`, `modeSwitch` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
 
 The frontmatter is the note's too. The default theme draws it as MemorySmith does: `name` as the title, and the other entries in a block that folds, each key with the icon of its value's shape, lists as chips and dates in `strings.locale`, with a `[[wikilink]]`, a Markdown link or a web address in a value drawn as a link. A theme decides otherwise through the `properties` slot, which may draw nothing, as a host that shows properties elsewhere does:
 
@@ -73,6 +73,30 @@ const mine = defineTheme({ name: 'mine', components: { properties: () => null } 
 ```
 
 Import `structure.css` instead of `styles.css` for a theme that draws everything itself. A theme names faces; your page loads them.
+
+## Edit
+
+A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves.
+
+```tsx
+<NoteBody
+  markdown={note}
+  editable                                        // the switch, at the top right
+  onChange={(next) => setNote(next)}              // after every change; you decide when to save
+  suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
+  modeButton="icon"                               // or "label", the icon and its word
+/>
+```
+
+`mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
+
+```tsx
+import { NoteEditor } from '@memorysmithapp/markdown-renderer/edit';
+
+<NoteEditor markdown={note} onChange={setNote} {...host} />;
+```
+
+A note that mixes line breaks (CRLF and LF) opens read-only, because the editor could not give it back byte for byte.
 
 ## Diagnose
 

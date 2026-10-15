@@ -1076,3 +1076,404 @@
     background-image: none;
   }
 }
+
+/* ── Edit mode ──────────────────────────────────────────────────────────────
+   The note edited on the page that draws it: the same faces, sizes and
+   colours as reading, with the notation the author is in shown dimmed, the
+   blocks drawn as on the page, and the editor's own controls kept small and
+   neutral so they never read as content. */
+.markdown .mode-switch {
+  margin: 0 0 0.5rem 1rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-family: var(--ms-font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.markdown .mode-switch-icon {
+  padding: 0.3rem;
+}
+.markdown .mode-switch:hover {
+  border-color: var(--ms-accent);
+  color: var(--ms-accent);
+}
+.markdown .mode-switch:focus-visible,
+.markdown .edit-control:focus-visible,
+.markdown .edit-field:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: 2px;
+}
+.markdown .edit-toolbar {
+  margin: 0 0 1rem;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+}
+.markdown .edit-toolbar-group + .edit-toolbar-group {
+  padding-inline-start: 0.25rem;
+  border-inline-start: 1px solid var(--ms-border);
+}
+.markdown .edit-control {
+  min-width: 1.9rem;
+  height: 1.9rem;
+  padding: 0 0.35rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: none;
+  color: var(--ms-text-soft);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.markdown .edit-control:hover:not(:disabled),
+.markdown .edit-control[aria-pressed='true'] {
+  background: var(--ms-code-bg);
+  color: var(--ms-text);
+}
+.markdown .edit-control:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.markdown .edit-control-labelled {
+  gap: 0.35rem;
+}
+.markdown .edit-toolbar select,
+.markdown .edit-block-controls select {
+  height: 1.9rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--ms-border);
+  border-radius: calc(var(--ms-radius) - 2px);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.markdown .edit-unavailable {
+  margin: 0 0 1rem;
+  color: var(--ms-text-soft);
+  font-size: 0.85rem;
+}
+
+/* The text: the line height of a run, and the caret in the accent. */
+.markdown .markdown-editor .cm-content {
+  padding: 0;
+  font-family: var(--ms-font-sans);
+  line-height: var(--ms-line-height-normal);
+  caret-color: var(--ms-accent);
+}
+.markdown .markdown-editor .cm-line {
+  padding: 0;
+}
+.markdown .markdown-editor .cm-cursor {
+  border-left-color: var(--ms-accent);
+}
+.markdown .markdown-editor .cm-selectionBackground,
+.markdown .markdown-editor .cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--ms-accent) 22%, transparent);
+}
+.markdown .cm-ms-syntax {
+  color: var(--ms-text-soft);
+  opacity: 0.75;
+  font-weight: normal;
+  font-style: normal;
+}
+.markdown .cm-ms-heading {
+  font-family: var(--ms-font-heading);
+  font-weight: var(--ms-heading-weight);
+  color: var(--ms-heading-color);
+  line-height: var(--ms-line-height-tight);
+  padding-top: 0.6em;
+}
+.markdown .cm-ms-h1 {
+  font-size: var(--ms-h1-size);
+  font-weight: var(--ms-h1-weight);
+}
+.markdown .cm-ms-h2 {
+  font-size: var(--ms-h2-size);
+}
+.markdown .cm-ms-h3 {
+  font-size: var(--ms-h3-size);
+}
+.markdown .cm-ms-h4 {
+  font-size: var(--ms-h4-size);
+}
+.markdown .cm-ms-h5 {
+  font-size: var(--ms-h5-size);
+}
+.markdown .cm-ms-h6 {
+  font-size: var(--ms-h6-size);
+  color: var(--ms-h6-color);
+}
+.markdown .cm-ms-strong {
+  font-weight: 700;
+}
+.markdown .cm-ms-em {
+  font-style: italic;
+}
+.markdown .cm-ms-strike {
+  text-decoration: line-through;
+}
+.markdown .cm-ms-highlight {
+  /* What the page draws for marked text: the browser's own <mark>. */
+  background: mark;
+  color: marktext;
+}
+.markdown .cm-ms-code {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  color: var(--ms-code-color);
+  background: var(--ms-inline-code-bg);
+}
+.markdown .cm-ms-link,
+.markdown .cm-ms-wikilink {
+  color: var(--ms-accent);
+  cursor: text;
+}
+.markdown .cm-ms-wikilink {
+  font-weight: 600;
+}
+.markdown .cm-ms-wikilink.cm-ms-pending {
+  color: var(--ms-pending);
+  border-bottom: 1px dashed var(--ms-pending);
+}
+.markdown .cm-ms-bullet {
+  display: inline-block;
+  width: 1em;
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-list-marker {
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-task {
+  margin: 0 0.45em 0 0;
+  vertical-align: middle;
+  accent-color: var(--ms-accent);
+  cursor: pointer;
+}
+.markdown .cm-ms-task-done {
+  color: var(--ms-text-soft);
+}
+.markdown .cm-ms-quote {
+  padding-inline-start: 1.5em !important;
+  border-inline-start: var(--ms-quote-border-width) solid var(--ms-quote-border-color);
+  color: var(--ms-quote-color);
+}
+.markdown .cm-ms-quote-2 {
+  box-shadow: inset calc(var(--ms-quote-border-width) + 0.6em) 0 0 -0.6em var(--ms-quote-border-color);
+}
+.markdown .cm-ms-code-line,
+.markdown .cm-ms-yaml,
+.markdown .cm-ms-table-source,
+.markdown .cm-ms-callout-source {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  background: var(--ms-code-bg);
+  padding: 0 1rem !important;
+}
+.markdown .cm-ms-code-line {
+  border-inline: 1px solid var(--ms-code-border);
+}
+.markdown .cm-ms-code-first {
+  border-top: 1px solid var(--ms-code-border);
+  border-start-start-radius: var(--ms-radius);
+  border-start-end-radius: var(--ms-radius);
+  padding-top: 0.5rem !important;
+}
+.markdown .cm-ms-code-last {
+  border-bottom: 1px solid var(--ms-code-border);
+  border-end-start-radius: var(--ms-radius);
+  border-end-end-radius: var(--ms-radius);
+  padding-bottom: 0.5rem !important;
+}
+.markdown .cm-ms-callout-source {
+  border-inline-start: 3px solid color-mix(in srgb, var(--ms-accent) 60%, transparent);
+}
+.markdown .cm-ms-math-source {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+}
+.markdown .cm-ms-math-block {
+  padding: 0.5rem 0;
+  text-align: center;
+  cursor: text;
+}
+.markdown .cm-ms-rule hr {
+  margin: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--ms-border);
+}
+.markdown .cm-ms-footnote-ref {
+  vertical-align: super;
+  font-size: 0.75em;
+  color: var(--ms-accent);
+}
+.markdown .cm-ms-footnote-def {
+  color: var(--ms-text-soft);
+  font-size: 0.9em;
+}
+/* A comment is not on the page, so in edit mode it reads as a margin note. */
+.markdown .cm-ms-comment {
+  color: var(--ms-text-soft);
+  font-style: italic;
+  background: color-mix(in srgb, var(--ms-text-soft) 12%, transparent);
+  border-radius: 2px;
+}
+.markdown .cm-ms-block-id {
+  color: var(--ms-text-soft);
+  font-family: var(--ms-font-mono);
+  font-size: 0.75em;
+}
+.markdown .cm-ms-raw {
+  font-family: var(--ms-font-mono);
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+
+/* A drawn block answers the pointer by showing it can be opened as source;
+   its controls appear when it is pointed at or holds the focus. */
+.markdown .cm-ms-block {
+  border-radius: var(--ms-radius);
+  cursor: text;
+}
+.markdown .cm-ms-block:hover {
+  box-shadow: 0 0 0 1px var(--ms-border);
+}
+.markdown .edit-block-controls {
+  opacity: 0;
+  padding: 0.1rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  transition: opacity 0.12s;
+}
+.markdown .cm-ms-block:hover .edit-block-controls,
+.markdown .edit-block:focus-within .edit-block-controls {
+  opacity: 1;
+}
+.markdown .edit-table table {
+  width: 100%;
+}
+.markdown .edit-cell {
+  display: block;
+  min-height: 1.5em;
+  outline: none;
+}
+.markdown .edit-cell-drawn {
+  cursor: text;
+}
+.markdown .edit-cell-drawn .markdown,
+.markdown .edit-cell-drawn p {
+  display: inline;
+  margin: 0;
+}
+.markdown .edit-cell:focus {
+  box-shadow: 0 0 0 2px var(--ms-accent);
+  border-radius: 2px;
+}
+
+/* The properties as a form: the fields look like the values they hold until
+   they are pointed at, so the form reads as the page. */
+.markdown .edit-properties {
+  padding-top: 0.25rem;
+}
+.markdown .edit-field {
+  width: 100%;
+  min-width: 0;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--ms-radius) - 3px);
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.markdown .edit-field:hover,
+.markdown .edit-field:focus {
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+}
+.markdown .edit-field::placeholder {
+  color: var(--ms-pending);
+}
+.markdown .edit-title {
+  display: block;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  font-family: var(--ms-title-font);
+  font-size: var(--ms-title-size);
+  font-weight: var(--ms-title-weight);
+  line-height: var(--ms-line-height-tight);
+  color: var(--ms-title-color);
+}
+.markdown .edit-key {
+  width: auto;
+  color: var(--ms-properties-key-color);
+}
+.markdown .edit-field[type='date'] {
+  width: auto;
+}
+.markdown .edit-property .metadata-property-value {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.markdown .edit-property .metadata-property-value .edit-control {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0;
+}
+.markdown .edit-property:hover .edit-control,
+.markdown .edit-property:focus-within .edit-control,
+.markdown .edit-property-new .edit-control {
+  opacity: 1;
+}
+.markdown .edit-list {
+  align-items: center;
+  flex: 1 1 auto;
+}
+.markdown .edit-list-add {
+  width: 6rem;
+  flex: 1 1 4rem;
+}
+.markdown .edit-chip-remove {
+  margin-inline-start: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.markdown .edit-chip-remove:hover {
+  opacity: 1;
+}
+.markdown .edit-boolean {
+  display: inline-flex;
+  align-items: center;
+}
+.markdown .edit-add-properties {
+  margin: 0 0 0.75rem;
+}
+
+/* What the editor suggests after `[[`: a list on the surface. */
+.markdown .cm-tooltip-autocomplete {
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-family: var(--ms-font-sans);
+  font-size: 0.875rem;
+}
+.markdown .cm-tooltip-autocomplete > ul {
+  font-family: var(--ms-font-sans);
+}
+.markdown .cm-tooltip-autocomplete li[aria-selected] {
+  background: color-mix(in srgb, var(--ms-accent) 18%, transparent);
+  color: var(--ms-text);
+}
