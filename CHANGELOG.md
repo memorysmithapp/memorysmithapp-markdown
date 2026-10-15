@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-15
+
+### Fixed
+
+- A link in a callout title is underlined, so it reads as a link whatever the colour of the callout: in a blue callout — `note`, `info`, `todo`, and every type the theme does not name, such as `[!regra]` — the title is drawn in the accent, at the weight of a wikilink, and a link in it could not be told from the title around it. A pending link keeps its dashed rule. The underline is two public properties, `--markdown-callout-title-link-decoration` and `--markdown-callout-title-link-offset`, which a theme sets as `calloutTitleLinkDecoration` and `calloutTitleLinkOffset` (#45).
+
 ## [0.3.1] - 2026-10-14
 
 ### Changed
@@ -103,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
 [unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...HEAD
+[0.3.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...v0.2.0

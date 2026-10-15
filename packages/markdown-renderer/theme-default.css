@@ -61,6 +61,11 @@
   --ms-callout-stop: var(--markdown-callout-stop, 180, 35, 24);
   --ms-callout-aside: var(--markdown-callout-aside, 109, 40, 217);
   --ms-callout-quote: var(--markdown-callout-quote, 84, 93, 115);
+  /* A link in a callout title is underlined: the title is in the callout's
+     colour and weight, and the blue family's colour is the accent's, so a link
+     there would read as more of the title. */
+  --ms-callout-title-link-decoration: var(--markdown-callout-title-link-decoration, underline 1px);
+  --ms-callout-title-link-offset: var(--markdown-callout-title-link-offset, 0.15em);
   --ms-font-sans: var(--markdown-font-sans, 'Inter', 'Segoe UI', system-ui, sans-serif);
   --ms-font-display: var(--markdown-font-display, 'Space Grotesk', 'Segoe UI', system-ui, sans-serif);
   --ms-font-mono: var(--markdown-font-mono, ui-monospace, 'Cascadia Code', Consolas, monospace);
@@ -582,6 +587,13 @@
   color: rgb(var(--callout-color));
   font-weight: 600;
   line-height: var(--ms-line-height-tight);
+}
+/* A link in the title is marked by more than its colour, which may be the
+   title's own; a pending link keeps its dashed rule, and a footnote's number
+   its own look. */
+.markdown .callout-title :is(a, .wikilink):not(.wikilink-pending, [data-footnote-ref]) {
+  text-decoration: var(--ms-callout-title-link-decoration);
+  text-underline-offset: var(--ms-callout-title-link-offset);
 }
 .markdown .callout-title::before {
   content: '';

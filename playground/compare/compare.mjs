@@ -54,7 +54,7 @@ export const DELIBERATE = {
   'continuity-engineering/03 Reviews/Exercise 2026-03 · Region loss.md':
     'A callout title holding bold text: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
   'enologia/02 Protocolos/Vinificação em tinto.md':
-    'Two callout titles holding bold text, which MemorySmith lays out as columns and the renderer as one sentence (#42), and a callout of type `atenção`, which MemorySmith draws as a quotation beginning with its marker and the renderer as a callout titled Atenção (#43).',
+    'Two callout titles holding bold text, which MemorySmith lays out as columns and the renderer as one sentence (#42), and a callout of type `atenção`, which MemorySmith draws as a quotation beginning with its marker and the renderer as a callout titled Atenção (#43); one of those titles holds a link, which MemorySmith draws in the colour and weight of the title and the renderer underlines (#45).',
   'enologia/01 Castas/Índice.md':
     'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
 };
