@@ -14,7 +14,7 @@ describe('a callout', () => {
   it('becomes an element with its kind on it, titled by what follows the marker', () => {
     const out = html('> [!warning] O que pode dar errado\n> O corpo do aviso.');
     expect(out).toContain('<div class="callout" data-callout="warning">');
-    expect(out).toContain('<div class="callout-title">O que pode dar errado</div>');
+    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">O que pode dar errado</span></div>');
     expect(out).toContain('<p>O corpo do aviso.</p>');
     expect(out).not.toContain('<blockquote>');
     expect(out).not.toContain('[!warning]');
@@ -22,30 +22,54 @@ describe('a callout', () => {
 
   it('is titled by the host when it has no title of its own', () => {
     const out = html('> [!tip]\n> Corpo.', { strings: { callouts: { tip: 'Dica' } } });
-    expect(out).toContain('<div class="callout-title">Dica</div>');
+    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">Dica</span></div>');
   });
 
   it("is titled in MemorySmith's English when the host gives no words", () => {
-    expect(html('> [!tldr]\n> Corpo.')).toContain('<div class="callout-title">TL;DR</div>');
+    expect(html('> [!tldr]\n> Corpo.')).toContain('<div class="callout-title"><span class="callout-title-text">TL;DR</span></div>');
   });
 
   it('titles a kind nobody translated with the kind itself, capitalised', () => {
     // The vocabulary is open (§7.1), and a word nobody translated is still a word.
-    expect(html('> [!receita]\n> Corpo.')).toContain('<div class="callout-title">Receita</div>');
-    expect(html('> [!constructor]\n> Corpo.')).toContain('<div class="callout-title">Constructor</div>');
+    expect(html('> [!receita]\n> Corpo.')).toContain('<div class="callout-title"><span class="callout-title-text">Receita</span></div>');
+    expect(html('> [!constructor]\n> Corpo.')).toContain('<div class="callout-title"><span class="callout-title-text">Constructor</span></div>');
   });
 
   it('reads the kind case-insensitively, and takes the fold marker off the page', () => {
     const out = html('> [!NOTE]- Recolhido\n> Corpo.');
     expect(out).toContain('data-callout="note"');
-    expect(out).toContain('<div class="callout-title">Recolhido</div>');
-    expect(html('> [!faq]+ Aberto\n> Corpo.')).toContain('<div class="callout-title">Aberto</div>');
+    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">Recolhido</span></div>');
+    expect(html('> [!faq]+ Aberto\n> Corpo.')).toContain('<div class="callout-title"><span class="callout-title-text">Aberto</span></div>');
   });
 
   it('keeps emphasis in its title and cuts the title at the first line break', () => {
     const out = html('> [!info] Um *título* com ênfase\n> E o corpo, na linha seguinte.');
-    expect(out).toContain('<div class="callout-title">Um <em>título</em> com ênfase</div>');
+    expect(out).toContain('<div class="callout-title"><span class="callout-title-text">Um <em>título</em> com ênfase</span></div>');
     expect(out).toContain('<p>E o corpo, na linha seguinte.</p>');
+  });
+
+  it('keeps a title with strong text in it as one run, so it wraps as a sentence beside the icon', () => {
+    // Every inline node of a title straight in the row of the title would be a
+    // column of its own (#42): the words travel in one element.
+    for (const [markdown, title] of [
+      ['> [!regra] O software é **meio**, não fim.', 'O software é <strong>meio</strong>, não fim.'],
+      ['> [!regra] **Separação de funções:** nenhum agente aprova.', '<strong>Separação de funções:</strong> nenhum agente aprova.'],
+    ] as const) {
+      expect(html(markdown)).toContain(`<div class="callout-title"><span class="callout-title-text">${title}</span></div>`);
+    }
+  });
+
+  it('reads a type in any script, and titles it with the word as written', () => {
+    // §7.1 restricts the type to a word, not to A–Z (#43).
+    const out = html('> [!atenção]\n> Corpo.');
+    expect(out).toContain('data-callout="atenção"');
+    expect(out).toContain('<span class="callout-title-text">Atenção</span>');
+    expect(out).not.toContain('[!atenção]');
+    expect(html('> [!ATENÇÃO] Cuidado\n> Corpo.')).toContain('data-callout="atenção"');
+    expect(html('> [!Éclair]\n> Corpo.')).toContain('data-callout="éclair"');
+    expect(html('> [!注意]\n> 本文。')).toContain('data-callout="注意"');
+    // A type written decomposed is the same type as the one written composed.
+    expect(html('> [!atenc\u0327a\u0303o]\n> Corpo.')).toContain('data-callout="atenção"');
   });
 
   it('carries every block after its first paragraph', () => {
@@ -153,6 +177,21 @@ describe('a block identifier', () => {
   it('is taken off the end of a list item too', () => {
     const out = html('- um item ^item-1');
     expect(out).toContain('<li>um item</li>');
+  });
+
+  it('is taken off the end of a heading and of a table cell', () => {
+    expect(html('## Artigo 75 ^artigo-75')).toContain('>Artigo 75</h2>');
+    expect(html('| a |\n| - |\n| célula ^c-1 |')).toContain('<td>célula</td>');
+  });
+
+  it('leaves the label of a link to a block as it was typed (#39)', () => {
+    const note = 'Veja [[Índice de Polifenóis Totais#^faixa-de-guarda]].';
+    const out = html(note);
+    expect(out).toContain('>Índice de Polifenóis Totais#^faixa-de-guarda</span>');
+    // At the end of its paragraph, too, where the link's text is the last text of the block.
+    expect(html('Veja [[Índice#^faixa]]')).toContain('>Índice#^faixa</span>');
+    expect(html('Veja [[Índice#^faixa]]', { resolve: () => '/notes/indice' })).toMatch(/<a [^>]*>Índice#\^faixa<\/a>/);
+    expect(html('Veja **a regra ^nao-e-id**')).toContain('<strong>a regra ^nao-e-id</strong>');
   });
 });
 

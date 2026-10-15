@@ -37,6 +37,13 @@
   border: 0;
 }
 
+/* The words of a callout's title are one item of its row, so a title that
+   carries emphasis wraps as one sentence beside the icon, never as columns. */
+.markdown .callout-title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* An icon a theme draws as an element takes the place of the one the
    stylesheet draws as a mask, at the size of the title it sits in. */
 .markdown .callout-title.has-icon::before {

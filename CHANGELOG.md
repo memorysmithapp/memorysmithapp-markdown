@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-14
+
+### Changed
+
+- The demonstration notebooks show a callout title holding bold text, in the red-wine protocol and the March exercise, and a callout of a type outside A–Z, `[!atenção]`, in the protocol; the comparison with MemorySmith lists both notes as deliberate differences (#42, #43).
+
+### Fixed
+
+- An empty fenced block is an empty block of code, with a language or without one, where one that named a language drew the word *undefined*; an empty block keeps the height of one line, so its *Copy* button sits inside it instead of over its edge (#38).
+- An embed of a section runs to the next real heading of its level or higher: a `# ` line inside a fence of the section, such as a shell comment, is code and no longer ends the cut, which used to leave the section's code block empty (#40).
+- A link to a block, `[[note#^identifier]]`, keeps its label as typed, identifier included, where the label lost its `^identifier` to the rule that takes a block identifier off the page: that rule now reads the end of a block — a paragraph, a heading, a table cell — and never the end of a link or another inline inside it (#39).
+- A note whose `name:` carries `#`, `[`, `]` or `|` has no name on the page and in `diagnose` too, as `SPEC.md` §5.3 says and MemorySmith reads it: `name: Incident #4711` used to be drawn as the note's title and raise nothing, and now draws *Unnamed note* and raises `name-unusable`. `SPEC.md` §6.2 now says the subset has no comments, so a ` #` is a character of the value it is written in, with a conformance case for a name and one for an attribute (#41).
+- A callout whose title holds bold or other inline markup draws its title as one sentence beside the icon, wrapping as a paragraph does, where each run of it used to be a column of its own; the words of a title travel in one element, `.callout-title-text` (#42).
+- A callout type is a word of any script, as `SPEC.md` §7.1 says: `> [!atenção]` is a callout titled *Atenção* where it used to be a quotation beginning with its marker, a type written decomposed is the type written composed, and the specification now says so in words, with a conformance case for a type outside A–Z (#43).
+
 ## [0.3.0] - 2026-10-14
 
 ### Added
@@ -88,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
 [unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...HEAD
+[0.3.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.1.1...v0.1.2

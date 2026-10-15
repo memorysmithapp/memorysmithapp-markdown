@@ -75,7 +75,7 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'diagram-invalid': { severity: 'notice', section: '7.2', message: 'This diagram cannot be read, and is shown as its source or its error.' },
   'frontmatter-unclosed': { severity: 'notice', section: '6.1', message: 'This frontmatter is never closed by a ---: the note has no properties, and its lines are body text.' },
   'name-missing': { severity: 'notice', section: '6.5', message: 'The note has no name: a link reaches it only through an alias.' },
-  'name-unusable': { severity: 'notice', section: '6.5', message: 'This name is not a single text value, so the note is unnamed.' },
+  'name-unusable': { severity: 'notice', section: '6.5', message: 'This name is not a single text value, or carries one of #, [, ] and |, so the note is unnamed.' },
   'reserved-not-a-list': { severity: 'notice', section: '6.4', message: 'This value is not a list, so it is an ordinary attribute.' },
   'aliases-missing': { severity: 'hint', section: '6.4', message: 'The note has no aliases: only its name catches a link.' },
   'tags-missing': { severity: 'hint', section: '6.4', message: 'The note has no tags: it has no subjects to be filtered by.' },

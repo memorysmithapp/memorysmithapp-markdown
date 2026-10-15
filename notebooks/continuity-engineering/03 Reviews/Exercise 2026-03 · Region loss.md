@@ -22,6 +22,9 @@ it.
 > Everything in [[Recovery Time Objective]] is a target until a page like this
 > one carries a number.
 
+> [!rule] The **incident commander** owns the decision to fail over, and nobody waits for a second signal once the first one is confirmed.
+> The seven minutes in the timeline below are what waiting cost.
+
 # Timeline
 
 | Moment | Minutes | Note |

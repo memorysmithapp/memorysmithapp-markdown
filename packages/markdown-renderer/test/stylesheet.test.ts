@@ -94,6 +94,16 @@ describe('the stylesheet', () => {
     expect(rule).toContain('align-self: start;');
   });
 
+  it('keeps an empty block of code a line high, so its Copy button fits inside it (#38)', () => {
+    const rule = /\.markdown \.code-block > pre > code:empty::before \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
+    expect(rule).toContain("content: '\\200b';");
+  });
+
+  it('keeps the words of a callout title one item of its row, so they wrap as a sentence (#42)', () => {
+    const rule = /\.markdown \.callout-title-text \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
+    expect(rule).toContain('flex: 1 1 auto;');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {

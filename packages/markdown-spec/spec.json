@@ -2,7 +2,7 @@
   "$schema": "./schema/spec.schema.json",
   "spec": "MemorySmith Markdown Specification",
   "variant": "MemorySmith",
-  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.3.0/packages/markdown-spec/SPEC.md",
+  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.3.1/packages/markdown-spec/SPEC.md",
   "sources": [
     {
       "id": "commonmark",
@@ -380,7 +380,7 @@
       "reader": "reading-surface",
       "syntax": "> [!type] Optional title",
       "example": "> [!warning] What can go wrong\n> The body of the notice.\n",
-      "effect": "A blockquote whose first line begins with `[!type]` is drawn as a callout, not as a quotation with a marker in front of it. The five GitHub alert types are recognised and the vocabulary is open. A `[!type]` inside a code fence is not a callout.",
+      "effect": "A blockquote whose first line begins with `[!type]` is drawn as a callout, not as a quotation with a marker in front of it. The five GitHub alert types are recognised and the vocabulary is open, a word of any script. A `[!type]` inside a code fence is not a callout.",
       "spec": "7.1"
     },
     {
@@ -505,7 +505,7 @@
       "code": "name-unusable",
       "severity": "notice",
       "spec": "6.5",
-      "effect": "A name of a shape other than a single text value leaves the note unnamed."
+      "effect": "A name of a shape other than a single text value, or one carrying #, [, ] or |, leaves the note unnamed."
     },
     {
       "code": "reserved-not-a-list",

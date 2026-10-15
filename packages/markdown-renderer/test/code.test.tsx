@@ -27,6 +27,29 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await act(async () => new Promise((done) => setTimeout(done, 0)));
 }
 
+describe('an empty fence', () => {
+  it('is an empty block of code, with a language or without one (#38)', () => {
+    for (const [fence, open] of [
+      ['```bash\n```', '<code class="language-bash">'],
+      ['```promql\n```', '<code class="language-promql">'],
+      ['```\n```', '<code>'],
+    ] as const) {
+      const out = html(fence);
+      expect(out, fence).toContain(`<div class="code-block"><pre>${open}</code></pre>`);
+      expect(out, fence).not.toContain('undefined');
+    }
+  });
+
+  it('copies nothing, since nothing was typed', async () => {
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const note = await draw('```bash\n```');
+    await act(async () => note.container.querySelector<HTMLButtonElement>('.code-copy')?.click());
+    expect(writeText).toHaveBeenCalledWith('');
+    note.unmount();
+  });
+});
+
 describe('a fence that names a language the highlighter carries', () => {
   it('is drawn in tokens', () => {
     const out = html('```sql\nselect 1 from notes;\n```');

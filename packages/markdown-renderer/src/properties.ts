@@ -32,11 +32,17 @@ export interface PropertyEntry {
 
 /** The frontmatter, read. */
 export interface NoteProperties {
-  /** The name of the note: `name:` when it is a single text value (§6.5), else `null`. */
+  /**
+   * The name of the note: `name:` when it is a single text value (§6.5) that carries none of
+   * `#`, `[`, `]` and `|` (§5.3), else `null`.
+   */
   readonly name: string | null;
   /** Every other entry, in the order written. */
   readonly entries: readonly PropertyEntry[];
 }
+
+/** The four delimiters of the form that addresses a note: a name carrying one is no name (§5.3). */
+const UNADDRESSABLE = /[#[\]|]/;
 
 /** Above this a single value is prose rather than a category (§6.3). */
 const CATEGORY_CEILING = 40;
@@ -137,9 +143,11 @@ export function readProperties(markdown: string): NoteProperties {
   const read: PropertyEntry[] = [];
   for (const { key, raw, items } of entries) {
     if (key === 'name') {
-      // Only a single text value names a note; any other shape leaves it unnamed (§6.5).
+      // Only a single text value names a note; any other shape leaves it unnamed (§6.5), and so
+      // does one carrying a delimiter of the form that addresses it (§5.3). The subset has no
+      // comments (§6.2): `name: Incident #4711` is that whole value, and it carries a `#`.
       const value = items === null ? unquote(raw) : '';
-      name = value.length > 0 ? value : null;
+      name = value.length > 0 && !UNADDRESSABLE.test(value) ? value : null;
       continue;
     }
     // A list written with no item, `[]`, is an empty value, never a list (§6.3).

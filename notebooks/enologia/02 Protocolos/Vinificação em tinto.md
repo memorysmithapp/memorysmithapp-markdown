@@ -36,6 +36,15 @@ quem chega na safra sem ter feito a anterior.
 O passo 4 é o que ==decide a estrutura do vinho==, e é o único que não aceita
 regra fixa.
 
+> [!regra] A data de descuba é do **enólogo responsável**, e fica escrita na ficha do tanque antes da primeira remontagem.
+> O cronograma propõe; quem assina a ficha decide.
+
+> [!regra] **Separação de funções:** quem lê o IPT não é quem decide a descuba do mesmo tanque.
+
+> [!atenção]
+> Remontagem com o mosto acima de 30 °C extrai amargor, não cor. Pare e
+> resfrie antes de seguir.
+
 > [!example] A ficha do tanque, como o laboratório a preenche
 > ```yaml
 > tanque: T4
