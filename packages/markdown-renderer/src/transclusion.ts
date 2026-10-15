@@ -17,7 +17,7 @@
  * a link and is never dropped, which is what `demoteEmbeds` does.
  */
 
-import { codeRegions, headingKey, insideCode, insideTable, outsideCode, tableRegions } from './markdown.js';
+import { codeRegions, fenceRegions, headingKey, insideCode, insideTable, outsideCode, tableRegions } from './markdown.js';
 
 /** Same shape the link extractor matches, plus the leading `!`. */
 const EMBED = /!\[\[([^\]|#]+?)(?:#([^\]|]+?))?(?:\|[^\]]*?)?\]\]/g;
@@ -150,14 +150,22 @@ function escapeRegExp(value: string): string {
  * The section of a document, cut syntactically: from the heading whose slug
  * matches the anchor to the next heading of equal or higher level. No notebook
  * convention takes part in this: the cut is syntactic.
+ *
+ * A line inside a fence is code and never a heading, so the `# Step 1` comment
+ * of a shell block neither opens a section nor ends one.
  */
 export function sectionOf(markdown: string, anchor: string): string | null {
   const wanted = headingKey(anchor);
   const lines = markdown.split('\n');
+  const fences = fenceRegions(markdown);
   let start = -1;
   let level = 0;
+  let at = 0;
 
   for (let index = 0; index < lines.length; index++) {
+    const offset = at;
+    at += (lines[index] ?? '').length + 1;
+    if (insideCode(fences, offset)) continue;
     const heading = HEADING.exec(lines[index] ?? '');
     if (!heading) continue;
 

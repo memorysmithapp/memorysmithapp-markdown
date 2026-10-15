@@ -104,4 +104,33 @@ describe('cutting a section', () => {
   it('answers null when the section is not there, instead of guessing', () => {
     expect(sectionOf(document, 'Revogação')).toBeNull();
   });
+
+  it('reads a line inside a fence as code, so a shell comment never ends the section (#40)', () => {
+    const runbook = [
+      '## The commands',
+      '',
+      '```bash',
+      '# Step 1: stop the writes',
+      'pg_ctl stop',
+      '~~~',
+      '# Step 2: promote the replica',
+      '```',
+      '',
+      '> ~~~sql',
+      '> # not a heading either',
+      '> ~~~',
+      '',
+      '## Afterwards',
+      '',
+      'Check the replica.',
+    ].join('\n');
+
+    const cut = sectionOf(runbook, 'The commands') ?? '';
+    expect(cut).toContain('# Step 1: stop the writes');
+    expect(cut).toContain('# Step 2: promote the replica');
+    expect(cut).toContain('# not a heading either');
+    expect(cut).not.toContain('## Afterwards');
+    // Nor does a line inside a fence open a section of its own.
+    expect(sectionOf(runbook, 'Step 1: stop the writes')).toBeNull();
+  });
 });
