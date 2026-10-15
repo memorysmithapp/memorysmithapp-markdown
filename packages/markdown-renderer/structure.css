@@ -236,6 +236,14 @@
 .markdown .cm-ms-math-block {
   display: flow-root;
 }
+/* A table's cell is where a click edits it: it fills its column and keeps a
+   size of its own when it is empty, as every cell of a new table is, or it
+   would be nothing wide and nothing could be clicked (#68). */
+.markdown .edit-cell {
+  display: block;
+  min-width: 3em;
+  min-height: 1.5em;
+}
 .markdown .edit-block-controls {
   position: absolute;
   top: 0.25rem;

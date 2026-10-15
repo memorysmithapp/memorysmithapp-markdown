@@ -187,8 +187,8 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
     selection?.collapseToEnd();
   }, [editing]);
 
-  const commit = (row: number, column: number, value: string, next?: { row: number; column: number }) => {
-    const changes = setCell(table, row, column, value);
+  const commit = (row: number, column: number, value: string, next?: { row: number; column: number }, more: readonly TextChange[] = []) => {
+    const changes = [...setCell(table, row, column, value), ...more];
     if (next) pendingFocus = { from: table.from, ...next };
     if (changes.length > 0) write(view, changes);
     else if (next) {
@@ -217,7 +217,12 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
         nextColumn = width - 1;
         nextRow = row === 2 ? 0 : row - 1;
       }
-      commit(row, column, value, nextRow >= 0 && nextRow < table.rows.length && nextRow !== 1 ? { row: nextRow, column: nextColumn } : undefined);
+      if (nextRow >= table.rows.length) {
+        // Tab past the last cell adds a row and goes on in it, as a table does in a document.
+        commit(row, column, value, { row: nextRow, column: 0 }, addRow(table, row));
+      } else {
+        commit(row, column, value, nextRow >= 0 && nextRow !== 1 ? { row: nextRow, column: nextColumn } : undefined);
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       event.currentTarget.textContent = table.rows[row]?.cells[column]?.text ?? '';

@@ -99,6 +99,14 @@ describe('the stylesheet', () => {
     expect(rule).toContain("content: '\\200b';");
   });
 
+  it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
+    const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(rule).toContain('display: block;');
+    expect(rule).toMatch(/min-width: [1-9]/);
+    expect(rule).toMatch(/min-height: [1-9]/);
+  });
+
   it('keeps the words of a callout title one item of its row, so they wrap as a sentence (#42)', () => {
     const rule = /\.markdown \.callout-title-text \{([^}]*)\}/.exec(css.replace(/\/\*[\s\S]*?\*\//g, ''))?.[1] ?? '';
     expect(rule).toContain('flex: 1 1 auto;');

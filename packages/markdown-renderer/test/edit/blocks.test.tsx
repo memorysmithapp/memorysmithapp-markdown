@@ -124,6 +124,26 @@ describe('a table', () => {
     expect(changes.at(-1)).toBe(NOTE.replace('| 1 | 2 |', '| 1 | two |'));
   });
 
+  it('fills a new table cell by cell, and adds a row on Tab past its last cell (#68)', async () => {
+    const empty = 'Text.\n\n|  |  |\n| --- | --- |\n|  |  |\n\nAfter.\n';
+    const changes = await open(empty);
+    const edit = async (row: number, column: number) => {
+      const drawn = $<HTMLElement>(`.edit-cell[data-row="${row}"][data-column="${column}"]`)!;
+      await act(async () => drawn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+      await settle();
+      return $<HTMLElement>(`.edit-cell[data-row="${row}"][data-column="${column}"][contenteditable]`)!;
+    };
+    const cell = await edit(2, 1);
+    cell.textContent = 'last';
+    await act(async () => cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })));
+    await settle();
+    expect(changes.at(-1)).toBe(empty.replace('|  |  |\n\nAfter', '|  | last |\n|  |  |\n\nAfter'));
+    // The new row's first cell is the one being edited, with the focus.
+    const next = $<HTMLElement>('.edit-cell[data-row="3"][data-column="0"][contenteditable]');
+    expect(next).not.toBeNull();
+    expect(document.activeElement).toBe(next);
+  });
+
   it('adds a row and aligns a column from its controls', async () => {
     const changes = await open(NOTE);
     await act(async () => $<HTMLButtonElement>('.edit-table button[aria-label="Add a row"]')!.click());
