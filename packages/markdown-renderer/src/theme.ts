@@ -60,6 +60,10 @@ export interface ThemeProperties {
   readonly calloutStop?: string;
   readonly calloutAside?: string;
   readonly calloutQuote?: string;
+  // How a link in a callout title is marked beyond its colour, which may be the
+  // title's own: a `text-decoration`, and the underline's offset.
+  readonly calloutTitleLinkDecoration?: string;
+  readonly calloutTitleLinkOffset?: string;
   // Callout icons, as CSS images used as masks (`url("data:image/svg+xml,…")`),
   // which take the colour of the callout.
   readonly iconNote?: string;
@@ -139,6 +143,7 @@ export const THEME_PROPERTIES = Object.keys({
   codeBg: 1, codeColor: 1, codeBorder: 1, inlineCodeBg: 1, inlineCodePadding: 1,
   tokenKeyword: 1, tokenString: 1, tokenNumber: 1, tokenComment: 1, tokenPunctuation: 1,
   calloutInfo: 1, calloutIdea: 1, calloutDone: 1, calloutWarn: 1, calloutStop: 1, calloutAside: 1, calloutQuote: 1,
+  calloutTitleLinkDecoration: 1, calloutTitleLinkOffset: 1,
   iconNote: 1, iconInfo: 1, iconSummary: 1, iconTip: 1, iconSuccess: 1, iconQuestion: 1, iconWarning: 1,
   iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1,
   fontSans: 1, fontDisplay: 1, fontMono: 1, fontHeading: 1,

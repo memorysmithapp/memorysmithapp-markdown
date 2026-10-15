@@ -104,6 +104,16 @@ describe('the stylesheet', () => {
     expect(rule).toContain('flex: 1 1 auto;');
   });
 
+  it('underlines a link in a callout title, whose colour may be the title\'s own (#45)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /\.markdown \.callout-title :is\(a, \.wikilink\):not\(\.wikilink-pending, \[data-footnote-ref\]\) \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    expect(rule).toContain('text-decoration: var(--ms-callout-title-link-decoration);');
+    expect(source).toContain('--ms-callout-title-link-decoration: var(--markdown-callout-title-link-decoration, underline 1px);');
+    // The blue family's title is the accent, which is why the colour alone cannot mark the link.
+    expect(source).toContain('--ms-callout-info: var(--markdown-callout-info, 15, 86, 215);');
+    expect(source).toContain('--ms-accent: var(--markdown-accent, #0f56d7);');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {

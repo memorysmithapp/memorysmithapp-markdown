@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A link in a callout title is underlined, so it reads as a link whatever the colour of the callout: in a blue callout — `note`, `info`, `todo`, and every type the theme does not name, such as `[!regra]` — the title is drawn in the accent, at the weight of a wikilink, and a link in it could not be told from the title around it. A pending link keeps its dashed rule. The underline is two public properties, `--markdown-callout-title-link-decoration` and `--markdown-callout-title-link-offset`, which a theme sets as `calloutTitleLinkDecoration` and `calloutTitleLinkOffset` (#45).
+
 ## [0.3.1] - 2026-10-14
 
 ### Changed

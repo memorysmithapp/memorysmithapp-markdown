@@ -39,7 +39,7 @@ regra fixa.
 > [!regra] A data de descuba é do **enólogo responsável**, e fica escrita na ficha do tanque antes da primeira remontagem.
 > O cronograma propõe; quem assina a ficha decide.
 
-> [!regra] **Separação de funções:** quem lê o IPT não é quem decide a descuba do mesmo tanque.
+> [!regra] **Separação de funções:** quem lê o [[Índice de Polifenóis Totais|IPT]] não é quem decide a descuba do mesmo tanque.
 
 > [!atenção]
 > Remontagem com o mosto acima de 30 °C extrai amargor, não cor. Pare e
