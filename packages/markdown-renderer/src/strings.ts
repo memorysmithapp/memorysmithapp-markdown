@@ -107,6 +107,12 @@ export interface EditorWords {
   readonly removeProperty: string;
   readonly propertyKey: string;
   readonly propertyValue: string;
+  /** The type a new property is made with, and each type's word (#70). */
+  readonly propertyType: string;
+  readonly typeText: string;
+  readonly typeList: string;
+  readonly typeBoolean: string;
+  readonly typeDate: string;
   readonly addItem: string;
   readonly removeItem: string;
   readonly calloutType: string;
@@ -238,6 +244,11 @@ export const ENGLISH: NoteStrings = {
     removeProperty: 'Remove the property',
     propertyKey: 'Key',
     propertyValue: 'Value',
+    propertyType: 'Type of the new property',
+    typeText: 'Text',
+    typeList: 'List',
+    typeBoolean: 'Yes or no',
+    typeDate: 'Date',
     addItem: 'Add',
     removeItem: 'Remove',
     calloutType: 'Type',

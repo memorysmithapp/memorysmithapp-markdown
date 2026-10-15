@@ -455,14 +455,19 @@ function Field({
 }
 
 /** A list value as chips, each removable, with a field that adds one on Enter. */
-function ListField({ items, label, onCommit }: { items: readonly string[]; label: string; onCommit: (items: string[]) => void }) {
+/**
+ * A list's items as chips and the field that adds the next. `typing` says the author is still in
+ * the field — an item added with Enter or a comma, the last taken back with Backspace — so the
+ * field keeps the focus once the form is drawn again; an item committed by leaving it does not.
+ */
+function ListField({ items, label, onCommit }: { items: readonly string[]; label: string; onCommit: (items: string[], typing: boolean) => void }) {
   const { strings } = useHost();
   const [draft, setDraft] = useState('');
-  const add = () => {
+  const add = (typing: boolean) => {
     const item = draft.trim();
     if (item.length === 0) return;
     setDraft('');
-    onCommit([...items, item]);
+    onCommit([...items, item], typing);
   };
   return (
     <span className="prop-tags edit-list">
@@ -476,7 +481,7 @@ function ListField({ items, label, onCommit }: { items: readonly string[]; label
             aria-label={`${strings.editor.removeItem} ${item}`}
             title={strings.editor.removeItem}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onCommit(items.filter((_, at) => at !== index))}
+            onClick={() => onCommit(items.filter((_, at) => at !== index), false)}
           >
             ×
           </button>
@@ -489,13 +494,13 @@ function ListField({ items, label, onCommit }: { items: readonly string[]; label
         value={draft}
         data-ms-control=""
         onChange={(event) => setDraft(event.target.value)}
-        onBlur={add}
+        onBlur={() => add(false)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ',') {
             event.preventDefault();
-            add();
+            add(true);
           }
-          if (event.key === 'Backspace' && draft === '' && items.length > 0) onCommit(items.slice(0, -1));
+          if (event.key === 'Backspace' && draft === '' && items.length > 0) onCommit(items.slice(0, -1), true);
         }}
       />
     </span>
@@ -507,7 +512,16 @@ function ValueField({ view, front, entry, written }: { view: EditorView; front: 
   const { strings } = useHost();
   const label = `${strings.editor.propertyValue}: ${entry.key}`;
   if (entry.shape === 'list') {
-    return <ListField items={entry.values} label={entry.key} onCommit={(items) => write(view, setList(front, entry.key, items))} />;
+    return (
+      <ListField
+        items={entry.values}
+        label={entry.key}
+        onCommit={(items, typing) => {
+          if (typing) focusAfterDraw.set(view, entry.key);
+          write(view, setList(front, entry.key, items));
+        }}
+      />
+    );
   }
   if (entry.shape === 'boolean') {
     const value = entry.values[0] ?? 'false';
@@ -551,6 +565,25 @@ function ValueField({ view, front, entry, written }: { view: EditorView; front: 
  * the name as the title, then each entry with its key and its value by its shape. Each change
  * rewrites the lines of its entry only; a value the form cannot hold is edited as source.
  */
+/** The types a new property is made with, each written as the notation of an empty value (#70). */
+type NewPropertyType = 'text' | 'list' | 'boolean' | 'date';
+
+function emptyValue(type: Exclude<NewPropertyType, 'list'>): string {
+  if (type === 'boolean') return 'false';
+  if (type === 'date') {
+    const today = new Date();
+    const two = (value: number) => String(value).padStart(2, '0');
+    return `${today.getFullYear()}-${two(today.getMonth() + 1)}-${two(today.getDate())}`;
+  }
+  return '';
+}
+
+/**
+ * The property whose value field takes the focus once the form is drawn again, per editor: one
+ * just made (#70), or a list the author is adding items to.
+ */
+const focusAfterDraw = new WeakMap<EditorView, string>();
+
 export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) {
   const { strings } = useHost();
   const words = strings.editor;
@@ -558,6 +591,28 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
   const front = readFrontmatter(source);
   const properties = readProperties(source.slice(0, to));
   const [adding, setAdding] = useState('');
+  const [type, setType] = useState<NewPropertyType>('text');
+  const box = useRef<HTMLDivElement>(null);
+
+  // A property just made, or a list being typed in: its value field takes the focus, a list's the field of its next item.
+  // The form is drawn into a widget the editor places after, so the focus waits for it to be there.
+  useEffect(() => {
+    const key = focusAfterDraw.get(view);
+    if (!key || !front?.entries.some((entry) => entry.key === key)) return;
+    const names = [`${words.propertyValue}: ${key}`, `${words.addItem}: ${key}`];
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const place = () => {
+      const field = [...(box.current?.querySelectorAll<HTMLElement>('[aria-label]') ?? [])].find((each) => names.includes(each.getAttribute('aria-label') ?? ''));
+      if (field?.isConnected) {
+        focusAfterDraw.delete(view);
+        field.focus();
+      } else if (++tries < 10) timer = setTimeout(place, 16);
+    };
+    place();
+    return () => clearTimeout(timer);
+  });
+
   if (!front) return null;
   const nameEntry = front.entries.find((entry) => entry.key === 'name');
   const name = nameEntry ? source.slice(nameEntry.valueSpan.from, nameEntry.valueSpan.to).replace(/^(["'])([\s\S]*)\1$/, '$2') : '';
@@ -565,10 +620,12 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
     const key = adding.trim();
     if (!/^[A-Za-z0-9_-]+$/.test(key)) return;
     setAdding('');
-    write(view, addEntry(front, key, ''));
+    focusAfterDraw.set(view, key);
+    // A list starts inline and empty, so its first item is written as `key: [first]`.
+    write(view, addEntry(front, key, type === 'list' ? [] : emptyValue(type)));
   };
   return (
-    <div className="edit-block edit-properties">
+    <div className="edit-block edit-properties" ref={box}>
       <div className="edit-block-controls" data-ms-control="">
         <Control label={words.source} onClick={() => reveal(view, 4)}>
           {ICONS.source}
@@ -586,7 +643,9 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
           {front.entries
             .filter((entry) => entry.key !== 'name')
             .map((entry) => {
-              const read = properties.entries.find((each) => each.key === entry.key) ?? { key: entry.key, shape: 'empty', values: [] };
+              const found = properties.entries.find((each) => each.key === entry.key) ?? { key: entry.key, shape: 'empty', values: [] };
+              // A list with no items is empty to the page, which draws nothing; to the form it is still a list.
+              const read = found.shape === 'empty' && entry.form !== 'scalar' ? { ...found, shape: 'list' } : found;
               const type = read.shape === 'list' ? 'list' : read.shape === 'date' ? 'date' : read.shape === 'boolean' ? 'checkbox' : 'text';
               return (
                 <div key={entry.key} className="metadata-property edit-property" data-property-type={type}>
@@ -622,6 +681,19 @@ export function PropertiesBlock({ view, to }: { view: EditorView; to: number }) 
               />
             </span>
             <span className="metadata-property-value">
+              <select
+                className="edit-property-type"
+                aria-label={words.propertyType}
+                title={words.propertyType}
+                value={type}
+                data-ms-control=""
+                onChange={(event) => setType(event.target.value as NewPropertyType)}
+              >
+                <option value="text">{words.typeText}</option>
+                <option value="list">{words.typeList}</option>
+                <option value="boolean">{words.typeBoolean}</option>
+                <option value="date">{words.typeDate}</option>
+              </select>
               <Control label={words.addProperty} onClick={add}>
                 {ICONS.add}
               </Control>

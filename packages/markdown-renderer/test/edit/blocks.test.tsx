@@ -4,7 +4,7 @@
  */
 
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NoteEditor } from '../../src/edit/index.js';
 import { mount, type Mounted } from '../render.js';
 
@@ -77,6 +77,64 @@ describe('the properties form', () => {
     expect(changes.at(-1)).toBe(note.replace('true', 'false'));
     await choose('published', 'yes');
     expect(changes.at(-1)).toBe(note.replace('true', 'false').replace('No', 'Yes'));
+  });
+
+  it('makes a new property of the type chosen, its value field taking the focus (#70)', async () => {
+    const add = async (key: string, type: string) => {
+      const name = $<HTMLInputElement>('.edit-property-new input')!;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      await act(async () => {
+        setter.call(name, key);
+        name.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const select = $<HTMLSelectElement>('select[aria-label="Type of the new property"]')!;
+      await act(async () => {
+        select.value = type;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await act(async () => $<HTMLButtonElement>('.edit-property-new button[aria-label="Add a property"]')!.click());
+      await settle();
+    };
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 15, 12));
+    const changes = await open(NOTE);
+    expect([...$<HTMLSelectElement>('select[aria-label="Type of the new property"]')!.options].map((option) => option.textContent)).toEqual(['Text', 'List', 'Yes or no', 'Date']);
+
+    await add('aliases', 'list');
+    expect(changes.at(-1)).toBe(NOTE.replace('status: draft\n', 'status: draft\naliases: []\n'));
+    // An empty list is still a list to the form: the field of its first item, with the focus.
+    const first = $<HTMLInputElement>('input[aria-label="Add: aliases"]')!;
+    expect(document.activeElement).toBe(first);
+    const typeItem = async (value: string) => {
+      const field = $<HTMLInputElement>('input[aria-label="Add: aliases"]')!;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      await act(async () => {
+        setter.call(field, value);
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await act(async () => field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+      await settle();
+    };
+    // Items typed one after the other with Enter: the field keeps the focus for the next.
+    await typeItem('First');
+    expect(changes.at(-1)).toContain('aliases: [First]\n');
+    expect(document.activeElement).toBe($('input[aria-label="Add: aliases"]'));
+    await typeItem('Second');
+    expect(changes.at(-1)).toContain('aliases: [First, Second]\n');
+    expect(document.activeElement).toBe($('input[aria-label="Add: aliases"]'));
+
+    await add('done', 'boolean');
+    expect(changes.at(-1)).toContain('done: false\n');
+    expect(document.activeElement).toBe($('select[aria-label="Value: done"]'));
+
+    await add('due', 'date');
+    expect(changes.at(-1)).toContain('due: 2026-10-15\n');
+    expect(document.activeElement).toBe($('input[aria-label="Value: due"]'));
+
+    await add('note', 'text');
+    expect(changes.at(-1)).toContain('note:\n---');
+    expect(document.activeElement).toBe($('input[aria-label="Value: note"]'));
+    vi.useRealTimers();
   });
 
   it('gives a note with no frontmatter one, at its top', async () => {

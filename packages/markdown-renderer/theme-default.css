@@ -1290,7 +1290,8 @@
   gap: 0.35rem;
 }
 .markdown .edit-toolbar select,
-.markdown .edit-block-controls select {
+.markdown .edit-block-controls select,
+.markdown .edit-property-type {
   height: 1.9rem;
   padding: 0 0.3rem;
   border: 1px solid var(--ms-border);
@@ -1571,9 +1572,11 @@
   height: 1.5rem;
   opacity: 0;
 }
+/* A property's controls show on hover or focus; the row that adds one shows
+   its button always, at the specificity of the rule that hides the others. */
 .markdown .edit-property:hover .edit-control,
 .markdown .edit-property:focus-within .edit-control,
-.markdown .edit-property-new .edit-control {
+.markdown .edit-property-new .metadata-property-value .edit-control {
   opacity: 1;
 }
 .markdown .edit-list {
