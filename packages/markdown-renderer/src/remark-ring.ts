@@ -65,9 +65,16 @@ export function remarkHighlight() {
  */
 const BLOCK_ID = /[ \t]*\^([A-Za-z0-9-]+)[ \t]*$/;
 
+/**
+ * The nodes a block ends in. The last text of a link, an emphasis or any other
+ * inline is not the end of a block: `[[Note#^id]]` keeps its `^id` on the label.
+ */
+const BLOCKS = new Set(['paragraph', 'heading', 'tableCell']);
+
 export function remarkBlockIds() {
   return (tree: MdastNode): void =>
     walk(tree, (parent) => {
+      if (!BLOCKS.has(parent.type)) return;
       const children = parent.children ?? [];
       const last = children[children.length - 1];
       if (!last || !isText(last) || !last.value?.includes('^')) return;

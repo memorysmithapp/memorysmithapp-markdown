@@ -178,6 +178,21 @@ describe('a block identifier', () => {
     const out = html('- um item ^item-1');
     expect(out).toContain('<li>um item</li>');
   });
+
+  it('is taken off the end of a heading and of a table cell', () => {
+    expect(html('## Artigo 75 ^artigo-75')).toContain('>Artigo 75</h2>');
+    expect(html('| a |\n| - |\n| célula ^c-1 |')).toContain('<td>célula</td>');
+  });
+
+  it('leaves the label of a link to a block as it was typed (#39)', () => {
+    const note = 'Veja [[Índice de Polifenóis Totais#^faixa-de-guarda]].';
+    const out = html(note);
+    expect(out).toContain('>Índice de Polifenóis Totais#^faixa-de-guarda</span>');
+    // At the end of its paragraph, too, where the link's text is the last text of the block.
+    expect(html('Veja [[Índice#^faixa]]')).toContain('>Índice#^faixa</span>');
+    expect(html('Veja [[Índice#^faixa]]', { resolve: () => '/notes/indice' })).toMatch(/<a [^>]*>Índice#\^faixa<\/a>/);
+    expect(html('Veja **a regra ^nao-e-id**')).toContain('<strong>a regra ^nao-e-id</strong>');
+  });
 });
 
 describe('mathematics', () => {
