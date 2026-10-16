@@ -14,7 +14,7 @@ import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { HOST_KEYS, HostProvider, resolveHost, type NoteHost, type ResolvedHost } from '../host.js';
+import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
 import {
@@ -152,11 +152,37 @@ function insertBlockCommand(name: keyof typeof BLOCKS): Command {
   };
 }
 
-/** Where the files the author attached stand: none in flight, some being kept, or the last one failed. */
-type Attaching = 'idle' | 'busy' | 'failed';
+/**
+ * Where the files the author attached stand: none in flight, some being kept, or the last one
+ * failed; with the host's latest step while busy, or its refusal once failed (#88).
+ */
+interface Attaching {
+  readonly state: 'idle' | 'busy' | 'failed';
+  readonly message: string | null;
+  /** How much of the file in flight is kept, from 0 to 1, when the host said. */
+  readonly fraction: number | null;
+  /** The files waiting behind the one in flight. */
+  readonly queued: number;
+}
 
-/** How long the attach button says a file was not attached, in milliseconds. */
+const NOT_ATTACHING: Attaching = { state: 'idle', message: null, fraction: null, queued: 0 };
+
+/** How long the attach button says a file was not attached, when the host did not say why, in milliseconds. */
 const ATTACH_FAILED_MS = 3000;
+
+/** A host's fraction, kept between 0 and 1, or none when it gave no number. */
+function fractionOf(report: AttachProgress | undefined): number | null {
+  const fraction = report?.fraction;
+  return typeof fraction === 'number' && Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : null;
+}
+
+/** What the paperclip says: its word, the host's step and the files waiting, or why the last one failed. */
+function attachSays(attaching: Attaching, words: ResolvedHost['strings']['editor']): string {
+  if (attaching.state === 'failed') return attaching.message ?? words.attachFailed;
+  if (attaching.state === 'idle') return words.attach;
+  const step = attaching.message ?? words.attaching;
+  return attaching.queued > 0 ? `${step} (${words.attachQueued(attaching.queued)})` : step;
+}
 
 /** The toolbar of the editor: the marks, the blocks and the history, each a command. */
 function Toolbar({
@@ -245,20 +271,37 @@ function Toolbar({
           {button('wikilink', command(insertWikilink), 'Mod-Shift-K')}
           {button('footnote', command(insertFootnote))}
           {button('comment', command(toggleComment), 'Mod-/')}
-          <button
-            ref={attachButton}
-            type="button"
-            className="edit-control"
-            title={attaching === 'busy' ? words.attaching : attaching === 'failed' ? words.attachFailed : words.attach}
-            aria-label={words.attach}
-            aria-busy={attaching === 'busy' ? true : undefined}
-            data-attach={attaching}
-            disabled={disabled}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={onAttach}
-          >
-            {attaching === 'busy' ? ICONS.saving : attaching === 'failed' ? ICONS.notSaved : ICONS.attach}
-          </button>
+          <span className="edit-attach-control">
+            <button
+              ref={attachButton}
+              type="button"
+              className="edit-control"
+              title={attachSays(attaching, words)}
+              aria-label={words.attach}
+              aria-busy={attaching.state === 'busy' ? true : undefined}
+              data-attach={attaching.state}
+              disabled={disabled}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onAttach}
+            >
+              {attaching.state === 'busy' ? ICONS.saving : attaching.state === 'failed' ? ICONS.notSaved : ICONS.attach}
+            </button>
+            {/* The host's fraction, drawn under the paperclip as a bar that fills (#88). */}
+            {attaching.state === 'busy' && attaching.fraction !== null && (
+              <span
+                className="edit-attach-progress"
+                role="progressbar"
+                aria-label={words.attach}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(attaching.fraction * 100)}
+                style={{ ['--edit-attach-fraction' as string]: attaching.fraction }}
+              />
+            )}
+            <span className="visually-hidden" role="status" aria-live="polite">
+              {attaching.state === 'idle' ? '' : attachSays(attaching, words)}
+            </span>
+          </span>
         </span>
         <span className="edit-toolbar-group">
           {button('bulletList', command((state) => toggleList(state, 'bullet')), 'Mod-Shift-8')}
@@ -370,11 +413,16 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const [blocked, setBlocked] = useState(false);
   const [refusals, setRefusals] = useState(0);
   const editorView = useRef<EditorView | null>(null);
-  const [attaching, setAttaching] = useState<Attaching>('idle');
+  const [attaching, setAttaching] = useState<Attaching>(NOT_ATTACHING);
+  // Each run of attaching, so that a run a later one replaced says nothing more.
+  const attachRun = useRef(0);
+  // The refusal the paperclip said, shown again at the top of the dialog it opens (#88).
+  const [refusal, setRefusal] = useState<string | null>(null);
   /**
    * Hands each file to the host's `attach`, one after the other, and embeds it as `![[name]]` on a
    * line of its own where the cursor is once the host answered its name; a file the host could not
-   * keep writes nothing, and the button says so for a moment (#75).
+   * keep writes nothing, and the button says so for a moment (#75) — or, when the host said why,
+   * until the author opens it again. The host's steps are shown as they come (#88).
    */
   const attachFiles = useRef<(files: readonly ChosenFile[], at?: number) => void>(() => undefined);
   attachFiles.current = (files, at) => {
@@ -382,18 +430,30 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     const target = editorView.current;
     if (!attach || !target || target.state.readOnly || files.length === 0) return;
     if (at !== undefined) target.dispatch({ selection: { anchor: at } });
-    setAttaching('busy');
+    const run = ++attachRun.current;
+    const live = () => run === attachRun.current && editorView.current !== null;
     void (async () => {
       let failed = false;
-      for (const { file, name: wanted, description } of files) {
+      let reason: string | null = null;
+      for (const [index, { file, name: wanted, description }] of files.entries()) {
+        const queued = files.length - 1 - index;
+        let settled = false;
+        setAttaching({ state: 'busy', message: null, fraction: null, queued });
+        // A step the host reports after the file settled, or for a run since replaced, says nothing.
+        const progress = (report: AttachProgress) => {
+          if (settled || !live()) return;
+          setAttaching({ state: 'busy', message: typeof report?.message === 'string' && report.message ? report.message : null, fraction: fractionOf(report), queued });
+        };
         try {
-          const name = await attach(file, { name: wanted, description });
+          const name = await attach(file, { name: wanted, description }, progress);
           insertLine(`![[${name}]]`);
-        } catch {
+        } catch (rejection) {
           failed = true;
+          if (isAttachRefusal(rejection)) reason = rejection.message;
         }
+        settled = true;
       }
-      if (editorView.current) setAttaching(failed ? 'failed' : 'idle');
+      if (live()) setAttaching(failed ? { ...NOT_ATTACHING, state: 'failed', message: reason } : NOT_ATTACHING);
     })();
   };
   /** A line of its own at the cursor: an embed, or an image of the web (#78). */
@@ -485,8 +545,9 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   /** A pasted or dropped file, kept under its own name and with no description. */
   const asChosen = (files: readonly File[]): ChosenFile[] => files.map((file) => ({ file, name: file.name, description: '' }));
   useEffect(() => {
-    if (attaching !== 'failed') return;
-    const timer = setTimeout(() => setAttaching('idle'), ATTACH_FAILED_MS);
+    // A failure the host explained stays until the author acts; a bare one is said for a moment.
+    if (attaching.state !== 'failed' || attaching.message !== null) return;
+    const timer = setTimeout(() => setAttaching(NOT_ATTACHING), ATTACH_FAILED_MS);
     return () => clearTimeout(timer);
   }, [attaching]);
   // The note as edit mode opened it, as the editor holds its text: lines joined by `\n`.
@@ -665,7 +726,14 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             view={view}
             host={resolved}
             opened={opened.current}
-            onAttach={() => setAttachOpen(true)}
+            onAttach={() => {
+              // Opening the paperclip is the author acting on a refusal: the dialog says it once more.
+              if (attaching.state === 'failed') {
+                setRefusal(attaching.message);
+                setAttaching(NOT_ATTACHING);
+              } else setRefusal(null);
+              setAttachOpen(true);
+            }}
             attaching={attaching}
             attachButton={attachButton}
             end={
@@ -697,6 +765,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         )}
         {attachOpen && (
           <AttachDialog
+            refusal={refusal}
             onClose={() => setAttachOpen(false)}
             onClosed={(inserted) => !inserted && attachButton.current?.focus()}
             onAttach={(files) => attachFiles.current(files)}

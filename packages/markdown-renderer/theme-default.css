@@ -1325,6 +1325,14 @@
 .markdown .edit-control[data-attach='failed'] {
   color: rgb(var(--ms-callout-stop));
 }
+.markdown .edit-attach-progress {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--ms-accent) calc(var(--edit-attach-fraction, 0) * 100%), var(--ms-border) 0);
+}
+.markdown .edit-attach-refusal {
+  padding: 0.6rem 1rem 0;
+}
 @media (prefers-reduced-motion: reduce) {
   .markdown .edit-control[data-attach='busy'] > svg {
     animation: none;

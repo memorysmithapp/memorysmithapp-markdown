@@ -2,7 +2,8 @@
  * Attaching in edit mode (#75, #78): the paperclip opens a dialog with three ways in — a file from
  * the computer, kept by the host's `attach` under the name and with the description the author
  * gives; a file the notebook keeps, listed by the host's `files`; an image at a web address — and a
- * file pasted or dropped is attached directly, under its own name.
+ * file pasted or dropped is attached directly, under its own name. The host's steps and its refusal
+ * show on the paperclip (#88).
  */
 
 import { EditorView } from '@codemirror/view';
@@ -153,7 +154,96 @@ describe('the attach dialog (#78)', () => {
     Object.defineProperty(paste, 'clipboardData', { value: { files: [file('screen.png')], getData: () => '' } });
     await act(async () => view.contentDOM.dispatchEvent(paste));
     await settle();
-    expect(attach).toHaveBeenCalledWith(expect.any(File), { name: 'screen.png', description: '' });
+    expect(attach).toHaveBeenCalledWith(expect.any(File), { name: 'screen.png', description: '' }, expect.any(Function));
     expect(changes.at(-1)).toBe('Text.\n\n![[pasted.png]]\n');
+  });
+});
+
+describe("the host's steps and refusals on the paperclip (#88)", () => {
+  /** A keep the test drives: its progress, and its end. */
+  function driven() {
+    const calls: { progress: (report: { message: string; fraction?: number }) => void; resolve: (name: string) => void; reject: (reason: unknown) => void }[] = [];
+    const attach = (_file: File, _attributes: unknown, progress: (report: { message: string; fraction?: number }) => void) =>
+      new Promise<string>((resolve, reject) => calls.push({ progress, resolve, reject }));
+    return { calls, attach };
+  }
+  const announced = () => $<HTMLElement>('.edit-attach-control [role="status"]')!.textContent;
+  const bar = () => $<HTMLElement>('.edit-attach-progress');
+
+  it('shows each step the host reports, announced, and its fraction as a determinate bar', async () => {
+    const changes: string[] = [];
+    const { calls, attach } = driven();
+    await open({ attach }, changes);
+    await openDialog();
+    await choose([file('big.pdf', 'application/pdf'), file('b.png')]);
+    await submit();
+    expect(paperclip().dataset['attach']).toBe('busy');
+    expect(paperclip().title).toBe('Attaching… (1 more file waiting)');
+    expect(bar()).toBeNull();
+
+    await act(async () => calls[0]!.progress({ message: 'Hashing the file…' }));
+    expect(paperclip().title).toBe('Hashing the file… (1 more file waiting)');
+    expect(announced()).toBe('Hashing the file… (1 more file waiting)');
+    expect(bar()).toBeNull();
+
+    await act(async () => calls[0]!.progress({ message: 'Sending part 12 of 40', fraction: 0.3 }));
+    expect(paperclip().title).toBe('Sending part 12 of 40 (1 more file waiting)');
+    expect(bar()!.getAttribute('role')).toBe('progressbar');
+    expect(bar()!.getAttribute('aria-valuenow')).toBe('30');
+
+    await act(async () => calls[0]!.resolve('big.pdf'));
+    await settle();
+    // A step reported after its file settled says nothing.
+    await act(async () => calls[0]!.progress({ message: 'late', fraction: 1 }));
+    expect(paperclip().title).toBe('Attaching…');
+    await act(async () => calls[1]!.progress({ message: 'Sending', fraction: 2 }));
+    expect(bar()!.getAttribute('aria-valuenow')).toBe('100');
+    await act(async () => calls[1]!.resolve('b.png'));
+    await settle();
+    expect(paperclip().dataset['attach']).toBe('idle');
+    expect(bar()).toBeNull();
+    expect(announced()).toBe('');
+    expect(changes.at(-1)).toBe('Text.\n\n![[big.pdf]]\n\n![[b.png]]\n');
+  });
+
+  it("says the host's refusal until the author opens the paperclip, which says it once more", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const changes: string[] = [];
+      await open({ attach: () => Promise.reject({ message: 'An attached file goes up to 100 MB' }) }, changes);
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { files: [file('huge.mov', 'video/quicktime')], getData: () => '' } });
+      await act(async () => $<HTMLElement>('.cm-content')!.dispatchEvent(paste));
+      await settle();
+      expect(paperclip().dataset['attach']).toBe('failed');
+      expect(paperclip().title).toBe('An attached file goes up to 100 MB');
+      expect(announced()).toBe('An attached file goes up to 100 MB');
+      // It does not go away by itself, as a bare failure does.
+      await act(async () => vi.advanceTimersByTime(10_000));
+      expect(paperclip().title).toBe('An attached file goes up to 100 MB');
+
+      await openDialog();
+      expect($('.edit-attach .edit-attach-refusal')!.textContent).toBe('An attached file goes up to 100 MB');
+      expect(paperclip().dataset['attach']).toBe('idle');
+      expect(changes).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps its own words for a host that rejects with an error, for a moment, as before', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await open({ attach: () => Promise.reject(new Error('quota')) }, []);
+      await openDialog();
+      await choose([file('a.png')]);
+      await submit();
+      expect(paperclip().title).toBe('The file was not attached');
+      await act(async () => vi.advanceTimersByTime(3_500));
+      expect(paperclip().dataset['attach']).toBe('idle');
+      expect(paperclip().title).toBe('Attach a file');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

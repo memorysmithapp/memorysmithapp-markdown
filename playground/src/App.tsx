@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -59,7 +59,8 @@ interface View {
  * after the delay — `slow` always resolves, `fail` always rejects, `random` rejects about one save
  * in three — and write only when it resolves. Two more say why, for an edit (#86): `alert` saves and
  * resolves with an outcome the author decides, `refuse` rejects with a refusal and its choices; a
- * tick is saved as `slow` in both.
+ * tick is saved as `slow` in both. A file attached with any of them reports its parts as it is
+ * sent, and `refuse` refuses it with a reason (#88).
  */
 type SaveMode = 'instant' | 'slow' | 'fail' | 'random' | 'alert' | 'refuse';
 const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random', 'alert', 'refuse'];
@@ -76,6 +77,9 @@ const NOTICE_WORDS = {
     discard: 'Discard my edit and reload',
     saveAnyway: 'Save anyway',
     theirs: 'A line somebody else wrote.',
+    reading: 'Reading the file…',
+    sending: (part: number, parts: number) => `Sending part ${part} of ${parts}`,
+    refusedFile: 'The playground refuses this file on purpose',
   },
   pt: {
     alertTitle: 'Salvo, com uma pergunta',
@@ -87,6 +91,9 @@ const NOTICE_WORDS = {
     discard: 'Descartar minha edição e recarregar',
     saveAnyway: 'Salvar mesmo assim',
     theirs: 'Uma linha que outra pessoa escreveu.',
+    reading: 'Lendo o arquivo…',
+    sending: (part: number, parts: number) => `Enviando a parte ${part} de ${parts}`,
+    refusedFile: 'O playground recusa este arquivo de propósito',
   },
 } as const;
 
@@ -221,20 +228,31 @@ export function App() {
       // Everything the notebook keeps, for the attach dialog to list (#78).
       files: () => Object.values(storedNow.current[slug] ?? {}),
       // Kept under the name the author gave, with a number when the notebook already keeps one so named.
-      attach: async (file, attributes) => {
+      attach: async (file, attributes, progress) => {
         const wanted = (attributes.name.trim() || file.name).normalize('NFC');
         const dot = wanted.lastIndexOf('.');
         const [stem, extension] = dot > 0 ? [wanted.slice(0, dot), wanted.slice(dot)] : [wanted, ''];
         const taken = (name: string) => storedNow.current[slug]?.[name] !== undefined;
         let name = wanted;
         for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`.normalize('NFC');
+        // A simulated save sends the file in parts over the delay, saying each one, as a host keeping it in parts does (#88).
+        if (view.save !== 'instant') {
+          const words = NOTICE_WORDS[view.lang];
+          progress({ message: words.reading });
+          const parts = Math.min(8, Math.max(2, Math.ceil(file.size / 65536)));
+          for (let part = 1; part <= parts; part++) {
+            await new Promise((done) => setTimeout(done, view.delay / parts));
+            progress({ message: words.sending(part, parts), fraction: part / parts });
+          }
+          if (view.save === 'refuse') throw { message: words.refusedFile } satisfies AttachRefusal;
+        }
         const url = await readAsDataUrl(file);
         const kept: StoredFile = { name, mimeType: file.type || 'application/octet-stream', bytes: file.size, url, description: attributes.description };
         await save(() => setAttached((all) => ({ ...all, [slug]: { ...all[slug], [name]: kept } })));
         return name;
       },
     };
-  }, [view.notebook, stored, view.save, view.delay]);
+  }, [view.notebook, stored, view.save, view.delay, view.lang]);
 
   const body = (
     <article className="pane">

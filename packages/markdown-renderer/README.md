@@ -84,7 +84,7 @@ A note the host makes `editable` carries a button at its top right that switches
   editable                                        // the switch, at the top right
   onChange={(next) => save(next)}                 // after every change; return the save's promise
   suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
-  attach={(file, { name, description }) => keepInNotebook(file, name, description)} // the name it is kept under
+  attach={(file, { name, description }, progress) => keepInNotebook(file, name, description, progress)} // the name it is kept under
   files={() => filesOfTheNotebook()}              // what the attach dialog lists: { name, mimeType, bytes, url, description }
   modeButton="icon"                               // or "label", the icon and its word
 />
@@ -105,6 +105,8 @@ onChange={async (next) => {
   ] } satisfies SaveOutcome;
 }}
 ```
+
+While `attach` keeps a file, call `progress({ message, fraction })` with each step in your words — *Sending part 12 of 40*, and `0.3` — and the paperclip shows it, a bar filling when you give the fraction. Reject with `{ message }` (an `AttachRefusal`, not an `Error`) to tell the author why the file was refused; the paperclip says it until they open it again. An `Error` keeps the paperclip's own *The file was not attached*.
 
 Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
 
