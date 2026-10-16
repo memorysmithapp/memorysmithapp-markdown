@@ -125,6 +125,16 @@ describe('the stylesheet', () => {
     expect(css).not.toMatch(/markdown-editing[^{]*\{[^}]*container-type/);
   });
 
+  it('keeps the corner of a note that is read in view while it scrolls, and in the bar in edit mode (#97)', () => {
+    const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const corner = /(?:^|\})\s*\.markdown \.note-corner \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(corner).toContain('float: right;');
+    expect(corner).toContain('position: sticky;');
+    expect(corner).toContain('top: 0;');
+    const inBar = /\.markdown \.edit-corner \.note-corner \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(inBar).toContain('position: relative;');
+  });
+
   it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
     const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';

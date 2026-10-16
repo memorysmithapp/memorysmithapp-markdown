@@ -12,11 +12,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- The buttons at the top right of a note that is read — *Show Markdown*, *Copy Markdown* and the switch — stay at the top of what is in view while the note is scrolled, as the toolbar does in edit mode, so a reader far down a long note no longer scrolls back to the top to edit or copy it. The text still flows around the place they take at the top of the note (#97).
 - The `display` a theme's `modeSwitch` slot receives may also be `responsive` (#96).
 
 ### Deprecated
 
 - `modeButton`, which governed the switch alone: `buttons` governs it with the buttons beside it. `modeButton` is still read when `buttons` is left out (#96).
+
+### Fixed
+
+- The playground keeps the window's width on a phone: a block of code wider than the note scrolls inside it rather than widening the page (#97).
 
 ## [0.6.0] - 2026-10-16
 

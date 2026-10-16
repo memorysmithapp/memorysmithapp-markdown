@@ -97,10 +97,14 @@
    and the text of a title flows around it. In edit mode it stays there, at
    the end of a bar that holds the toolbar to its left and the save's status
    under it, and the bar stays at the top of the note while it scrolls. */
-/* The group at the top right: Show Markdown, Copy Markdown and the switch (#76). */
+/* The group at the top right: Show Markdown, Copy Markdown and the switch (#76).
+   It stays at the top of what is in view while the note is read and scrolled,
+   as the bar does in edit mode, and the text flows around the place it takes
+   at the top of the note (#97). */
 .markdown .note-corner {
   float: right;
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 2;
   display: inline-flex;
   align-items: stretch;
@@ -170,6 +174,7 @@
 }
 .markdown .edit-corner .note-corner {
   float: none;
+  position: relative;
 }
 /* On a phone the corner keeps the top right, and the tools take the whole
    width under it rather than a narrow column beside it. */
