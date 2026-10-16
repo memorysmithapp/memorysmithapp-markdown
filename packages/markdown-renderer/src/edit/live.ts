@@ -15,8 +15,10 @@ import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
 import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
+import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
+import { DEFAULT_METRICS, estimateHeight, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
 import { AddProperties, CalloutBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
@@ -45,6 +47,42 @@ export const analysisField = StateField.define<Analysis>({
 export const setFocused = StateEffect.define<boolean>();
 /** A grammar a code block names has arrived: its tokens can be coloured now (#84). */
 export const grammarArrived = StateEffect.define<string>();
+
+/** The editor's metrics changed: the blocks made from now on estimate their height by them (#91). */
+const setBlockMetrics = StateEffect.define<BlockMetrics>();
+
+/** The metrics of the editor's text column, which a drawn block estimates its height by (#91). */
+const metricsField = StateField.define<BlockMetrics>({
+  create: () => DEFAULT_METRICS,
+  update: (metrics, transaction) => {
+    for (const effect of transaction.effects) if (effect.is(setBlockMetrics)) return effect.value;
+    return metrics;
+  },
+});
+
+/** Reads the editor's metrics again whenever its geometry changes, and keeps them when they moved. */
+const metricsWatcher = ViewPlugin.define((view) => {
+  let destroyed = false;
+  const check = () =>
+    view.requestMeasure({
+      read: () => withinReason({ width: view.contentDOM.clientWidth, lineHeight: view.defaultLineHeight, charWidth: view.defaultCharacterWidth }),
+      write: (next) => {
+        const now = view.state.field(metricsField);
+        const moved = Math.abs(next.width - now.width) >= 1 || Math.abs(next.lineHeight - now.lineHeight) >= 0.5 || Math.abs(next.charWidth - now.charWidth) >= 0.05;
+        // Not inside the measure, where CodeMirror takes no transaction.
+        if (moved) queueMicrotask(() => destroyed || view.dispatch({ effects: setBlockMetrics.of(next) }));
+      },
+    });
+  check();
+  return {
+    update: (update: ViewUpdate) => {
+      if (update.geometryChanged) check();
+    },
+    destroy: () => {
+      destroyed = true;
+    },
+  };
+});
 
 /** Whether the editor has the focus: a construct is shown as source only to an author who is in it. */
 const focusField = StateField.define<boolean>({
@@ -87,7 +125,7 @@ class BlockBoundary extends Component<{ host: ResolvedHost; source: string; chil
 /** The React roots the widgets mounted, unmounted when CodeMirror lets the widget go. */
 const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null }>();
 
-function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string): void {
+function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string, measured: (height: number) => void): void {
   const { host } = view.state.facet(editorEnvironment);
   const root = createRoot(element);
   // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
@@ -95,7 +133,13 @@ function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: 
   root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, node)));
   // A block whose content arrives later — an embed, a diagram — changes its height after it is
   // measured; the editor is told so, or the lines below it would be placed by the old height.
-  const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => view.requestMeasure());
+  const observer =
+    typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(() => {
+          measured(element.getBoundingClientRect().height);
+          view.requestMeasure();
+        });
   observer?.observe(element);
   roots.set(element, { unmount: () => root.unmount(), observer });
 }
@@ -109,19 +153,37 @@ function unmount(element: HTMLElement): void {
   queueMicrotask(() => mounted.unmount());
 }
 
+/** What a drawn block is besides how it is drawn. */
+interface BlockOptions {
+  /** A block drawn within a line, whose height is the line's. */
+  readonly inline?: boolean;
+  /** The lines it stands for, shown as written when drawing it fails (#90), and what it estimates by. */
+  readonly source?: string;
+  /** What it draws, for its estimate (#91); a block of no kind estimates two lines. */
+  readonly kind?: BlockKind;
+  /** The editor's metrics when it was made. */
+  readonly metrics?: BlockMetrics;
+}
+
 /** A block drawn with React in place of lines of the note. */
 class BlockWidget extends WidgetType {
+  readonly inline: boolean;
+  readonly source: string;
   constructor(
     readonly key: string,
     readonly host: ResolvedHost,
     readonly draw: (view: EditorView) => ReactNode,
     /** Whether a click on it shows its source; a block with controls of its own handles its clicks. */
     readonly revealsOnClick: boolean,
-    readonly inline = false,
-    /** The lines it stands for, shown as written when drawing it fails (#90). */
-    readonly source = '',
+    readonly options: BlockOptions = {},
   ) {
     super();
+    this.inline = options.inline ?? false;
+    this.source = options.source ?? '';
+  }
+  /** What it is remembered by once measured: what it draws, wherever in the note it stands. */
+  private get identity(): string {
+    return `${this.options.kind ?? 'block'}\u0000${this.source}`;
   }
   override eq(other: BlockWidget): boolean {
     return other.key === this.key && other.host === this.host;
@@ -129,7 +191,7 @@ class BlockWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
     element.className = this.inline ? 'cm-ms-inline-block' : 'cm-ms-block';
-    mount(view, element, this.draw(view), this.source);
+    mount(view, element, this.draw(view), this.source, (height) => rememberHeight(this.identity, view.state.field(metricsField), height));
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('[data-ms-control]')) return;
@@ -152,8 +214,15 @@ class BlockWidget extends WidgetType {
   override ignoreEvent(): boolean {
     return true;
   }
+  /**
+   * The height CodeMirror lays the block out at until it is drawn, which it reads once, when the
+   * block is made: the height it was drawn at before at this width, or its estimate (#91).
+   */
   override get estimatedHeight(): number {
-    return this.inline ? -1 : 48;
+    if (this.inline) return -1;
+    const metrics = this.options.metrics ?? DEFAULT_METRICS;
+    const kind = this.options.kind;
+    return measuredHeight(this.identity, metrics) ?? (kind ? estimateHeight(kind, this.source, metrics) : 2 * metrics.lineHeight);
   }
 }
 
@@ -214,6 +283,11 @@ class TaskWidget extends WidgetType {
   }
 }
 
+/** What a rule and a formula's row are drawn at by the default theme, before they are measured (#91). */
+const RULE_HEIGHT = 33;
+const MATH_ROW = 32;
+const MATH_MARGINS = 32;
+
 class RuleWidget extends WidgetType {
   override eq(): boolean {
     return true;
@@ -223,6 +297,9 @@ class RuleWidget extends WidgetType {
     wrap.className = 'cm-ms-rule';
     wrap.appendChild(document.createElement('hr'));
     return wrap;
+  }
+  override get estimatedHeight(): number {
+    return RULE_HEIGHT;
   }
 }
 
@@ -243,20 +320,31 @@ class MathWidget extends WidgetType {
     katex.render(this.tex, element, { throwOnError: false, displayMode: this.display, strict: 'ignore' });
     return element;
   }
+  /** A formula's rows, each a line of KaTeX's display, within its margins (#91). */
+  override get estimatedHeight(): number {
+    return this.display ? MATH_MARGINS + MATH_ROW * this.tex.split('\\\\').length : -1;
+  }
   override ignoreEvent(): boolean {
     return false;
   }
 }
 
+/** What an image declares no height for is drawn at before it loads, near enough (#91). */
+const UNDECLARED_IMAGE_HEIGHT = 200;
+
 class ImageWidget extends WidgetType {
+  readonly match: RegExpExecArray | null;
+  readonly alt: ImageAlt;
   constructor(readonly source: string) {
     super();
+    this.match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
+    this.alt = readImageAlt(this.match?.[1] ?? '');
   }
   override eq(other: ImageWidget): boolean {
     return other.source === this.source;
   }
   toDOM(): HTMLElement {
-    const match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(this.source);
+    const match = this.match;
     const address = match ? followable(match[2] ?? '') : '';
     if (!match || !address) {
       const text = document.createElement('span');
@@ -267,8 +355,17 @@ class ImageWidget extends WidgetType {
     const image = document.createElement('img');
     image.className = 'cm-ms-image';
     image.src = address;
-    image.alt = (match[1] ?? '').split('|')[0] ?? '';
+    // Its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14).
+    image.alt = this.alt.description;
+    if (this.alt.width !== null) image.width = this.alt.width;
+    if (this.alt.height !== null) image.height = this.alt.height;
     return image;
+  }
+  /** The line it stands in is as tall as the image: the height it declares, or a guess (#91). */
+  override get estimatedHeight(): number {
+    if (!this.match) return -1;
+    if (this.alt.height !== null) return this.alt.height;
+    return this.alt.width !== null ? Math.round(this.alt.width * 0.75) : UNDECLARED_IMAGE_HEIGHT;
   }
   override ignoreEvent(): boolean {
     return false;
@@ -288,6 +385,7 @@ const BLOCK_KINDS = new Set<Construct['kind']>(['frontmatter', 'callout', 'table
 function build(state: EditorState): DecorationSet {
   const { constructs, bodyFrom } = state.field(analysisField);
   const { host } = state.facet(editorEnvironment);
+  const metrics = state.field(metricsField);
   const focused = state.field(focusField);
   const doc = state.doc;
   const text = textOf(state);
@@ -311,18 +409,19 @@ function build(state: EditorState): DecorationSet {
     const lines = linesOf(from, to);
     for (let at = doc.lineAt(lines.from).number; at <= doc.lineAt(lines.to).number; at++) out.push(line(className).range(doc.line(at).from));
   };
-  const block = (from: number, to: number, key: string, draw: (view: EditorView) => ReactNode, revealsOnClick = true) => {
+  const block = (from: number, to: number, kind: BlockKind, key: string, draw: (view: EditorView) => ReactNode, revealsOnClick = true) => {
     const lines = linesOf(from, to);
-    out.push(Decoration.replace({ widget: new BlockWidget(key, host, draw, revealsOnClick, false, text.slice(lines.from, lines.to)), block: true }).range(lines.from, lines.to));
+    const source = text.slice(lines.from, lines.to);
+    out.push(Decoration.replace({ widget: new BlockWidget(key, host, draw, revealsOnClick, { source, kind, metrics }), block: true }).range(lines.from, lines.to));
     covered.push(lines);
   };
   const after = (to: number, key: string, draw: (view: EditorView) => ReactNode, source: string) => {
     const lines = linesOf(to, to);
-    out.push(Decoration.widget({ widget: new BlockWidget(key, host, draw, false, false, source), block: true, side: 1 }).range(lines.to));
+    out.push(Decoration.widget({ widget: new BlockWidget(key, host, draw, false, { source, kind: 'preview', metrics }), block: true, side: 1 }).range(lines.to));
   };
 
   if (bodyFrom === 0) {
-    out.push(Decoration.widget({ widget: new BlockWidget('add-properties', host, (view) => createElement(AddProperties, { view }), false), block: true, side: -1 }).range(0));
+    out.push(Decoration.widget({ widget: new BlockWidget('add-properties', host, (view) => createElement(AddProperties, { view }), false, { kind: 'add-properties', metrics }), block: true, side: -1 }).range(0));
   }
 
   // Blocks first: what a drawn block covers is not decorated again.
@@ -335,20 +434,20 @@ function build(state: EditorState): DecorationSet {
     switch (construct.kind) {
       case 'frontmatter':
         if (open) eachLine(from, to, 'cm-ms-yaml');
-        else block(from, to, `front:${source}`, (view) => createElement(PropertiesBlock, { view, to }), false);
+        else block(from, to, 'frontmatter', `front:${source}`, (view) => createElement(PropertiesBlock, { view, to }), false);
         break;
       case 'callout':
         if (!alone(from, to)) break;
         if (open) eachLine(from, to, `cm-ms-callout-source`);
         else {
           const marker = { ...construct.marker, type: construct.type, fold: construct.fold };
-          block(from, to, `callout:${from}:${source}`, (view) => createElement(CalloutBlock, { view, text: source, marker }));
+          block(from, to, 'callout', `callout:${from}:${source}`, (view) => createElement(CalloutBlock, { view, text: source, marker }));
         }
         break;
       case 'table':
         if (!alone(from, to)) break;
         if (open) eachLine(from, to, 'cm-ms-table-source');
-        else block(from, to, `table:${from}:${source}`, (view) => createElement(TableBlock, { view, from, to }), false);
+        else block(from, to, 'table', `table:${from}:${source}`, (view) => createElement(TableBlock, { view, from, to }), false);
         break;
       case 'mathBlock':
         if (!alone(from, to)) break;
@@ -363,7 +462,7 @@ function build(state: EditorState): DecorationSet {
         break;
       case 'embed':
         if (open) out.push(mark('cm-ms-wikilink').range(from, to));
-        else block(from, to, `embed:${source}`, () => createElement(Snippet, { text: source }));
+        else block(from, to, 'embed', `embed:${source}`, () => createElement(Snippet, { text: source }));
         break;
       case 'rule':
         if (!alone(from, to)) break;
@@ -376,7 +475,7 @@ function build(state: EditorState): DecorationSet {
       case 'code': {
         const diagram = construct.language === 'mermaid' && construct.open !== null;
         if (diagram && !open && alone(from, to)) {
-          block(from, to, `diagram:${source}`, () => createElement(Snippet, { text: source }));
+          block(from, to, 'diagram', `diagram:${source}`, () => createElement(Snippet, { text: source }));
           break;
         }
         codeLines(construct, out, doc, text);
@@ -386,7 +485,7 @@ function build(state: EditorState): DecorationSet {
           const language = construct.language;
           out.push(
             Decoration.widget({
-              widget: new BlockWidget(`language:${fence}:${language ?? ''}`, host, (view) => createElement(LanguageControl, { view, from: fence, language }), false, true),
+              widget: new BlockWidget(`language:${fence}:${language ?? ''}`, host, (view) => createElement(LanguageControl, { view, from: fence, language }), false, { inline: true }),
               side: 1,
             }).range(construct.open.to),
           );
@@ -445,7 +544,7 @@ function build(state: EditorState): DecorationSet {
         if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
           const source = text.slice(from, to);
           out.push(
-            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, true, source) }).range(from, to),
+            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, { inline: true, source }) }).range(from, to),
           );
           break;
         }
@@ -671,10 +770,16 @@ const grammarLoader = ViewPlugin.fromClass(
   },
 );
 
-/** The live page: the analysis, the decorations over it, and what the focus and a modifier-click do. */
-export function livePage(): Extension {
+/**
+ * The live page: the analysis, the decorations over it, and what the focus and a modifier-click do.
+ * `metrics` are the editor's text column measured before the editor is made, which the first drawn
+ * blocks estimate their height by; without them they assume `DEFAULT_METRICS` until it is measured.
+ */
+export function livePage(metrics?: BlockMetrics): Extension {
   return [
     analysisField,
+    metricsField.init(() => metrics ?? DEFAULT_METRICS),
+    metricsWatcher,
     focusField,
     decorationsField,
     EditorView.focusChangeEffect.of((_state, focusing) => setFocused.of(focusing)),
