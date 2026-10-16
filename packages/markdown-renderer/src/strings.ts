@@ -188,6 +188,8 @@ export interface EditorWords {
   readonly retry: string;
   /** Said when the author asked to go back to reading and the last change is not saved. */
   readonly stayInEdit: string;
+  /** Said while a refused save waits for the author's choice before the note is written in again (#101). */
+  readonly chooseToEdit: string;
 }
 
 /** The callout titles of MemorySmith, in English. */
@@ -377,6 +379,7 @@ export const ENGLISH: NoteStrings = {
     saving: 'Saving…',
     retry: 'Try again',
     stayInEdit: 'Not saved: the note stays in edit',
+    chooseToEdit: 'Choose what to do with it to keep writing',
   },
   loading: 'Loading…',
   failed: 'Something went wrong.',

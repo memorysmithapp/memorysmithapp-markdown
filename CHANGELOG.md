@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - A click on a drawn callout in edit mode puts the caret where the author clicked, in the line of its source that draws the text clicked, rather than at the end of its title line, where the next key was typed. The same holds for a diagram or an embed whose drawing shows text its source writes; elsewhere the caret goes to the end of the block's first line, as before (#102).
+- A save the host refuses with choices — another person wrote the note — opens its dialog by itself, rather than turning the status into a small icon the author had to notice and click. Until the author chooses, the note is held: the caret still moves, a key that would write opens the dialog again, and the status says so in `strings.editor.chooseToEdit`, so changes no longer pile up behind saves that are all refused. An alert with choices opens by itself too, and never holds the note (#101).
 
 ## [0.7.0] - 2026-10-16
 

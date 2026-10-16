@@ -382,14 +382,15 @@ describe('what the host says of a save (#86)', () => {
         }}
       />,
     );
-    await type(await editor(), 'x');
+    const view = await editor();
+    await type(view, 'x');
     await settle();
     expect(status().dataset['save']).toBe('failed');
     expect($('.edit-save-retry')).toBeNull();
-    expect(noticeButton()!.getAttribute('aria-label')).toBe('Somebody else wrote this note');
+    expect(noticeButton()!.getAttribute('aria-label')).toBe('Somebody else wrote this note. Choose what to do with it to keep writing');
 
-    // Closing without choosing keeps the state, and the button opens it again.
-    await act(async () => noticeButton()!.click());
+    // It opens by itself, without a click (#101), and closing it without choosing keeps the state.
+    expect(dialog()!.textContent).toContain('Somebody else wrote this note');
     await act(async () => void dialog()!.dispatchEvent(new Event('cancel', { cancelable: true })));
     expect(dialog()).toBeNull();
     expect(status().dataset['save']).toBe('failed');
@@ -399,12 +400,18 @@ describe('what the host says of a save (#86)', () => {
     expect(dialog()).toBeNull();
     expect(document.activeElement).toBe(noticeButton());
 
-    await act(async () => noticeButton()!.click());
+    // Until the author chooses, the note is not written in: a key asks again, and nothing is handed.
+    expect(view.state.readOnly).toBe(true);
+    await act(async () => void view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', bubbles: true, cancelable: true })));
+    expect(dialog()).not.toBeNull();
     await act(async () => action('Save anyway').click());
     await settle();
     expect(status().dataset['save']).toBe('failed');
     expect(noticeButton()!.title).toBe('Still refused');
     expect(handed).toEqual([`${NOTE}x`]);
+    // A refusal with no choice left holds nothing.
+    expect(view.state.readOnly).toBe(false);
+    expect(dialog()).toBeNull();
   });
 
   it('blocks going back to reading in Error, and lets it happen in Alert', async () => {
