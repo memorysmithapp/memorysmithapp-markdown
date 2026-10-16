@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
 ### Changed
 
 - The switch between reading and editing is drawn as its icon alone by default, named by its word, like *Show Markdown* and *Copy Markdown* beside it, so the three buttons of a note's corner follow one rule. A host that wants the word beside the icon passes `modeButton="label"`; one that passed `modeButton="icon"` sees no difference. The playground draws the icon alone and `?button=label` the word (#92).
@@ -147,7 +149,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.1...v0.3.2
