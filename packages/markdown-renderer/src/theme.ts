@@ -331,7 +331,10 @@ export interface ModeSwitchSlotProps {
 export interface AttachmentSlotProps {
   /** The name it is kept under, as the embed wrote it. */
   readonly name: string;
-  /** What the host said of it, its addresses already through the package's filter. */
+  /**
+   * What the host said of it, its addresses already through the package's filter, and its
+   * description the one a Markdown image that names it wrote, when it wrote one (#104).
+   */
   readonly file: KeptFile;
   /** The shape its media type is drawn in: `image`, `audio`, `video` or `card`. */
   readonly shape: FileShape;
@@ -346,6 +349,8 @@ export interface AttachmentSlotProps {
   readonly height: number | null;
   /** The width it declared as a share of the page, from 1 to 100, which it is drawn at most, or `null` (#108). */
   readonly percent: number | null;
+  /** The title a Markdown image that names it wrote after its destination, or `null` (#104). */
+  readonly title: string | null;
 }
 
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */

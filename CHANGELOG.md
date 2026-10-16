@@ -9,11 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - An image's width may be a share of the page, `|50%`, from `1%` to `100%`, in a Markdown image, `![Curva|50%](…)`, and in the embed of a kept file, `![[curva.png|50%]]` (`SPEC.md` §3.14 and §5.8). It is a share of the width the note is read at — the column, the cell or the callout it stands in — with the height following the image's ratio, and a maximum: an image narrower than it keeps its own width, so it is never enlarged and blurred. A height in percent, a mixed pair (`50%x180`), `0%`, `150%` and fractions are not dimensions and stay part of the description, and after a note's name the pipe is still the alias. The renderer draws it as a `max-width` in reading and in edit mode, `renderAttachment` and the `attachment` slot receive it as `percent`, and `readDimensions` and `readImageAlt` answer it; `writeDimensions` and the type `Dimensions` are exported. Two conformance cases hold it (#108).
+- `AttachmentRequest`, what `renderAttachment` receives, carries the `description` and the `title` a Markdown image that names the file wrote, and the `attachment` slot its `title` (#104).
 
 ### Changed
 
+- An image whose destination names no host — `![Curva|300](../assets/curva-2026.png)`, the form a vault exported from a desktop editor writes — is the file the notebook keeps under the last segment of its path, as `SPEC.md` §5.8 now states without contradicting itself: its query and fragment dropped, percent-decoded, `/` and `\` separating, case-exact, and a file only, never a note. It is drawn as `![[curva-2026.png]]` is, in reading and in edit mode — an image at the dimensions after its pipe, with its description as the `alt`, the file's own when it wrote none, and its title kept; a player; or a card with its description as the text — and a name nothing is kept under shows its description marked pending, and is never asked of a path under the page, where it drew nothing but a 404. `diagnose` reports it as `embed-pending`. Thirteen conformance cases hold the rule, and the example of `image-dimensions` in `spec.json` is a remote image, since `engelbart.jpg` now names a kept file (#104).
 - `readDimensions` answers `width: null` and `percent` for a share of the page, so its `width` is `number | null`; every answer and `readImageAlt`'s carry `percent` (#108).
-
 - The menu of a right-click in edit mode opens with Cut, Copy and Paste, as every other context menu a person knows does, before *Format* and *Insert*, which keep their order. The focus lands on the first entry that runs: Cut with a selection, Paste without one (#110).
 
 ## [0.7.1] - 2026-10-16

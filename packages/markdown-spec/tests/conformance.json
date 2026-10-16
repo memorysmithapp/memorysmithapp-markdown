@@ -988,6 +988,215 @@
       ]
     },
     {
+      "id": "image/a-name-reaches-a-kept-file",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![Curva|300x180](curva-2026.png)",
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/a-path-plays-no-part",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![Curva|300](../assets/curva-2026.png)",
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/a-path-with-a-backslash",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![](assets\\curva-2026.png)",
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/percent-encoded-name",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![](assets/diagram%20final.png)",
+      "resolution": [
+        {
+          "target": "diagram final.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/angle-brackets-keep-the-space",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![](<assets/diagram final.png>)",
+      "resolution": [
+        {
+          "target": "diagram final.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/query-and-fragment-are-dropped",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![](curva-2026.png?v=2#top)",
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/the-title-is-not-the-target",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![Curva](curva-2026.png \"Safra 2026\")",
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/case-exact",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n![](Curva-2026.png)\n",
+      "notices": [
+        { "code": "embed-pending", "line": 8 }
+      ],
+      "resolution": [
+        {
+          "target": "Curva-2026.png",
+          "kind": "pending",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/a-note-name-is-not-drawn",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![](Nota)",
+      "resolution": [
+        {
+          "target": "Nota",
+          "kind": "pending",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/a-kept-file-that-is-not-an-image",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![A ata](ata.pdf)",
+      "resolution": [
+        {
+          "target": "ata.pdf",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/missing-is-pending-not-an-error",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n![Falta|200](nao-existe.png)\n",
+      "notices": [
+        { "code": "embed-pending", "line": 8 }
+      ],
+      "resolution": [
+        {
+          "target": "nao-existe.png",
+          "kind": "pending",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "image/a-remote-image-names-no-file",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![Remota|300](https://example.org/curva-2026.png)",
+      "resolution": []
+    },
+    {
+      "id": "image/never-an-edge",
+      "notation": "attachment",
+      "notebook": {
+        "attachments": ["curva-2026.png", "diagram final.png", "ata.pdf"],
+        "notes": ["---\nname: Nota\n---\n"]
+      },
+      "markdown": "![Curva|300x180](curva-2026.png)",
+      "links": [],
+      "resolution": [
+        {
+          "target": "curva-2026.png",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
       "id": "resolution/the-markdown-form-reaches-the-same-note",
       "notation": "markdown-relative-link",
       "notebook": {

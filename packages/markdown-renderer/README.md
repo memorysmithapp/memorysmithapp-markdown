@@ -18,7 +18,7 @@ import 'katex/dist/katex.min.css';
 <NoteBody
   markdown={note}                                  // the note as you keep it, frontmatter included
   resolve={(name) => addressOfTheOneNoteNamed(name)} // or null: the link is pending
-  keeps={(name) => notebookKeepsAFile(name)}       // only an embed reaches a file
+  keeps={(name) => notebookKeepsAFile(name)}       // reached by an embed, and by an image with no host: ![](../assets/x.png)
   fileOf={(name) => describe(name)}               // { mimeType, bytes, url, description }: drawn by its type, as MemorySmith does
   renderLink={({ href, className, children }) => <a href={href} className={className} onClick={follow(href)}>{children}</a>} // follow: your router's navigate, captured where it is
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches

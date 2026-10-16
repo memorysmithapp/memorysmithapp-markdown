@@ -322,7 +322,7 @@ A value after the pipe that is none of these is **not a dimension** — it stays
 
 A `!` in front of a **wikilink** is a different thing entirely: `![[target]]` is the embed of §5.7, and there the dimensions go inside the brackets — `![[engelbart.jpg|100x145]]`, `![[engelbart.jpg|50%]]`. The same pipe means the alias of §5.1 when the target is a note, and that crossing is §5.8.
 
-Where an image that is not remote is found is §5.8. A destination naming a host makes this image a request to that host when the note is opened, and what a Reader may and may not do about that is §7.10.
+An image whose destination has no scheme and does not begin with `//` names a file the notebook keeps, by the last segment of its path: `![Curva|300](../assets/curva-2026.png)` is the kept file `curva-2026.png`, drawn at 300 pixels, and §5.8 says how it is found and what is drawn when nothing is kept under that name. A destination naming a host makes this image a request to that host when the note is opened, and what a Reader may and may not do about that is §7.10.
 
 ### 3.15 Autolinks
 
@@ -498,11 +498,22 @@ An **attachment** is a file of the notebook that is not a note: an image, a PDF,
 
 The comparison is the one §5.3 states for the name of a note — normalised to NFC, case-exact, folded in no other way — and the tolerances of §5.2 apply the same way they do to a note: `![alt](../assets/diagram%20final.png)` addresses the attachment named `diagram final.png`, because a path plays no part in identity here either.
 
+**An image whose destination names no host is a reference to a kept file.** It is the form a vault exported from a desktop editor writes, `![](../assets/x.png)` or `![](attachments/x.png)`, and it is read by these rules:
+
+1. **What it is.** A destination with no scheme (§5.2, step 1) that does not begin with `//` names a kept file. `https:`, `http:` and `data:` destinations do not: they are the remote image of §3.14 and §7.10, or an address a Reader refuses.
+2. **Its name** is the last segment of the path, after any `?query` and `#fragment` are dropped, percent-decoded as step 5 of §5.2 says — an escape that is not one is left as written — and normalised to NFC. `/` and `\` both separate segments. `../assets/curva-2026.png`, `/curva-2026.png`, `assets\curva-2026.png` and `curva-2026.png` all name `curva-2026.png`; `<assets/diagram final.png>` and `assets/diagram%20final.png` name `diagram final.png`. No extension is removed: an attachment's extension is part of its name.
+3. **It is compared** as §5.3 says, NFC and case-exact: `Curva-2026.png` does not reach `curva-2026.png`.
+4. **It reaches kept files only.** A note of that name is not drawn by `![…](…)`, which is not a transclusion, so the reference is pending.
+5. **Its description** is the text before the pipe, and the pipe carries the dimensions of §3.14. An empty description takes the kept file's own description, as `![[file]]` does, so the image never has an empty alt text. A title after the destination, `![Curva](curva-2026.png "Safra 2026")`, is the image's title and never changes the target.
+6. **A kept file that is not an image** is drawn as `![[file]]` draws it — a player, or a card to open or download — with the description as its text.
+7. **A name the notebook keeps nothing under is pending.** The description is drawn as text marked pending, never as a broken image, and nothing is requested from a path under the page; it is reported as an embed no file answers is (§7.13, `embed-pending`).
+8. **It is never an edge**, as no attachment reference is.
+
 **What the attachment is, and how it is shown, is its own property and not its name.** An implementation that stores attachments knows the media type of each one, and that is what decides whether it is drawn and how. A name ending in `.png` over a document is a name ending in `.png`.
 
 A note and an attachment are both addressed by a name, and the two are keys of the same shape for the same reason: an address that survives the file being moved, and that two implementations cannot read differently.
 
-**Only an embed names an attachment.** A `[[target]]` is resolved by §5.2 and by nothing else — the names of the notes, then their aliases, then nothing — and an attachment appears in none of its steps: a link whose target only a file carries is a **pending link**, reported as §5.5 asks, and it is not an error. The two forms differ here and nowhere else: what they produce for the graph is the same, which is nothing.
+**Only an embed — `![[…]]` — or an image whose destination names no host — `![…](…)` — names an attachment. A link, `[[…]]` or `[…](…)`, never does.** A `[[target]]` is resolved by §5.2 and by nothing else — the names of the notes, then their aliases, then nothing — and an attachment appears in none of its steps: a link whose target only a file carries is a **pending link**, reported as §5.5 asks, and it is not an error. The two forms differ here and nowhere else: what they produce for the graph is the same, which is nothing.
 
 **An attachment reference is never an edge.** The graph is between notes (§5.1). An embed of an attachment renders, it is deduplicated like anything else, and it appears in no graph and generates no backlink. A name that matches nothing in the notebook is reported the way a pending link is (§5.5), and MUST NOT be an error.
 
@@ -836,7 +847,7 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `raw-html` | notice | §7.9 | Raw HTML is drawn as text, tags and all |
 | `strikethrough-single-tilde` | notice | §4.3 | One tilde on each side strikes nothing, and the tildes stay on the page |
 | `link-pending` | hint | §7.4 | A wikilink no note answers is drawn as pending |
-| `embed-pending` | hint | §7.3 | An embed no note and no kept file answers is drawn as a pending link, not as content |
+| `embed-pending` | hint | §7.3 | An embed no note and no kept file answers is drawn as a pending link, not as content; so is an image whose destination names no host and no kept file answers (§5.8), whose description is drawn as pending text |
 
 The two pending codes need the notebook: an implementation reports them only when it knows which notes and files exist, and a pending link is a note still to write, which is why it is a hint. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body.
 
@@ -928,7 +939,7 @@ Every form this document declares, in one table. The last column is the section 
 | Reference link | `[text][label]` | An edge when the target is internal | 3.13, 5.2 |
 | Image | `![alt](image.png)` | A remote destination is a request when the note opens | 3.14, 7.10 |
 | Image dimensions | `![alt\|100x145](image.png)`, `![alt\|50%](image.png)` | Sizes the image, in pixels or as a share of the page at most; not part of the description | 3.14 |
-| Attachment | `![[diagram.png]]` | Resolved by name; never an edge | 5.8 |
+| Attachment | `![[diagram.png]]`, `![alt](../assets/diagram.png)` | Resolved by name, a path's last segment for an image; never an edge | 5.8 |
 | Autolink | `<https://example.org>` | Never an edge | 3.15, 5.2 |
 | Raw inline HTML | `<abbr>…</abbr>` | Kept in the bytes, shown as text | 3.16, 7.10 |
 | Hard line break | trailing `\` | — | 3.17 |

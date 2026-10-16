@@ -226,6 +226,14 @@ export interface AttachmentRequest {
    * drawn at most, or `null` (#108). `width` and `height` are then `null`.
    */
   readonly percent: number | null;
+  /**
+   * What a Markdown image that names the file wrote before its pipe, `![description](name)`
+   * (`SPEC.md` §5.8, #104): an image's `alt`, a card's text. Absent for an embed, and empty when
+   * the image wrote none, when the file's own description is the one to draw.
+   */
+  readonly description?: string;
+  /** The title that image wrote after its destination, `![…](name "title")`, when it wrote one. */
+  readonly title?: string;
 }
 
 /** A link to draw through the host's router. */
