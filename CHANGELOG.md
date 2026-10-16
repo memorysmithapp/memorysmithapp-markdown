@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
 ### Added
 
 - `NoteBody` takes `buttons`, one option for every button it draws around a note: *Show Markdown*, *Copy Markdown* and the switch at its top right, and *Copy* in the dialog of *Show Markdown*. `icon`, the default, draws each as its icon alone; `label`, its icon and its word; `responsive`, its word beside its icon on a note at least 560px wide and its icon alone on a narrower one, measured on the note and not on the window, so a host draws MemorySmith's rule of a word on a computer and an icon on a phone. A host moves the threshold with `--markdown-button-words-from`, or a theme's `buttonWordsFrom`. Wherever the word is not drawn or may be hidden it is the button's name and title, the dialog's *Copy* included, which also gets the icon of *Copy Markdown*. `NoteEditor` takes `buttons` too, and the type `NoteButtons` is exported. The playground's `?button=responsive` shows it (#96).
@@ -169,7 +171,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
