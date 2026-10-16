@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteButtons, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -49,8 +49,11 @@ interface View {
   readonly delay: number;
   /** Whether the note offers the switch to edit it: every note does, unless `?editable=0` or `?bare=1`. */
   readonly editable: boolean;
-  /** The switch drawn as its icon alone, as by default, or its icon and its word (`?button=label`). */
-  readonly button: 'icon' | 'label';
+  /**
+   * The buttons around the note drawn as their icon alone, as by default, their icon and their word
+   * (`?button=label`), or their word only on a wide note (`?button=responsive`).
+   */
+  readonly button: NoteButtons;
 }
 
 /**
@@ -64,6 +67,9 @@ interface View {
  */
 type SaveMode = 'instant' | 'slow' | 'fail' | 'random' | 'alert' | 'refuse';
 const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random', 'alert', 'refuse'];
+
+/** How the buttons around the note show their word, as `?button=` chooses (#96). */
+const BUTTONS: readonly NoteButtons[] = ['icon', 'label', 'responsive'];
 
 /** The words of the two notices the playground gives, in the reader's language. */
 const NOTICE_WORDS = {
@@ -113,7 +119,7 @@ function readView(): View {
     delay: Math.max(0, Number(query.get('delay') ?? '') || 2000),
     // The note alone is what the comparison screenshots, and MemorySmith's page has no switch.
     editable: query.get('editable') !== '0' && query.get('bare') !== '1',
-    button: query.get('button') === 'label' ? 'label' : 'icon',
+    button: BUTTONS.find((each) => each === query.get('button')) ?? 'icon',
   };
 }
 
@@ -264,7 +270,7 @@ export function App() {
         scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         editable={view.editable}
-        modeButton={view.button}
+        buttons={view.button}
         // The comparison screenshots the note alone, as MemorySmith's own component draws it.
         actions={!view.bare}
         onChange={(next) => saveEdit(key, next)}
@@ -297,7 +303,10 @@ export function App() {
           <a className={!view.editable ? 'current' : undefined} href={withQuery({ editable: view.editable ? '0' : '1' })}>
             {view.editable ? 'hide' : 'show'}
           </a>
-          {(['icon', 'label'] as const).map((button) => (
+        </div>
+        <div className="controls saves">
+          <span>Buttons</span>
+          {BUTTONS.map((button) => (
             <a key={button} className={button === view.button ? 'current' : undefined} href={withQuery({ button })}>
               {button}
             </a>

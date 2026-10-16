@@ -4,9 +4,27 @@
  * note that is only read offers them without loading it.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useHost } from './host.js';
 import { ICON_CHECK, ICON_CLOSE, ICON_COPY, ICON_MARKDOWN } from './mode-icons.js';
+
+/**
+ * How the buttons a note draws around its text show their word (#96): `icon`, the icon alone;
+ * `label`, the icon and the word; `responsive`, the word beside the icon on a note at least
+ * `--markdown-button-words-from` wide and hidden on a narrower one. Wherever the word may be
+ * hidden it is the button's name.
+ */
+export type NoteButtons = 'icon' | 'label' | 'responsive';
+
+/** A button's icon and, unless it is drawn alone, its word, which the stylesheet may hide. */
+export function ButtonFace({ icon, word, display, wordClass }: { icon: ReactNode; word: string; display: NoteButtons; wordClass?: string }) {
+  return (
+    <>
+      {icon}
+      {display !== 'icon' && <span className={wordClass ? `note-button-word ${wordClass}` : 'note-button-word'}>{word}</span>}
+    </>
+  );
+}
 
 /** Puts the text on the clipboard; answers whether it got there. */
 function copyText(text: string): Promise<boolean> {
@@ -23,7 +41,7 @@ function copyText(text: string): Promise<boolean> {
  * closed by Escape, its button or a click outside it, the focus then back on the button that
  * opened it.
  */
-function SourceDialog({ text, onClose, onClosed }: { text: string; onClose: () => void; onClosed: () => void }) {
+function SourceDialog({ text, display, onClose, onClosed }: { text: string; display: NoteButtons; onClose: () => void; onClosed: () => void }) {
   const host = useHost();
   const words = host.strings.editor;
   const dialog = useRef<HTMLDialogElement>(null);
@@ -45,7 +63,7 @@ function SourceDialog({ text, onClose, onClosed }: { text: string; onClose: () =
   return (
     <dialog
       ref={dialog}
-      className="edit-source"
+      className={`edit-source${display === 'responsive' ? ' has-responsive-buttons' : ''}`}
       aria-modal="true"
       aria-labelledby="edit-source-title"
       onCancel={(event) => {
@@ -63,8 +81,15 @@ function SourceDialog({ text, onClose, onClosed }: { text: string; onClose: () =
           <span className="edit-source-copied" role="status">
             {copied === 'copied' ? words.copied : copied === 'failed' ? words.copyFailed : ''}
           </span>
-          <button type="button" className="edit-control edit-control-labelled" onClick={() => void copyText(text).then((done) => setCopied(done ? 'copied' : 'failed'))}>
-            {words.copy}
+          <button
+            type="button"
+            className={`edit-control edit-source-copy${display === 'label' ? ' edit-control-labelled' : ''}`}
+            data-buttons={display}
+            title={words.copy}
+            aria-label={display === 'label' ? undefined : words.copy}
+            onClick={() => void copyText(text).then((done) => setCopied(done ? 'copied' : 'failed'))}
+          >
+            <ButtonFace icon={copied === 'copied' ? ICON_CHECK : ICON_COPY} word={words.copy} display={display} />
           </button>
           <button type="button" className="edit-control edit-source-close" aria-label={host.strings.close} title={host.strings.close} onClick={onClose}>
             {ICON_CLOSE}
@@ -81,8 +106,11 @@ function SourceDialog({ text, onClose, onClosed }: { text: string; onClose: () =
 /** How long Copy Markdown shows its check, in milliseconds. */
 const COPIED_MS = 1600;
 
-/** Show Markdown and Copy Markdown; `text` answers the bytes when a button is used. */
-export function NoteActions({ text }: { text: () => string }) {
+/**
+ * Show Markdown and Copy Markdown; `text` answers the bytes when a button is used, and `display`
+ * how they and the dialog's Copy show their word.
+ */
+export function NoteActions({ text, display = 'icon' }: { text: () => string; display?: NoteButtons }) {
   const words = useHost().strings.editor;
   const show = useRef<HTMLButtonElement>(null);
   const [source, setSource] = useState<string | null>(null);
@@ -98,28 +126,30 @@ export function NoteActions({ text }: { text: () => string }) {
       <button
         ref={show}
         type="button"
-        className="note-action"
+        className={`note-action note-action-${display}`}
+        data-buttons={display}
         title={words.showMarkdown}
-        aria-label={words.showMarkdown}
+        aria-label={display === 'label' ? undefined : words.showMarkdown}
         aria-haspopup="dialog"
         onClick={() => setSource(text())}
       >
-        {ICON_MARKDOWN}
+        <ButtonFace icon={ICON_MARKDOWN} word={words.showMarkdown} display={display} />
       </button>
       <button
         type="button"
-        className="note-action"
+        className={`note-action note-action-${display}`}
+        data-buttons={display}
         data-copied={copied ?? undefined}
         title={copyLabel}
         aria-label={words.copyMarkdown}
         onClick={() => void copyText(text()).then((done) => setCopied(done ? 'copied' : 'failed'))}
       >
-        {copied === 'copied' ? ICON_CHECK : ICON_COPY}
+        <ButtonFace icon={copied === 'copied' ? ICON_CHECK : ICON_COPY} word={words.copyMarkdown} display={display} />
       </button>
       <span className="visually-hidden" role="status">
         {copied === 'copied' ? words.copied : copied === 'failed' ? words.copyFailed : ''}
       </span>
-      {source !== null && <SourceDialog text={source} onClose={() => setSource(null)} onClosed={() => show.current?.focus()} />}
+      {source !== null && <SourceDialog text={source} display={display} onClose={() => setSource(null)} onClosed={() => show.current?.focus()} />}
     </>
   );
 }

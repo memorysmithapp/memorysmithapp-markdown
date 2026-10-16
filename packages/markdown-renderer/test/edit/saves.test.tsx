@@ -156,7 +156,7 @@ describe("the note's Markdown (#63)", () => {
     expect(dialog.getAttribute('aria-labelledby')).toBe('edit-source-title');
     expect($('.edit-source-text')!.textContent).toBe(`${crlf}More.`);
 
-    await act(async () => [...dialog.querySelectorAll('button')].find((each) => each.textContent === 'Copy')!.click());
+    await act(async () => dialog.querySelector<HTMLButtonElement>('button[aria-label="Copy"]')!.click());
     await settle();
     expect(writeText).toHaveBeenCalledWith(`${crlf}More.`);
     expect($('.edit-source-copied')!.textContent).toBe('Copied');

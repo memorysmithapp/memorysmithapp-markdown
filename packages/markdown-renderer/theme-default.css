@@ -1193,8 +1193,15 @@
   cursor: pointer;
 }
 .markdown .mode-switch.mode-switch-icon,
-.markdown .note-action {
+.markdown .note-action.note-action-icon {
   padding: 0.3rem 0.4rem;
+}
+/* A responsive button keeps an icon's padding on a narrow note and takes a
+   word's from --markdown-button-words-from on (#96). */
+.markdown .mode-switch.mode-switch-responsive,
+.markdown .note-action.note-action-responsive {
+  padding-block: 0.3rem;
+  padding-inline: calc(0.4rem + min(calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000), 0.3rem));
 }
 .markdown .note-action {
   color: var(--ms-text-soft);

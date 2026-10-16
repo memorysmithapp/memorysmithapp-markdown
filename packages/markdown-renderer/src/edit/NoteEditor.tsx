@@ -34,7 +34,7 @@ import {
 } from './commands.js';
 import { analysisField, editorEnvironment, livePage } from './live.js';
 import { measureMetrics } from './heights.js';
-import { NoteActions } from '../NoteActions.js';
+import { NoteActions, type NoteButtons } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
 import { chooseLanguageAt } from './LanguageControl.js';
@@ -54,6 +54,11 @@ export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTa
   readonly editable?: boolean;
   /** What sits at the top right of the note, such as the switch back to reading. */
   readonly corner?: ReactNode;
+  /**
+   * How the buttons at the top right show their word, as `NoteBody`'s `buttons` (#96): the bar is
+   * what a `responsive` button measures. Defaults to `icon`.
+   */
+  readonly buttons?: NoteButtons;
   /** Whether the editor takes the focus when it opens. */
   readonly autoFocus?: boolean;
   /**
@@ -390,7 +395,7 @@ function SaveStatus({ saves, blocked, host, onDecided }: { saves: EditSaves; blo
  * Edits a note on the page that draws it. Exported at `@memorysmithapp/markdown-renderer/edit`
  * for a host that edits without the switch of `NoteBody`; `NoteBody` loads it on demand.
  */
-export function NoteEditor({ markdown: given, onChange, editable = true, corner, autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
+export function NoteEditor({ markdown: given, onChange, editable = true, corner, buttons = 'icon', autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
   const resolved = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
@@ -722,7 +727,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         data-theme={resolved.scheme}
         style={rootStyle(resolved.theme, resolved.scheme)}
       >
-        <div ref={bar} className="edit-bar" data-leaving={folding ? '' : undefined}>
+        <div ref={bar} className={`edit-bar${buttons === 'responsive' ? ' has-responsive-buttons' : ''}`} data-leaving={folding ? '' : undefined}>
           <Toolbar
             view={view}
             host={resolved}
@@ -747,7 +752,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
               >
                 <SaveStatus saves={saves} blocked={blocked} host={resolved} onDecided={() => view?.focus()} />
                 {/* Alone, without NoteBody's switch, the editor keeps the note's Markdown at hand itself (#76). */}
-                {corner ?? <NoteActions text={() => (view ? output(view.state) : given)} />}
+                {corner ?? <NoteActions display={buttons} text={() => (view ? output(view.state) : given)} />}
               </div>
             }
           />

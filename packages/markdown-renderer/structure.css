@@ -116,6 +116,30 @@
 .markdown .mode-switch-glyph {
   flex: none;
 }
+/* The buttons around a note show their word as the host asked (#96). A
+   `responsive` one measures what it stands in — the note in reading, the bar
+   in edit mode, the dialog of Show Markdown — as a container, and shows its
+   word only from `--markdown-button-words-from` on. A container query cannot
+   read a custom property, so the threshold is a switch computed from the
+   container's width: 0px on a narrower one and 1px from it on, which the
+   word's width and the space before it are multiplied by. The editor's root
+   is never the container, because a container holds what is fixed, and the
+   menu of a right-click is fixed to the window. */
+.markdown.has-responsive-buttons,
+.markdown .has-responsive-buttons {
+  container-type: inline-size;
+}
+.markdown .note-button-word {
+  white-space: nowrap;
+}
+.markdown [data-buttons='responsive'] {
+  gap: 0;
+}
+.markdown [data-buttons='responsive'] .note-button-word {
+  overflow: hidden;
+  max-width: calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000);
+  margin-inline-start: min(calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000), 0.35em);
+}
 .markdown .edit-bar {
   position: sticky;
   top: 0;
