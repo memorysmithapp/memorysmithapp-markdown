@@ -176,6 +176,9 @@ const NOT_ATTACHING: Attaching = { state: 'idle', message: null, fraction: null,
 /** How long the attach button says a file was not attached, when the host did not say why, in milliseconds. */
 const ATTACH_FAILED_MS = 3000;
 
+/** The keys that write besides a character's own: a note held for the author's choice asks again on them (#101). */
+const WRITING_KEYS = new Set(['Enter', 'Backspace', 'Delete', 'Tab']);
+
 /** A host's fraction, kept between 0 and 1, or none when it gave no number. */
 function fractionOf(report: AttachProgress | undefined): number | null {
   const fraction = report?.fraction;
@@ -334,21 +337,35 @@ function Toolbar({
  * each state, in a slot of one size, so the toolbar never moves as the author types; its word is
  * its title. A failed save's icon is the button that tries again (#66). When the host said why —
  * an alert on a save that succeeded, or the reason for one it refused — the icon is the button that
- * opens what it said, with the host's title as its tooltip, and the author's choices (#86). Whoever
- * hears the page is told the whole of it, why the note stays in edit included.
+ * opens what it said, with the host's title as its tooltip, and the author's choices (#86); a notice
+ * with choices opens by itself as it arrives, and a refusal with choices holds the note until the
+ * author chooses (#101). Whoever hears the page is told the whole of it, why the note stays in edit
+ * included.
  */
-function SaveStatus({ saves, blocked, host, onDecided }: { saves: EditSaves; blocked: boolean; host: ResolvedHost; onDecided: () => void }) {
+function SaveStatus({
+  saves,
+  blocked,
+  deciding,
+  open,
+  setOpen,
+  host,
+  onDecided,
+}: {
+  saves: EditSaves;
+  blocked: boolean;
+  /** Whether the note waits for the author to choose before it is written in again. */
+  deciding: boolean;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  host: ResolvedHost;
+  onDecided: () => void;
+}) {
   const { state, notice } = saves;
   const words = host.strings.editor;
-  const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
-  // A notice the save no longer carries has nothing left to show.
-  useEffect(() => {
-    if (!notice) setOpen(false);
-  }, [notice]);
   const base = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
-  const shown = notice ? notice.title : base;
-  const said = state === 'failed' && blocked ? (notice ? `${words.stayInEdit}. ${notice.title}` : words.stayInEdit) : shown;
+  const shown = notice ? (deciding ? `${notice.title}. ${words.chooseToEdit}` : notice.title) : base;
+  const said = state === 'failed' && blocked ? (notice ? `${words.stayInEdit}. ${shown}` : words.stayInEdit) : shown;
   const icon =
     state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'alert' ? ICONS.alert : state === 'failed' ? ICONS.notSaved : null;
   const retryLabel = `${said}. ${words.retry}`;
@@ -359,8 +376,8 @@ function SaveStatus({ saves, blocked, host, onDecided }: { saves: EditSaves; blo
           ref={button}
           type="button"
           className="edit-save-icon edit-save-notice"
-          title={notice.title}
-          aria-label={notice.title}
+          title={shown}
+          aria-label={shown}
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}
         >
@@ -407,8 +424,18 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   const environment = useRef(new Compartment());
   const access = useRef(new Compartment());
   const saves = useEditSaves(onChange);
-  const latest = useRef({ hand: saves.hand, host: resolved, onLeave });
-  latest.current = { hand: saves.hand, host: resolved, onLeave };
+  /**
+   * A refusal that gives the author choices — another person wrote the note, say — is decided
+   * before the note is written in again: every save after it would be refused too (#101).
+   */
+  const deciding = saves.state === 'failed' && (saves.notice?.actions.length ?? 0) > 0;
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  // A notice with choices opens by itself as it arrives; one the save no longer carries closes.
+  useEffect(() => {
+    setNoticeOpen(!!saves.notice && saves.notice.actions.length > 0);
+  }, [saves.notice]);
+  const latest = useRef({ hand: saves.hand, host: resolved, onLeave, deciding, ask: () => setNoticeOpen(true) });
+  latest.current = { hand: saves.hand, host: resolved, onLeave, deciding, ask: () => setNoticeOpen(true) };
   /**
    * The texts handed to the host that it has not given back yet. A host that saves before it
    * passes the note again gives back a text the editor has since moved past; that echo is not a
@@ -559,7 +586,9 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   // The note as edit mode opened it, as the editor holds its text: lines joined by `\n`.
   const opened = useRef(given.replace(/\r\n?/g, '\n'));
   const lineBreak = lineBreakOf(given);
-  const readOnly = !editable || lineBreak === null;
+  const locked = !editable || lineBreak === null;
+  // Held while the author decides: the caret still moves, and a key that would write asks again.
+  const readOnly = locked || deciding;
   /**
    * The editor splits its text on any line break, so a paste or a block written with `\n` is lines
    * like any other, and writes the note back with the break it was written with: what a host
@@ -576,7 +605,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
       state: EditorState.create({
         doc: given,
         extensions: [
-          access.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
+          access.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!locked)]),
           environment.current.of(editorEnvironment.of({ host: resolved })),
           history(),
           markdown(),
@@ -595,6 +624,14 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             return true;
           }),
           EditorView.domEventHandlers({
+            // A key that would write, while the note waits for the author's choice, shows the choice again (#101).
+            keydown: (event) => {
+              if (!latest.current.deciding || event.ctrlKey || event.metaKey || event.altKey) return false;
+              if (event.key.length !== 1 && !WRITING_KEYS.has(event.key)) return false;
+              event.preventDefault();
+              latest.current.ask();
+              return true;
+            },
             // The editing menu where the pointer is; Shift keeps the browser's, and so do the
             // drawn blocks' own fields, which are the browser's to edit (#81).
             contextmenu: (event, target) => {
@@ -653,8 +690,8 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   }, [view, resolved]);
 
   useEffect(() => {
-    view?.dispatch({ effects: access.current.reconfigure([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]) });
-  }, [view, readOnly]);
+    view?.dispatch({ effects: access.current.reconfigure([EditorState.readOnly.of(readOnly), EditorView.editable.of(!locked)]) });
+  }, [view, readOnly, locked]);
 
   // A note the host changed — a tick saved, another device — is taken in as the change it is.
   useEffect(() => {
@@ -750,7 +787,15 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
                 // A refusal shakes the corner once each time the author asks to leave.
                 key={blocked ? `blocked-${refusals}` : 'corner'}
               >
-                <SaveStatus saves={saves} blocked={blocked} host={resolved} onDecided={() => view?.focus()} />
+                <SaveStatus
+                  saves={saves}
+                  blocked={blocked}
+                  deciding={deciding}
+                  open={noticeOpen}
+                  setOpen={setNoticeOpen}
+                  host={resolved}
+                  onDecided={() => view?.focus()}
+                />
                 {/* Alone, without NoteBody's switch, the editor keeps the note's Markdown at hand itself (#76). */}
                 {corner ?? <NoteActions display={buttons} text={() => (view ? output(view.state) : given)} />}
               </div>

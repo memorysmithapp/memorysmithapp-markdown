@@ -180,6 +180,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     saving: 'Salvando…',
     retry: 'Tentar de novo',
     stayInEdit: 'Não salvo: a nota continua em edição',
+    chooseToEdit: 'Escolha o que fazer para continuar escrevendo',
   },
   updating: 'Atualizando…',
   saved: 'Salvo',
