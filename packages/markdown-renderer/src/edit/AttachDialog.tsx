@@ -29,12 +29,15 @@ export function webImage(name: string, address: string): string {
 }
 
 export function AttachDialog({
+  refusal = null,
   onClose,
   onClosed,
   onAttach,
   onEmbed,
   onLink,
 }: {
+  /** Why the host refused the last file, said at the top of the dialog the author opened after it (#88). */
+  refusal?: string | null;
   onClose: () => void;
   /** Once the dialog is closed: whether something was put in the note, which then has the focus. */
   onClosed: (inserted: boolean) => void;
@@ -92,6 +95,7 @@ export function AttachDialog({
             {ICONS.remove}
           </button>
         </header>
+        {refusal && <p className="edit-attach-error edit-attach-refusal">{refusal}</p>}
         <div className="edit-attach-ways" role="tablist" aria-label={words.attachTitle}>
           {ways.map((each) => (
             <button

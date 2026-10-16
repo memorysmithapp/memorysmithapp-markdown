@@ -1298,6 +1298,9 @@
 .markdown .edit-save[data-save='failed'] {
   color: rgb(var(--ms-callout-stop));
 }
+.markdown .edit-save[data-save='alert'] {
+  color: rgb(var(--ms-callout-warn));
+}
 /* Asked to leave while the last save failed: the corner shakes once. */
 .markdown .edit-corner[data-blocked] {
   animation: markdown-corner-refuse 360ms ease-in-out;
@@ -1322,6 +1325,14 @@
 .markdown .edit-control[data-attach='failed'] {
   color: rgb(var(--ms-callout-stop));
 }
+.markdown .edit-attach-progress {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--ms-accent) calc(var(--edit-attach-fraction, 0) * 100%), var(--ms-border) 0);
+}
+.markdown .edit-attach-refusal {
+  padding: 0.6rem 1rem 0;
+}
 @media (prefers-reduced-motion: reduce) {
   .markdown .edit-control[data-attach='busy'] > svg {
     animation: none;
@@ -1332,7 +1343,8 @@
     transform: rotate(360deg);
   }
 }
-.markdown .edit-save-retry {
+.markdown .edit-save-retry,
+.markdown .edit-save-notice {
   padding: 0;
   border: 0;
   border-radius: calc(var(--ms-radius) - 2px);
@@ -1340,10 +1352,12 @@
   color: inherit;
   cursor: pointer;
 }
-.markdown .edit-save-retry:hover {
+.markdown .edit-save-retry:hover,
+.markdown .edit-save-notice:hover {
   background: var(--ms-code-bg);
 }
-.markdown .edit-save-retry:focus-visible {
+.markdown .edit-save-retry:focus-visible,
+.markdown .edit-save-notice:focus-visible {
   outline: 2px solid var(--ms-accent);
   outline-offset: 2px;
 }
@@ -1636,6 +1650,19 @@
   font-family: var(--ms-font-display);
   font-size: 1rem;
   font-weight: 600;
+}
+/* What the host said of a save: the dialog's own size, whatever the toolbar it opens from. */
+.markdown .edit-notice {
+  font-family: var(--ms-font-sans);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.markdown .edit-notice-message {
+  padding: 1rem 1rem 0;
+}
+.markdown .edit-notice-actions {
+  gap: 0.5rem;
+  padding: 1rem;
 }
 .markdown .edit-source-copied {
   color: var(--ms-text-soft);

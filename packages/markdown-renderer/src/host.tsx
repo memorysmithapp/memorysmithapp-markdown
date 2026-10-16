@@ -72,8 +72,13 @@ export interface NoteHost {
    * has its own name and none), and answers the name it is kept under, which the editor embeds as
    * `![[name]]` (#75, #78). The package never stores a file. Without it, the editor offers no file
    * from the computer.
+   *
+   * While it keeps the file, the host may report each step through `progress`, which the paperclip
+   * shows and announces; a promise rejected with an `AttachRefusal` has the paperclip say why until
+   * the author acts (#88). A host that ignores `progress` and rejects with an error keeps the
+   * paperclip's own words.
    */
-  readonly attach?: (file: File, attributes: AttachAttributes) => string | PromiseLike<string>;
+  readonly attach?: (file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>;
   /**
    * The files the notebook keeps, with their names, which the attach dialog lists for the author to
    * embed one (#78). Without it, the dialog offers no file of the notebook.
@@ -162,6 +167,34 @@ export interface KeptFileEntry extends KeptFile {
   readonly name: string;
 }
 
+/** A step of keeping a file, as the host words it (#88). */
+export interface AttachProgress {
+  /** What is happening, in the reader's language: "Sending part 12 of 40". */
+  readonly message: string;
+  /** How much is done, from 0 to 1, when the host knows it: drawn as a determinate indicator. */
+  readonly fraction?: number;
+}
+
+/**
+ * Why the host would not keep a file, what `attach` rejects with (#88): a plain object, so that an
+ * `Error`, whose message is meant for a developer, keeps the paperclip's own words.
+ */
+export interface AttachRefusal {
+  /** Why, in the reader's language: "An attached file goes up to 100 MB". */
+  readonly message: string;
+}
+
+/** Whether a rejection is a refusal the host worded for the author, and not an error. */
+export function isAttachRefusal(value: unknown): value is AttachRefusal {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !(value instanceof Error) &&
+    typeof (value as AttachRefusal).message === 'string' &&
+    (value as AttachRefusal).message.length > 0
+  );
+}
+
 /** What the author said of a file they attach (#78). */
 export interface AttachAttributes {
   /** The name to keep it under; the host may answer another, when that one is taken. */
@@ -219,7 +252,7 @@ export interface ResolvedHost {
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
-  readonly attach: ((file: File, attributes: AttachAttributes) => string | PromiseLike<string>) | null;
+  readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
   readonly files: (() => readonly KeptFileEntry[] | PromiseLike<readonly KeptFileEntry[]>) | null;
   readonly fileOf: ((name: string) => KeptFile | null | PromiseLike<KeptFile | null>) | null;
   readonly renderAttachment: ((file: AttachmentRequest) => ReactNode) | null;

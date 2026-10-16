@@ -76,7 +76,7 @@ Import `structure.css` instead of `styles.css` for a theme that draws everything
 
 ## Edit
 
-A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar grows out of the switch, which becomes its last control; its first tool undoes every change since editing began, and a right-click on the text opens a menu of the same tools where you are (Shift keeps the browser's); beside the switch, in both modes, Show Markdown opens the note's Markdown, as you have it or would receive it, in a dialog, and Copy Markdown copies it.
+A note the host makes `editable` carries a button at its top right that switches between reading and editing it on the same page. The author edits what they see: marks, headings, lists, tasks, links and the names of notes after `[[`, callouts, tables cell by cell, code, formulas and diagrams with their drawing live, the properties as a form, footnotes and comments. The note is the bytes you gave, and every change comes back whole through `onChange`, unchanged wherever the author did not touch it — the order and quoting of the frontmatter, a list's marker, a table's spacing, a comment, a line break. The package never saves. The toolbar grows out of the switch, which becomes its last control; its first tool undoes every change since editing began, and a right-click on the text opens a menu of the same tools where you are (Shift keeps the browser's); beside the switch, in both modes, Show Markdown opens the note's Markdown, as you have it or would receive it, in a dialog, and Copy Markdown copies it. Those two are reading, so a note that is not `editable` carries them too, without the switch; pass `actions={false}` to hide them, for a print, a preview or an embed.
 
 ```tsx
 <NoteBody
@@ -84,13 +84,31 @@ A note the host makes `editable` carries a button at its top right that switches
   editable                                        // the switch, at the top right
   onChange={(next) => save(next)}                 // after every change; return the save's promise
   suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
-  attach={(file, { name, description }) => keepInNotebook(file, name, description)} // the name it is kept under
+  attach={(file, { name, description }, progress) => keepInNotebook(file, name, description, progress)} // the name it is kept under
   files={() => filesOfTheNotebook()}              // what the attach dialog lists: { name, mimeType, bytes, url, description }
   modeButton="icon"                               // or "label", the icon and its word
 />
 ```
 
-When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
+When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. When there is something to tell the author, resolve the promise with a `SaveOutcome` (the save went through, and they have a choice to make) or reject it with a `SaveRefusal` (it did not, and why): each is a `title`, a `message` and the `actions` to choose from, in your words. The icon then opens a dialog with them; an action's promise is followed like a save, and the author can close the dialog and come back to it:
+
+```tsx
+onChange={async (next) => {
+  const saved = await save(next);
+  if (saved.conflict) throw { title: 'Somebody else wrote this note', message: 'Your edit was not saved.', actions: [
+    { label: 'Discard my edit and reload', run: () => reload() },
+    { label: 'Save anyway', run: () => save(next, { force: true }) },
+  ] } satisfies SaveRefusal;
+  if (saved.renamed) return { title: 'Note renamed', message: `${saved.links} links reached the old name.`, actions: [
+    { label: 'Keep the links broken', run: () => undefined },
+    { label: 'Keep the old name as an alias', run: () => addAlias() },
+  ] } satisfies SaveOutcome;
+}}
+```
+
+While `attach` keeps a file, call `progress({ message, fraction })` with each step in your words — *Sending part 12 of 40*, and `0.3` — and the paperclip shows it, a bar filling when you give the fraction. Reject with `{ message }` (an `AttachRefusal`, not an `Error`) to tell the author why the file was refused; the paperclip says it until they open it again. An `Error` keeps the paperclip's own *The file was not attached*.
+
+Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
 
 `mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
 

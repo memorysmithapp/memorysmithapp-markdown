@@ -6,10 +6,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { NoteBody, type NoteBodyProps } from '../src/index.js';
 
+// What these helpers draw is the note itself: Show and Copy Markdown, at its top right unless a
+// host says otherwise (#87), are left out here and tested where they are the subject.
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 export function html(markdown: string, host: Omit<NoteBodyProps, 'markdown'> = {}): string {
-  return renderToStaticMarkup(<NoteBody markdown={markdown} {...host} />);
+  return renderToStaticMarkup(<NoteBody markdown={markdown} actions={false} {...host} />);
 }
 
 export interface Mounted {
@@ -36,5 +39,5 @@ export async function mount(element: ReactElement): Promise<Mounted> {
 }
 
 export async function draw(markdown: string, host: Omit<NoteBodyProps, 'markdown'> = {}): Promise<Mounted> {
-  return mount(<NoteBody markdown={markdown} {...host} />);
+  return mount(<NoteBody markdown={markdown} actions={false} {...host} />);
 }

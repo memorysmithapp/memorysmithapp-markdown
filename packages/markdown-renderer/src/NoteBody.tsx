@@ -24,7 +24,7 @@ export interface NoteBodyProps extends NoteHost {
   readonly markdown: string;
   /**
    * Whether the note offers the switch to edit it, at its top right (#51). Defaults to `false`:
-   * no switch, and the page is the one a reader always had.
+   * no switch, the note only read, with Show and Copy Markdown as `actions` says.
    */
   readonly editable?: boolean;
   /** The mode, for a host that controls it; left out, the note keeps its own, starting from `defaultMode`. */
@@ -36,11 +36,20 @@ export interface NoteBodyProps extends NoteHost {
   /**
    * The note after each change made in edit mode, byte for byte the original wherever it was not
    * edited. The package never saves it; a host that answers with the promise of its save has the
-   * editor say whether it was saved, and going back to reading wait for it (#64).
+   * editor say whether it was saved, and going back to reading wait for it (#64). The promise may
+   * resolve with a `SaveOutcome`, a save that succeeded with something the author must decide, or
+   * reject with a `SaveRefusal`, the reason it was refused: either opens, from the save's status,
+   * a dialog with the host's words and its actions (#86).
    */
   readonly onChange?: (markdown: string) => unknown;
   /** Whether the switch shows its icon alone or its icon and its word. Defaults to `label`. */
   readonly modeButton?: 'icon' | 'label';
+  /**
+   * Whether the note offers Show Markdown and Copy Markdown at its top right, editable or not:
+   * reading a note's Markdown and copying it are reading (#87). Defaults to `true`; `false` hides
+   * them, for a print, a preview or an embed.
+   */
+  readonly actions?: boolean;
 }
 
 /** Whether a note is read or edited. */
@@ -84,6 +93,7 @@ export function NoteBody({
   onModeChange,
   onChange,
   modeButton = 'label',
+  actions = true,
   ...rest
 }: NoteBodyProps) {
   const [own, setOwn] = useState<NoteMode>(defaultMode);
@@ -92,7 +102,7 @@ export function NoteBody({
   // The last text handed to the host in edit mode, which Show and Copy Markdown give there (#76).
   const handed = useRef<string | null>(null);
   const current: NoteMode = editable ? (mode ?? own) : 'view';
-  if (!editable) return <NoteView {...rest} />;
+  if (!editable && !actions) return <NoteView {...rest} />;
   const go = (next: NoteMode) => {
     if (mode === undefined) setOwn(next);
     onModeChange?.(next);
@@ -115,19 +125,20 @@ export function NoteBody({
   return (
     <HostOnly host={rest}>
       {(resolved) => {
-        // The switch, with Show and Copy Markdown beside it in both modes (#76).
+        // Show and Copy Markdown for whoever reads the note, in both modes (#76, #87), and the
+        // switch only where the note is editable.
         const corner = (
           <HostProvider value={resolved}>
             <div className="note-corner">
-              <NoteActions text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />
-              <ModeSwitch mode={current} display={modeButton} toggle={toggle} />
+              {actions && <NoteActions text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />}
+              {editable && <ModeSwitch mode={current} display={modeButton} toggle={toggle} />}
             </div>
           </HostProvider>
         );
-        if (current === 'view') return <NoteView {...rest} corner={corner} />;
+        if (current === 'view') return <NoteView {...rest} corner={corner} switched={editable} />;
         return (
           // While the editor loads, the note stays on the page as it was.
-          <Suspense fallback={<NoteView {...rest} corner={corner} />}>
+          <Suspense fallback={<NoteView {...rest} corner={corner} switched />}>
             <NoteEditor {...host} onChange={hand} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
           </Suspense>
         );
@@ -146,7 +157,14 @@ function HostOnly({ host, children }: { host: NoteHost; children: (host: Resolve
 }
 
 /** The note drawn for reading: the page MemorySmith's reading page draws. */
-function NoteView({ markdown, writable = false, onToggleTask, corner, ...host }: NoteHost & { markdown: string; corner?: ReactNode }) {
+function NoteView({
+  markdown,
+  writable = false,
+  onToggleTask,
+  corner,
+  switched = false,
+  ...host
+}: NoteHost & { markdown: string; corner?: ReactNode; switched?: boolean }) {
   const resolved = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
@@ -228,7 +246,7 @@ function NoteView({ markdown, writable = false, onToggleTask, corner, ...host }:
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
-        className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-mode-switch' : ''}`}
+        className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-note-corner' : ''}${switched ? ' has-mode-switch' : ''}`}
         data-theme={resolved.scheme}
         style={rootStyle(resolved.theme, resolved.scheme)}
       >

@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type NoteHost } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -57,10 +57,45 @@ interface View {
  * The saves the playground simulates, of a tick (#47) and of an edit (#64): `instant` writes at
  * once and answers nothing, as a host did before; the others answer with a promise that settles
  * after the delay — `slow` always resolves, `fail` always rejects, `random` rejects about one save
- * in three — and write only when it resolves.
+ * in three — and write only when it resolves. Two more say why, for an edit (#86): `alert` saves and
+ * resolves with an outcome the author decides, `refuse` rejects with a refusal and its choices; a
+ * tick is saved as `slow` in both. A file attached with any of them reports its parts as it is
+ * sent, and `refuse` refuses it with a reason (#88).
  */
-type SaveMode = 'instant' | 'slow' | 'fail' | 'random';
-const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random'];
+type SaveMode = 'instant' | 'slow' | 'fail' | 'random' | 'alert' | 'refuse';
+const SAVE_MODES: readonly SaveMode[] = ['instant', 'slow', 'fail', 'random', 'alert', 'refuse'];
+
+/** The words of the two notices the playground gives, in the reader's language. */
+const NOTICE_WORDS = {
+  en: {
+    alertTitle: 'Saved, with a question',
+    alertMessage: 'The playground saved this change and asks you to decide, as a host does after a rename.',
+    accept: 'Accept as it is',
+    saveAgain: 'Save it again',
+    refuseTitle: 'Somebody else wrote this note',
+    refuseMessage: 'Your edit was not saved: the playground pretends another write reached the note first.',
+    discard: 'Discard my edit and reload',
+    saveAnyway: 'Save anyway',
+    theirs: 'A line somebody else wrote.',
+    reading: 'Reading the file…',
+    sending: (part: number, parts: number) => `Sending part ${part} of ${parts}`,
+    refusedFile: 'The playground refuses this file on purpose',
+  },
+  pt: {
+    alertTitle: 'Salvo, com uma pergunta',
+    alertMessage: 'O playground salvou esta alteração e pede que você decida, como um host faz depois de uma renomeação.',
+    accept: 'Aceitar como está',
+    saveAgain: 'Salvar de novo',
+    refuseTitle: 'Outra pessoa escreveu esta nota',
+    refuseMessage: 'Sua edição não foi salva: o playground finge que outra escrita chegou antes à nota.',
+    discard: 'Descartar minha edição e recarregar',
+    saveAnyway: 'Salvar mesmo assim',
+    theirs: 'Uma linha que outra pessoa escreveu.',
+    reading: 'Lendo o arquivo…',
+    sending: (part: number, parts: number) => `Enviando a parte ${part} de ${parts}`,
+    refusedFile: 'O playground recusa este arquivo de propósito',
+  },
+} as const;
 
 function readView(): View {
   const query = new URLSearchParams(window.location.search);
@@ -105,7 +140,11 @@ export function App() {
   /** A save as the address asks for it: `write` runs at once, or when the simulated save lands. */
   const save = (write: () => void): Promise<void> | undefined => {
     if (view.save === 'instant') return void write();
-    return new Promise<void>((resolve, reject) =>
+    return later(write);
+  };
+  /** A save that lands after the delay, or fails on purpose as `fail` and `random` ask. */
+  const later = (write: () => void): Promise<void> =>
+    new Promise<void>((resolve, reject) =>
       setTimeout(() => {
         const fails = view.save === 'fail' || (view.save === 'random' && Math.random() < 1 / 3);
         if (fails) return reject(new Error('The playground failed this save on purpose.'));
@@ -113,6 +152,37 @@ export function App() {
         resolve();
       }, view.delay),
     );
+  /** The save of an edit: as `save`, or one the playground explains, as `alert` and `refuse` ask (#86). */
+  const saveEdit = (key: string, next: string): Promise<void | SaveNotice> | undefined => {
+    const write = () => setEdited((all) => ({ ...all, [key]: next }));
+    const words = NOTICE_WORDS[view.lang];
+    if (view.save === 'alert') {
+      const asked: SaveNotice = {
+        title: words.alertTitle,
+        message: words.alertMessage,
+        actions: [
+          { label: words.accept, run: () => undefined },
+          { label: words.saveAgain, run: () => later(write).then(() => asked) },
+        ],
+      };
+      return later(write).then(() => asked);
+    }
+    if (view.save === 'refuse') {
+      // The other version: the note as the playground has it, with a line somebody else added.
+      const base = edited[key] ?? view.note.markdown;
+      const theirs = `${base}${base.endsWith('\n') ? '' : '\n'}\n${words.theirs}\n`;
+      const refusal: SaveNotice = {
+        title: words.refuseTitle,
+        message: words.refuseMessage,
+        actions: [
+          // The other version reaches the editor as the note the host passes, and replaces the edit.
+          { label: words.discard, run: () => setEdited((all) => ({ ...all, [key]: theirs })) },
+          { label: words.saveAnyway, run: () => later(write) },
+        ],
+      };
+      return new Promise((_, reject) => setTimeout(() => reject(refusal), view.delay));
+    }
+    return save(write);
   };
 
   useEffect(() => {
@@ -158,20 +228,31 @@ export function App() {
       // Everything the notebook keeps, for the attach dialog to list (#78).
       files: () => Object.values(storedNow.current[slug] ?? {}),
       // Kept under the name the author gave, with a number when the notebook already keeps one so named.
-      attach: async (file, attributes) => {
+      attach: async (file, attributes, progress) => {
         const wanted = (attributes.name.trim() || file.name).normalize('NFC');
         const dot = wanted.lastIndexOf('.');
         const [stem, extension] = dot > 0 ? [wanted.slice(0, dot), wanted.slice(dot)] : [wanted, ''];
         const taken = (name: string) => storedNow.current[slug]?.[name] !== undefined;
         let name = wanted;
         for (let count = 1; taken(name); count++) name = `${stem} ${count}${extension}`.normalize('NFC');
+        // A simulated save sends the file in parts over the delay, saying each one, as a host keeping it in parts does (#88).
+        if (view.save !== 'instant') {
+          const words = NOTICE_WORDS[view.lang];
+          progress({ message: words.reading });
+          const parts = Math.min(8, Math.max(2, Math.ceil(file.size / 65536)));
+          for (let part = 1; part <= parts; part++) {
+            await new Promise((done) => setTimeout(done, view.delay / parts));
+            progress({ message: words.sending(part, parts), fraction: part / parts });
+          }
+          if (view.save === 'refuse') throw { message: words.refusedFile } satisfies AttachRefusal;
+        }
         const url = await readAsDataUrl(file);
         const kept: StoredFile = { name, mimeType: file.type || 'application/octet-stream', bytes: file.size, url, description: attributes.description };
         await save(() => setAttached((all) => ({ ...all, [slug]: { ...all[slug], [name]: kept } })));
         return name;
       },
     };
-  }, [view.notebook, stored, view.save, view.delay]);
+  }, [view.notebook, stored, view.save, view.delay, view.lang]);
 
   const body = (
     <article className="pane">
@@ -184,7 +265,9 @@ export function App() {
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         editable={view.editable}
         modeButton={view.button}
-        onChange={(next) => save(() => setEdited((all) => ({ ...all, [key]: next })))}
+        // The comparison screenshots the note alone, as MemorySmith's own component draws it.
+        actions={!view.bare}
+        onChange={(next) => saveEdit(key, next)}
         writable
         onToggleTask={(ordinal) => {
           // Applied to the note as it is when the save lands, as a host applies a tick to its latest bytes.

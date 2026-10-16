@@ -113,6 +113,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     attach: 'Anexar um arquivo',
     attaching: 'Anexando…',
     attachFailed: 'O arquivo não foi anexado',
+    attachQueued: (count) => (count === 1 ? 'mais 1 arquivo esperando' : `mais ${count} arquivos esperando`),
     language: 'Linguagem',
     plainText: 'Texto puro',
     mermaidDiagram: 'Diagrama Mermaid',

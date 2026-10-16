@@ -233,6 +233,17 @@
 /* The attach dialog (#78): its ways in as tabs, a panel that alone scrolls,
    and the files of the notebook as a list of buttons. */
 /* One height for every way in, so the dialog does not jump between them. */
+/* The paperclip and, under it, the bar of the host's fraction (#88). */
+.markdown .edit-attach-control {
+  position: relative;
+  display: inline-flex;
+}
+.markdown .edit-attach-progress {
+  position: absolute;
+  inset-inline: 0.2rem;
+  bottom: 0;
+  pointer-events: none;
+}
 .markdown .edit-attach .edit-source-frame {
   height: min(34rem, calc(100vh - 4rem));
 }
@@ -289,6 +300,19 @@
 }
 .markdown .edit-attach-actions {
   display: flex;
+  justify-content: flex-end;
+}
+/* What the host said of a save (#86): its title, its explanation, and its
+   choices in a row that wraps, as narrow as its words. */
+.markdown .edit-notice {
+  max-width: min(32rem, calc(100vw - 2rem));
+}
+.markdown .edit-notice-message {
+  margin: 0;
+}
+.markdown .edit-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
 }
 @media (max-width: 560px) {
