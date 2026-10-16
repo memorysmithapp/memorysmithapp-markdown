@@ -116,6 +116,15 @@ describe('the stylesheet', () => {
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/(?:^|\})\s*\.markdown \{[^}]*position: (?!relative)/);
   });
 
+  it("hides a responsive button's word below --markdown-button-words-from, in a container that is never the editor (#96)", () => {
+    const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const word = /\.markdown \[data-buttons='responsive'\] \.note-button-word \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(word).toContain('overflow: hidden;');
+    expect(word).toContain('max-width: calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000);');
+    expect(structure).toMatch(/\.markdown\.has-responsive-buttons,\s*\.markdown \.has-responsive-buttons \{\s*container-type: inline-size;/);
+    expect(css).not.toMatch(/markdown-editing[^{]*\{[^}]*container-type/);
+  });
+
   it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
     const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';
