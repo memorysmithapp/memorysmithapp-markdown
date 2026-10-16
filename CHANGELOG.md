@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- A block the editor draws — a callout, a table, an embed, the properties — is no longer left empty when a host function drawn inside it throws, as a `renderLink` returning a router's `<Link>` does outside the router's context: the block shows its Markdown under a notice, `strings.editor.blockFailed`, a click on it opens its source, and the error reaches the console. The documentation of `renderLink`, `renderAttachment` and a theme's slots says that in edit mode they may be drawn outside the host's React tree, and the README's example no longer uses a router's `<Link>` (#90).
 - A note scrolled inside a pane of the host no longer makes the page as tall as itself: the root of a note is positioned in `structure.css`, so the live region that announces a ticked box, laid out of the flow, hangs from the note and not from the page, and the page loses the second scrollbar that scrolled nothing (#93).
 
 ## [0.5.0] - 2026-10-15

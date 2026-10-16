@@ -10,7 +10,7 @@
 import { EditorSelection, Facet, Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import katex from 'katex';
-import { createElement, type ReactNode } from 'react';
+import { Component, createElement, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
@@ -57,15 +57,42 @@ const focusField = StateField.define<boolean>({
 
 // ── Widgets ──────────────────────────────────────────────────────────────────
 
+/**
+ * What a drawn block shows when drawing it threw — a host's `renderLink` that needs the host's own
+ * context, which a block's root, outside the host's tree, does not carry (#90): its lines as written,
+ * under a notice, so a failure never hides a part of the note. A click on it shows its source.
+ */
+class BlockBoundary extends Component<{ host: ResolvedHost; source: string; children?: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+  override componentDidCatch(error: unknown, info: ErrorInfo): void {
+    // React reports a caught error only in development; the host is told in every build.
+    console.error('A block of the note could not be drawn:', error, info.componentStack);
+  }
+  override render(): ReactNode {
+    if (!this.state.failed) return this.props.children;
+    const notice = this.props.host.strings.editor.blockFailed;
+    if (!this.props.source) return createElement('span', { className: 'cm-ms-block-failed', title: notice });
+    return createElement(
+      'div',
+      { className: 'cm-ms-block-failed', role: 'note' },
+      createElement('p', { className: 'cm-ms-block-failed-notice' }, notice),
+      createElement('pre', null, this.props.source),
+    );
+  }
+}
+
 /** The React roots the widgets mounted, unmounted when CodeMirror lets the widget go. */
 const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null }>();
 
-function mount(view: EditorView, element: HTMLElement, node: ReactNode): void {
+function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string): void {
   const { host } = view.state.facet(editorEnvironment);
   const root = createRoot(element);
   // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
   // inside a React commit, where React cannot be asked to render synchronously.
-  root.render(createElement(HostProvider, { value: host }, node));
+  root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, node)));
   // A block whose content arrives later — an embed, a diagram — changes its height after it is
   // measured; the editor is told so, or the lines below it would be placed by the old height.
   const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => view.requestMeasure());
@@ -91,6 +118,8 @@ class BlockWidget extends WidgetType {
     /** Whether a click on it shows its source; a block with controls of its own handles its clicks. */
     readonly revealsOnClick: boolean,
     readonly inline = false,
+    /** The lines it stands for, shown as written when drawing it fails (#90). */
+    readonly source = '',
   ) {
     super();
   }
@@ -100,7 +129,7 @@ class BlockWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
     element.className = this.inline ? 'cm-ms-inline-block' : 'cm-ms-block';
-    mount(view, element, this.draw(view));
+    mount(view, element, this.draw(view), this.source);
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('[data-ms-control]')) return;
@@ -284,12 +313,12 @@ function build(state: EditorState): DecorationSet {
   };
   const block = (from: number, to: number, key: string, draw: (view: EditorView) => ReactNode, revealsOnClick = true) => {
     const lines = linesOf(from, to);
-    out.push(Decoration.replace({ widget: new BlockWidget(key, host, draw, revealsOnClick), block: true }).range(lines.from, lines.to));
+    out.push(Decoration.replace({ widget: new BlockWidget(key, host, draw, revealsOnClick, false, text.slice(lines.from, lines.to)), block: true }).range(lines.from, lines.to));
     covered.push(lines);
   };
-  const after = (to: number, key: string, draw: (view: EditorView) => ReactNode) => {
+  const after = (to: number, key: string, draw: (view: EditorView) => ReactNode, source: string) => {
     const lines = linesOf(to, to);
-    out.push(Decoration.widget({ widget: new BlockWidget(key, host, draw, false), block: true, side: 1 }).range(lines.to));
+    out.push(Decoration.widget({ widget: new BlockWidget(key, host, draw, false, false, source), block: true, side: 1 }).range(lines.to));
   };
 
   if (bodyFrom === 0) {
@@ -325,7 +354,8 @@ function build(state: EditorState): DecorationSet {
         if (!alone(from, to)) break;
         if (open) {
           eachLine(from, to, 'cm-ms-code-line');
-          after(to, `math-preview:${construct.tex}`, () => createElement(Snippet, { text: `$$\n${construct.tex}\n$$` }));
+          const preview = `$$\n${construct.tex}\n$$`;
+          after(to, `math-preview:${construct.tex}`, () => createElement(Snippet, { text: preview }), preview);
         } else {
           out.push(Decoration.replace({ widget: new MathWidget(construct.tex, true), block: true }).range(lines.from, lines.to));
           covered.push(lines);
@@ -361,7 +391,10 @@ function build(state: EditorState): DecorationSet {
             }).range(construct.open.to),
           );
         }
-        if (diagram) after(to, `diagram-preview:${construct.code}`, () => createElement(Snippet, { text: '```mermaid\n' + construct.code + '\n```' }));
+        if (diagram) {
+          const preview = '```mermaid\n' + construct.code + '\n```';
+          after(to, `diagram-preview:${construct.code}`, () => createElement(Snippet, { text: preview }), preview);
+        }
         covered.push(lines);
         break;
       }
@@ -412,7 +445,7 @@ function build(state: EditorState): DecorationSet {
         if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
           const source = text.slice(from, to);
           out.push(
-            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, true) }).range(from, to),
+            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, true, source) }).range(from, to),
           );
           break;
         }

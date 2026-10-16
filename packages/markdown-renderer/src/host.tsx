@@ -93,9 +93,21 @@ export interface NoteHost {
   /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
    * dimensions are the ones the embed declared, in CSS pixels, or `null`.
+   *
+   * In edit mode the node may be drawn outside the host's React tree, in the root of a block the
+   * editor draws, so it must not depend on the host's context; a node that throws there leaves the
+   * block's Markdown in its place (#90).
    */
   readonly renderAttachment?: (file: AttachmentRequest) => ReactNode;
-  /** Draws a link to an internal address, through the host's router. */
+  /**
+   * Draws a link to an internal address, through the host's router.
+   *
+   * In edit mode the node may be drawn outside the host's React tree, in the root of a block the
+   * editor draws — a callout, a table, an embed, the properties — so it must not depend on the host's
+   * context: a router's `<Link>`, which reads its router from context, throws there. Hand it what it
+   * needs (a `navigate` captured where the router is) or draw an anchor whose click the host follows.
+   * A node that throws leaves the block's Markdown in its place (#90).
+   */
   readonly renderLink?: (link: LinkRequest) => ReactNode;
   /** The words the page shows, in the reader's language; each one left out is MemorySmith's English. */
   readonly strings?: NoteStringsInput;

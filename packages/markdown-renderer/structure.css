@@ -404,6 +404,12 @@
 .markdown .cm-ms-math-block {
   display: flow-root;
 }
+/* A block that could not be drawn shows its lines as they were written (#90). */
+.markdown .cm-ms-block-failed pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 /* A table's cell is where a click edits it: it fills its column and keeps a
    size of its own when it is empty, as every cell of a new table is, or it
    would be nothing wide and nothing could be clicked (#68). */

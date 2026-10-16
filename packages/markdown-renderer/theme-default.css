@@ -1913,6 +1913,20 @@
 .markdown .cm-ms-block:hover {
   box-shadow: 0 0 0 1px var(--ms-border);
 }
+.markdown .cm-ms-block-failed {
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--ms-border);
+  border-radius: var(--ms-radius);
+}
+.markdown .cm-ms-block-failed-notice {
+  margin: 0 0 0.35rem;
+  color: var(--ms-text-soft);
+  font-size: 0.85em;
+}
+.markdown .cm-ms-block-failed pre {
+  font-family: var(--ms-font-mono);
+  font-size: 0.9em;
+}
 .markdown .edit-block-controls {
   opacity: 0;
   padding: 0.1rem;

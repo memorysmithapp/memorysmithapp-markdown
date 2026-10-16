@@ -377,7 +377,10 @@ export interface Theme {
   readonly properties?: ThemeProperties | { readonly light?: ThemeProperties; readonly dark?: ThemeProperties };
   /** An icon per callout kind, drawn in the title in place of the stylesheet's. */
   readonly icons?: Readonly<Record<string, ReactNode>>;
-  /** The slots the theme fills. */
+  /**
+   * The slots the theme fills. In edit mode a slot may be drawn outside the host's React tree, in
+   * the root of a block the editor draws, so it must not depend on the host's context (#90).
+   */
   readonly components?: Partial<ThemeComponents>;
 }
 
