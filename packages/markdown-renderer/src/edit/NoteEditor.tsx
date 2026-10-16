@@ -499,7 +499,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   /** Where the editing menu is open, in the window's coordinates (#81). */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const openMenu = useRef((x: number, y: number) => setMenu({ x, y }));
-  /** The menu's groups, from the same commands as the toolbar: Format with a selection, Insert, Edit. */
+  /** The menu's groups, from the same commands as the toolbar: Edit first (#110), Format with a selection, Insert. */
   const menuGroups = (target: EditorView): MenuGroup[] => {
     const words = resolved.strings.editor;
     const item = (name: keyof typeof ICONS & keyof typeof words, action: Command, shortcut?: string): MenuItem => ({
@@ -546,7 +546,8 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         { name: 'attach', label: words.attach, icon: ICONS.attach, run: () => setAttachOpen(true) },
       ],
     });
-    groups.push({
+    // The clipboard's verbs open the menu, as they open every other one a person knows (#110).
+    groups.unshift({
       label: words.menuEdit,
       items: [
         {

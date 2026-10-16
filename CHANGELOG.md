@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The menu of a right-click in edit mode opens with Cut, Copy and Paste, as every other context menu a person knows does, before *Format* and *Insert*, which keep their order. The focus lands on the first entry that runs: Cut with a selection, Paste without one (#110).
+
 ## [0.7.1] - 2026-10-16
 
 ### Fixed
