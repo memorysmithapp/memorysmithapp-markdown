@@ -309,3 +309,129 @@ describe('the save of an edit (#64)', () => {
     expect(view.state.doc.toString()).toBe(`X${NOTE}ab`);
   });
 });
+
+describe('what the host says of a save (#86)', () => {
+  const notice = (title: string, actions: { label: string; run: () => unknown }[]) => ({ title, message: `${title}, explained.`, actions });
+  const dialog = () => $<HTMLDialogElement>('dialog.edit-notice');
+  const noticeButton = () => $<HTMLButtonElement>('button.edit-save-notice');
+  const action = (label: string) => [...dialog()!.querySelectorAll<HTMLButtonElement>('.edit-notice-action')].find((each) => each.textContent === label)!;
+
+  it('puts the status in Alert for a save that resolves with an outcome, whose dialog runs each action and closes', async () => {
+    const alias = deferred();
+    const broken = vi.fn();
+    const renamed = notice('Note renamed', [
+      { label: 'Keep the links broken', run: broken },
+      { label: 'Keep X as an alias', run: () => alias.promise },
+    ]);
+    mounted = await mount(<NoteEditor markdown={NOTE} onChange={() => Promise.resolve(renamed)} />);
+    await type(await editor(), 'x');
+    await settle();
+    expect(status().dataset['save']).toBe('alert');
+    expect(said()).toBe('Note renamed');
+    expect(noticeButton()!.title).toBe('Note renamed');
+    expect(noticeButton()!.getAttribute('aria-haspopup')).toBe('dialog');
+    expect($('.edit-save-retry')).toBeNull();
+
+    await act(async () => noticeButton()!.click());
+    expect(dialog()!.querySelector('h2')!.textContent).toBe('Note renamed');
+    expect(dialog()!.querySelector('.edit-notice-message')!.textContent).toBe('Note renamed, explained.');
+    expect([...dialog()!.querySelectorAll('.edit-notice-action')].map((each) => each.textContent)).toEqual(['Keep the links broken', 'Keep X as an alias']);
+    expect(document.activeElement).toBe(action('Keep the links broken'));
+
+    // An action's promise is followed like a save: Saving, then where it ends.
+    await act(async () => action('Keep X as an alias').click());
+    expect(dialog()).toBeNull();
+    expect(said()).toBe('Saving…');
+    await act(async () => alias.resolve());
+    expect(status().dataset['save']).toBe('saved');
+    expect(said()).toBe('Saved');
+    expect(broken).not.toHaveBeenCalled();
+  });
+
+  it('takes an action that answers nothing as decided, and one that answers an outcome as a new alert', async () => {
+    const again = notice('Still renamed', [{ label: 'Fine', run: () => undefined }]);
+    const first = notice('Note renamed', [
+      { label: 'Ask again', run: () => Promise.resolve(again) },
+      { label: 'Fine', run: () => undefined },
+    ]);
+    mounted = await mount(<NoteEditor markdown={NOTE} onChange={() => Promise.resolve(first)} />);
+    await type(await editor(), 'x');
+    await settle();
+    await act(async () => noticeButton()!.click());
+    await act(async () => action('Ask again').click());
+    await settle();
+    expect(status().dataset['save']).toBe('alert');
+    expect(noticeButton()!.title).toBe('Still renamed');
+    await act(async () => noticeButton()!.click());
+    await act(async () => action('Fine').click());
+    expect(status().dataset['save']).toBe('saved');
+  });
+
+  it('puts the status in Error for a save rejected with a refusal, its actions in place of Try again', async () => {
+    const handed: string[] = [];
+    const conflict = notice('Somebody else wrote this note', [
+      { label: 'Discard my edit and reload', run: () => undefined },
+      { label: 'Save anyway', run: () => Promise.reject(notice('Still refused', [])) },
+    ]);
+    mounted = await mount(
+      <NoteEditor
+        markdown={NOTE}
+        onChange={(text) => {
+          handed.push(text);
+          return Promise.reject(conflict);
+        }}
+      />,
+    );
+    await type(await editor(), 'x');
+    await settle();
+    expect(status().dataset['save']).toBe('failed');
+    expect($('.edit-save-retry')).toBeNull();
+    expect(noticeButton()!.getAttribute('aria-label')).toBe('Somebody else wrote this note');
+
+    // Closing without choosing keeps the state, and the button opens it again.
+    await act(async () => noticeButton()!.click());
+    await act(async () => void dialog()!.dispatchEvent(new Event('cancel', { cancelable: true })));
+    expect(dialog()).toBeNull();
+    expect(status().dataset['save']).toBe('failed');
+    expect(document.activeElement).toBe(noticeButton());
+    await act(async () => noticeButton()!.click());
+    await act(async () => dialog()!.querySelector<HTMLButtonElement>('.edit-source-close')!.click());
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(noticeButton());
+
+    await act(async () => noticeButton()!.click());
+    await act(async () => action('Save anyway').click());
+    await settle();
+    expect(status().dataset['save']).toBe('failed');
+    expect(noticeButton()!.title).toBe('Still refused');
+    expect(handed).toEqual([`${NOTE}x`]);
+  });
+
+  it('blocks going back to reading in Error, and lets it happen in Alert', async () => {
+    const refused = notice('Somebody else wrote this note', []);
+    mounted = await mount(<NoteBody markdown={NOTE} editable defaultMode="edit" onChange={() => Promise.reject(refused)} />);
+    await type(await editor(), 'x');
+    await settle();
+    await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
+    await settle();
+    expect($('.cm-editor')).not.toBeNull();
+    expect(said()).toBe('Not saved: the note stays in edit. Somebody else wrote this note');
+    mounted.unmount();
+
+    mounted = await mount(<NoteBody markdown={NOTE} editable defaultMode="edit" onChange={() => Promise.resolve(notice('Note renamed', []))} />);
+    await type(await editor(), 'x');
+    await settle();
+    expect(status().dataset['save']).toBe('alert');
+    await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
+    await settle();
+    expect($('.cm-editor')).toBeNull();
+  });
+
+  it('changes nothing for a host that answers as before', async () => {
+    mounted = await mount(<NoteEditor markdown={NOTE} onChange={() => Promise.resolve({ title: 'no actions' })} />);
+    await type(await editor(), 'x');
+    await settle();
+    expect(status().dataset['save']).toBe('saved');
+    expect(noticeButton()).toBeNull();
+  });
+});

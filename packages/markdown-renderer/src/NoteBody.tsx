@@ -36,7 +36,10 @@ export interface NoteBodyProps extends NoteHost {
   /**
    * The note after each change made in edit mode, byte for byte the original wherever it was not
    * edited. The package never saves it; a host that answers with the promise of its save has the
-   * editor say whether it was saved, and going back to reading wait for it (#64).
+   * editor say whether it was saved, and going back to reading wait for it (#64). The promise may
+   * resolve with a `SaveOutcome`, a save that succeeded with something the author must decide, or
+   * reject with a `SaveRefusal`, the reason it was refused: either opens, from the save's status,
+   * a dialog with the host's words and its actions (#86).
    */
   readonly onChange?: (markdown: string) => unknown;
   /** Whether the switch shows its icon alone or its icon and its word. Defaults to `label`. */

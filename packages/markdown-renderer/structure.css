@@ -291,6 +291,19 @@
   display: flex;
   justify-content: flex-end;
 }
+/* What the host said of a save (#86): its title, its explanation, and its
+   choices in a row that wraps, as narrow as its words. */
+.markdown .edit-notice {
+  max-width: min(32rem, calc(100vw - 2rem));
+}
+.markdown .edit-notice-message {
+  margin: 0;
+}
+.markdown .edit-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 @media (max-width: 560px) {
   .markdown .edit-attach-file {
     grid-template-columns: 1fr auto;

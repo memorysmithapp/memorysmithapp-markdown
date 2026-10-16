@@ -1,5 +1,7 @@
 // The entry point of @memorysmithapp/markdown-renderer.
 export { NoteBody, type NoteBodyProps, type NoteMode } from './NoteBody.js';
+// Types only: the editor, which follows them, stays on its own subpath until a note is edited.
+export type { SaveAction, SaveNotice, SaveOutcome, SaveRefusal } from './edit/saves.js';
 export type { AttachAttributes, AttachmentRequest, EmbeddedNote, KeptFile, KeptFileEntry, LinkChoiceNote, LinkChoices, LinkRequest, NoteHost } from './host.js';
 export { ENGLISH, type EditorWords, type NoteStrings, type NoteStringsInput } from './strings.js';
 export {

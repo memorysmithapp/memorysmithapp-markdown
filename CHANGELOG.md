@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A host says why a save of an edit failed, or that one which succeeded left the author something to decide (#86). `onChange`'s promise may resolve with a `SaveOutcome`, which puts the save's status in a new *Alert* state, with its own icon, or reject with a `SaveRefusal`, which keeps *Not saved* with the host's reason in place of *Try again*: each is a title, a message and the actions to choose from, in the host's words. The status's icon opens them in a dialog that never closes by itself; Escape or its × leave the state as it was, and an action closes it and is followed like a save — *Saving…*, then *Saved*, an alert or a refusal. Going back to reading is allowed in *Alert* and blocked in *Not saved*, as before. The types are exported with `isSaveNotice` at `/edit` and as types from the package. A host that answers as before sees no difference. The playground's `?save=alert` and `?save=refuse` show both.
 - A note that is only read offers *Show Markdown* and *Copy Markdown* at its top right, without the switch to edit it: reading a note's Markdown and copying it are reading. `NoteBody` takes `actions`, `true` unless a host passes `false` to hide the two buttons, editable or not, for a print, a preview or an embed. The playground's `?editable=0` shows the two buttons and no switch; `?bare=1`, which the comparison screenshots, shows neither (#87).
 
 ## [0.4.0] - 2026-10-15

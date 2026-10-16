@@ -37,14 +37,16 @@ import { NoteActions } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
 import { chooseLanguageAt } from './LanguageControl.js';
-import { useEditSaves } from './saves.js';
+import { useEditSaves, type EditSaves } from './saves.js';
+import { SaveNoticeDialog } from './SaveNoticeDialog.js';
 
 export interface NoteEditorProps extends Omit<NoteHost, 'writable' | 'onToggleTask'> {
   /** The note as the host keeps it, frontmatter included. A new value that differs from the editor's is taken in. */
   readonly markdown: string;
   /**
    * The note after each change the author makes, byte for byte the original wherever it was not
-   * edited. A promise answered is the save of that change, which the editor reports (#64).
+   * edited. A promise answered is the save of that change, which the editor reports (#64); one that
+   * resolves with a `SaveOutcome` or rejects with a `SaveRefusal` has the host's words and actions (#86).
    */
   readonly onChange?: (markdown: string) => unknown;
   /** Whether the author may change the note. Defaults to `true`. */
@@ -281,19 +283,42 @@ function Toolbar({
 /**
  * Where the save of the author's last change stands, in the toolbar before the switch: an icon for
  * each state, in a slot of one size, so the toolbar never moves as the author types; its word is
- * its title. A failed save's icon is the button that tries again (#66). Whoever hears the page is
- * told the whole of it, why the note stays in edit included.
+ * its title. A failed save's icon is the button that tries again (#66). When the host said why —
+ * an alert on a save that succeeded, or the reason for one it refused — the icon is the button that
+ * opens what it said, with the host's title as its tooltip, and the author's choices (#86). Whoever
+ * hears the page is told the whole of it, why the note stays in edit included.
  */
-function SaveStatus({ state, blocked, retry, host }: { state: string; blocked: boolean; retry: () => void; host: ResolvedHost }) {
+function SaveStatus({ saves, blocked, host, onDecided }: { saves: EditSaves; blocked: boolean; host: ResolvedHost; onDecided: () => void }) {
+  const { state, notice } = saves;
   const words = host.strings.editor;
-  const shown = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
-  const said = state === 'failed' && blocked ? words.stayInEdit : shown;
-  const icon = state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'failed' ? ICONS.notSaved : null;
+  const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  // A notice the save no longer carries has nothing left to show.
+  useEffect(() => {
+    if (!notice) setOpen(false);
+  }, [notice]);
+  const base = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
+  const shown = notice ? notice.title : base;
+  const said = state === 'failed' && blocked ? (notice ? `${words.stayInEdit}. ${notice.title}` : words.stayInEdit) : shown;
+  const icon =
+    state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'alert' ? ICONS.alert : state === 'failed' ? ICONS.notSaved : null;
   const retryLabel = `${said}. ${words.retry}`;
   return (
-    <div className="edit-save" data-save={state} title={state === 'failed' ? undefined : said || undefined}>
-      {state === 'failed' ? (
-        <button type="button" className="edit-save-icon edit-save-retry" title={retryLabel} aria-label={retryLabel} onClick={retry}>
+    <div className="edit-save" data-save={state} title={state === 'failed' || notice ? undefined : said || undefined}>
+      {notice ? (
+        <button
+          ref={button}
+          type="button"
+          className="edit-save-icon edit-save-notice"
+          title={notice.title}
+          aria-label={notice.title}
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          {icon}
+        </button>
+      ) : state === 'failed' ? (
+        <button type="button" className="edit-save-icon edit-save-retry" title={retryLabel} aria-label={retryLabel} onClick={saves.retry}>
           {icon}
         </button>
       ) : (
@@ -302,6 +327,17 @@ function SaveStatus({ state, blocked, retry, host }: { state: string; blocked: b
       <span className="visually-hidden" role="status" aria-live="polite">
         {said}
       </span>
+      {open && notice && (
+        <SaveNoticeDialog
+          notice={notice}
+          onClose={() => setOpen(false)}
+          onClosed={(chosen) => (chosen ? onDecided() : button.current?.focus())}
+          onAction={(action) => {
+            setOpen(false);
+            saves.run(action);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -640,7 +676,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
                 // A refusal shakes the corner once each time the author asks to leave.
                 key={blocked ? `blocked-${refusals}` : 'corner'}
               >
-                <SaveStatus state={saves.state} blocked={blocked} retry={saves.retry} host={resolved} />
+                <SaveStatus saves={saves} blocked={blocked} host={resolved} onDecided={() => view?.focus()} />
                 {/* Alone, without NoteBody's switch, the editor keeps the note's Markdown at hand itself (#76). */}
                 {corner ?? <NoteActions text={() => (view ? output(view.state) : given)} />}
               </div>

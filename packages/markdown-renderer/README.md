@@ -90,7 +90,23 @@ A note the host makes `editable` carries a button at its top right that switches
 />
 ```
 
-When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
+When `onChange` returns the promise of its save, the editor shows before the switch an icon for whether the last change is *Saving…*, *Saved* or *Not saved*, the last one's icon trying again when clicked, and going back to reading waits for the save, staying in edit when it failed. Return nothing and no status is shown. When there is something to tell the author, resolve the promise with a `SaveOutcome` (the save went through, and they have a choice to make) or reject it with a `SaveRefusal` (it did not, and why): each is a `title`, a `message` and the `actions` to choose from, in your words. The icon then opens a dialog with them; an action's promise is followed like a save, and the author can close the dialog and come back to it:
+
+```tsx
+onChange={async (next) => {
+  const saved = await save(next);
+  if (saved.conflict) throw { title: 'Somebody else wrote this note', message: 'Your edit was not saved.', actions: [
+    { label: 'Discard my edit and reload', run: () => reload() },
+    { label: 'Save anyway', run: () => save(next, { force: true }) },
+  ] } satisfies SaveRefusal;
+  if (saved.renamed) return { title: 'Note renamed', message: `${saved.links} links reached the old name.`, actions: [
+    { label: 'Keep the links broken', run: () => undefined },
+    { label: 'Keep the old name as an alias', run: () => addAlias() },
+  ] } satisfies SaveOutcome;
+}}
+```
+
+Pass the saved note back as `markdown` whenever you like: a text the editor already moved past is not applied over what the author typed since.
 
 `mode` and `onModeChange` let you control the mode yourself, and the words come from `strings` (`edit`, `view` and `editor`). The editor is CodeMirror, loaded the first time a note is edited, so a page that only draws never loads it. To edit without the switch, import it from its own entry point:
 
