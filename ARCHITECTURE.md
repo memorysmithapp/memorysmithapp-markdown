@@ -67,7 +67,7 @@ The repository is made of:
 | `attach` | `(file, { name, description }, progress) => string \| Promise<string>`: keeps a file the author attached in edit mode — from the attach dialog, with the name and description given there, or pasted or dropped, under its own name and none — in the notebook, and answers the name it is kept under; `progress({ message, fraction? })` reports each step in the host's words, and a rejection with an `AttachRefusal`, a plain object with a `message` and never an `Error`, says why it was refused (#88) | The dialog offers no file from the computer, and a pasted or dropped file is not attached |
 | `files` | `() => KeptFileEntry[] \| Promise<…>`: the files the notebook keeps, each a `KeptFile` with its `name`, for the attach dialog to list | The dialog offers no file of the notebook |
 | `fileOf` | `(name) => KeptFile \| null \| Promise<…>`: what the notebook knows of a kept file — `mimeType`, `bytes`, `url`, `downloadUrl?`, `description?` — which the package draws by its type, as MemorySmith's `Attachment` does | The file's name as text |
-| `renderAttachment` | `({ name, width, height }) => ReactNode`: draws a kept file itself, before `fileOf`; in edit mode it may be drawn outside the host's React tree (#90) | `fileOf`'s drawing |
+| `renderAttachment` | `({ name, width, height, percent }) => ReactNode`, `percent` the share of the page an embed declared, from 1 to 100, with `width` and `height` then `null` (#108): draws a kept file itself, before `fileOf`; in edit mode it may be drawn outside the host's React tree (#90) | `fileOf`'s drawing |
 | `renderLink` | `({ href, className, children }) => ReactNode`: follows an internal address with the host's router; in edit mode it may be drawn outside the host's React tree, so it must not read the host's context (#90) | A plain `<a>` |
 | `remoteNotice` | `boolean`: whether a note that fetched images from other sites says so under its body | `true` |
 | `theme` | A `Theme` ([§1.3](#13-themes)), or `'light' \| 'dark'`, which are the default theme in that scheme | The default theme |
@@ -193,7 +193,7 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `packages/markdown-renderer/src/NoteBody.tsx`, `Markdown.tsx` | The component and the pipeline of one parsed run ([§1.1](#11-the-renderer)) |
 | `packages/markdown-renderer/src/host.tsx`, `strings.ts` | The host contract, its defaults, and the words of the page with MemorySmith's English |
 | `packages/markdown-renderer/src/address.ts` | `followable`, the address filter (RN-RENDER-005) |
-| `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe |
+| `packages/markdown-renderer/src/image-dimensions.ts` | The dimensions an alt text or an embed declares after its pipe — pixels, or a share of the page (#108) — read, written back, and turned into the attributes an element is drawn at: pixels as `width` and `height`, a share as a `max-width` |
 | `packages/markdown-renderer/src/markdown.ts` | The text helpers that run before the parser: code, fence and table regions, wikilink resolution, the hosts of remote images, and the frontmatter as MemorySmith reads it |
 | `packages/markdown-renderer/src/transclusion.ts`, `Transclusion.tsx` | The split of a body into text and embeds, the cut of a section or a block, and the embed drawn in place |
 | `packages/markdown-renderer/src/wikilink-address.ts` | Where a wikilink goes under the host: its note, the choice, or pending |

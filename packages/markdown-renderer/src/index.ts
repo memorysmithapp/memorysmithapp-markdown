@@ -32,7 +32,7 @@ export {
   type WikilinkSlotProps,
 } from './theme.js';
 export { followable } from './address.js';
-export { readDimensions, readImageAlt, type ImageAlt } from './image-dimensions.js';
+export { readDimensions, readImageAlt, writeDimensions, type Dimensions, type ImageAlt } from './image-dimensions.js';
 export {
   codeRegions,
   fenceRegions,

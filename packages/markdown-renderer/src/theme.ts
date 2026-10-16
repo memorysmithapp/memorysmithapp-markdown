@@ -344,6 +344,8 @@ export interface AttachmentSlotProps {
   /** The dimensions the embed declared (§3.14), in CSS pixels, or `null`. */
   readonly width: number | null;
   readonly height: number | null;
+  /** The width it declared as a share of the page, from 1 to 100, which it is drawn at most, or `null` (#108). */
+  readonly percent: number | null;
 }
 
 /** The slots a theme may fill. Each one left out is drawn as the default theme draws it. */

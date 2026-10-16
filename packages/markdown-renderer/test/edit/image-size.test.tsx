@@ -36,6 +36,13 @@ describe('the dimensions of an image', () => {
     expect(resized('![[photo.jpg\\|200]]', 90)).toBe('![[photo.jpg\\|90]]');
   });
 
+  it('read a share of the page as the dimensions they are, and replace it whole (#108)', () => {
+    expect(readImageSize('![Curva|50%](curva.png)')).toMatchObject({ width: null, percent: 50, at: { from: 7, to: 11 } });
+    expect(readImageSize('![[curva.png|50%]]')).toMatchObject({ width: null, percent: 50 });
+    expect(resized('![Curva|50%](curva.png)', 300)).toBe('![Curva|300](curva.png)');
+    expect(resized('![[curva.png|50%]]', null)).toBe('![[curva.png]]');
+  });
+
   it('never overwrite what an embed says after its pipe when it is not a dimension', () => {
     expect(readImageSize('![[photo.jpg|My photo]]')).toBeNull();
     expect(resizeImage('![[photo.jpg|My photo]]', 0, 100)).toEqual([]);

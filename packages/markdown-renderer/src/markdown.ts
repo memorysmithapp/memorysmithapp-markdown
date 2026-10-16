@@ -1,7 +1,7 @@
 // The text helpers of the reading surface: what a note becomes before the parser reads it.
 // Nothing here rewrites the note a host keeps; each function returns a new string for display.
 
-import { readDimensions } from './image-dimensions.js';
+import { readDimensions, writeDimensions } from './image-dimensions.js';
 
 export interface SplitDocument {
   frontmatter: Record<string, string>;
@@ -398,9 +398,7 @@ function resolveWikilinksIn(
         // Dropping it here is what made `![[picture|120]]` render at full size:
         // the notation was read and then thrown away one line before it was used.
         const measured = label === undefined ? null : readDimensions(label);
-        const sized = measured
-          ? `|${measured.width}${measured.height === null ? '' : `x${measured.height}`}`
-          : '';
+        const sized = measured ? `|${writeDimensions(measured)}` : '';
         return `[${text}](attachment:${encodeURIComponent(clean)}${sized})`;
       }
       const url = resolve(clean.normalize('NFC'));

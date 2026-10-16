@@ -12,6 +12,8 @@ export interface ImageSize {
   /** The width it declares, or `null` when it is drawn at its own size. */
   readonly width: number | null;
   readonly height: number | null;
+  /** The width it declares as a share of the page, from 1 to 100, or `null` (#108). */
+  readonly percent: number | null;
   /**
    * Where in the source the dimensions are written, their pipe included; an empty span where they
    * would be written when there are none.
@@ -23,6 +25,8 @@ export interface ImageSize {
 
 /** The largest width the notation writes: five digits (`SPEC.md` §3.14). */
 export const MAX_IMAGE_WIDTH = 99999;
+
+const UNSIZED = { width: null, height: null, percent: null } as const;
 
 const MARKDOWN_IMAGE = /^!\[([^\]]*)\]\(/;
 const EMBED = /^!\[\[([^\]]*)\]\]$/;
@@ -45,18 +49,18 @@ function readTrimmed(source: string): ImageSize | null {
     const alt = image[1] ?? '';
     const start = 2;
     const read = readImageAlt(alt);
-    if (read.width === null) return { width: null, height: null, at: { from: start + alt.length, to: start + alt.length }, pipe: '|' };
-    return { width: read.width, height: read.height, at: { from: start + alt.lastIndexOf('|'), to: start + alt.length }, pipe: '|' };
+    if (read.width === null && read.percent === null) return { ...UNSIZED, at: { from: start + alt.length, to: start + alt.length }, pipe: '|' };
+    return { width: read.width, height: read.height, percent: read.percent, at: { from: start + alt.lastIndexOf('|'), to: start + alt.length }, pipe: '|' };
   }
   const embed = EMBED.exec(source);
   if (embed) {
     const inner = embed[1] ?? '';
     const start = 3;
     const pipe = /\\?\|/.exec(inner);
-    if (!pipe) return { width: null, height: null, at: { from: start + inner.length, to: start + inner.length }, pipe: '|' };
+    if (!pipe) return { ...UNSIZED, at: { from: start + inner.length, to: start + inner.length }, pipe: '|' };
     const measured = readDimensions(inner.slice(pipe.index + pipe[0].length));
     if (!measured) return null;
-    return { width: measured.width, height: measured.height, at: { from: start + pipe.index, to: start + inner.length }, pipe: pipe[0] };
+    return { ...measured, at: { from: start + pipe.index, to: start + inner.length }, pipe: pipe[0] };
   }
   return null;
 }
@@ -70,7 +74,7 @@ export function resizeImage(source: string, from: number, width: number | null):
   const size = readImageSize(source);
   if (!size) return [];
   const wanted = width === null ? null : Math.min(MAX_IMAGE_WIDTH, Math.max(1, Math.round(width)));
-  if (wanted === size.width && (wanted === null || size.height === null)) return [];
+  if (wanted === size.width && (wanted === null || size.height === null) && (wanted !== null || size.percent === null)) return [];
   const insert = wanted === null ? '' : `${size.pipe}${wanted}`;
   return [{ from: from + size.at.from, to: from + size.at.to, insert }];
 }

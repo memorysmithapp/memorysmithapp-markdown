@@ -15,7 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
 import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
-import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
+import { readImageAlt, sizedAttributes, type ImageAlt } from '../image-dimensions.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
@@ -460,7 +460,7 @@ function readImage(source: string): { alt: ImageAlt; address: string } | null {
 
 /** An image drawn with its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14). */
 function drawImage({ alt, address }: { alt: ImageAlt; address: string }): ReactNode {
-  return createElement('img', { className: 'cm-ms-image', src: address, alt: alt.description, width: alt.width ?? undefined, height: alt.height ?? undefined });
+  return createElement('img', { className: 'cm-ms-image', src: address, alt: alt.description, ...sizedAttributes(alt) });
 }
 
 // ── Decorations ──────────────────────────────────────────────────────────────

@@ -174,6 +174,7 @@ export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMe
       // The height it declares, or its width at a photograph's proportions, or a guess (#91).
       const size = readImageSize(source.trim());
       if (size?.height != null) return size.height;
+      if (size?.percent != null) return Math.round(((metrics.width * size.percent) / 100) * 0.75);
       return size?.width != null ? Math.round(size.width * 0.75) : UNDECLARED_IMAGE_HEIGHT;
     }
   }

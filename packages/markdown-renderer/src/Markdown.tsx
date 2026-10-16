@@ -19,7 +19,7 @@ import { CopyButton } from './CopyButton.js';
 import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
 import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from './highlight.js';
 import { useHost, type KeptFile } from './host.js';
-import { readDimensions, readImageAlt } from './image-dimensions.js';
+import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
@@ -71,20 +71,13 @@ type WithNode<T> = T & { node?: unknown };
 /**
  * An image, with the dimensions the specification puts in its alt text
  * (§3.14). What precedes the pipe is the description and is never dropped;
- * what follows it is width, or width and height, in CSS pixels, and never
- * appears as text. A value that is neither stays part of the description,
+ * what follows it is width, or width and height, in CSS pixels, or a width as
+ * a share of the page at most (#108), and never appears as text. A value that is neither stays part of the description,
  * because deleting an accessibility label is the worse failure.
  */
 function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAttributes<HTMLImageElement>>) {
   const read = readImageAlt(alt ?? '');
-  return (
-    <img
-      {...rest}
-      alt={read.description}
-      {...(read.width === null ? {} : { width: read.width })}
-      {...(read.height === null ? {} : { height: read.height })}
-    />
-  );
+  return <img {...rest} alt={read.description} {...sizedAttributes(read)} />;
 }
 
 /**
@@ -128,12 +121,12 @@ function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnch
  * reported the way a pending link is: a notebook is read most while it is
  * being written (§5.8).
  */
-function Attachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+function Attachment({ name, size }: { name: string; size: Dimensions }) {
   const host = useHost();
   if (!host.keeps(name)) return <AttachmentMissing name={name} />;
-  if (host.renderAttachment) return <>{host.renderAttachment({ name, width, height })}</>;
+  if (host.renderAttachment) return <>{host.renderAttachment({ name, ...size })}</>;
   if (!host.fileOf) return <span className="attachment-loading">{name}</span>;
-  return <KeptAttachment name={name} width={width} height={height} />;
+  return <KeptAttachment name={name} size={size} />;
 }
 
 function AttachmentMissing({ name }: { name: string }) {
@@ -198,7 +191,7 @@ function openInTab(event: MouseEvent<HTMLAnchorElement>, url: string): void {
  * included — a card with what it is, its size, and the ways out of the page: Open only for what a
  * browser shows, Download always. A theme may draw it through the `attachment` slot.
  */
-function KeptAttachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+function KeptAttachment({ name, size: declared }: { name: string; size: Dimensions }) {
   const host = useHost();
   const slot = useSlot('attachment');
   const described = useKeptFile(name);
@@ -210,13 +203,8 @@ function KeptAttachment({ name, width, height }: { name: string; width: number |
   const kind = fileKind(file.mimeType, host.strings.fileKinds);
   const size = formatBytes(file.bytes, host.strings.locale);
   const opens = opensInBrowser(file.mimeType);
-  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, width, height })}</>;
-  // The attributes reserve the box before the bytes arrive; a height is a style too, since the
-  // surface gives an image `height: auto`, which two numbers overrule (§3.14).
-  const sized = {
-    ...(width === null ? {} : { width }),
-    ...(height === null ? {} : { height, style: { height: `${height}px` } }),
-  };
+  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, ...declared })}</>;
+  const sized = sizedAttributes(declared);
   if (shape === 'image') return <img className="attachment-image" src={file.url} alt={file.description || name} {...sized} />;
   if (shape === 'audio') return <audio className="attachment-player" controls src={file.url} />;
   if (shape === 'video') return <video className="attachment-player" controls src={file.url} {...sized} />;
@@ -262,7 +250,7 @@ export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNod
     const at = address.lastIndexOf('|');
     const measured = at === -1 ? null : readDimensions(address.slice(at + 1));
     const name = measured ? address.slice(0, at) : address;
-    return <Attachment name={name} width={measured?.width ?? null} height={measured?.height ?? null} />;
+    return <Attachment name={name} size={measured ?? { width: null, height: null, percent: null }} />;
   }
   if (href?.startsWith('pending:')) {
     const pending = (label: ReactNode) => (

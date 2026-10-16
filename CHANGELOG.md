@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- An image's width may be a share of the page, `|50%`, from `1%` to `100%`, in a Markdown image, `![Curva|50%](…)`, and in the embed of a kept file, `![[curva.png|50%]]` (`SPEC.md` §3.14 and §5.8). It is a share of the width the note is read at — the column, the cell or the callout it stands in — with the height following the image's ratio, and a maximum: an image narrower than it keeps its own width, so it is never enlarged and blurred. A height in percent, a mixed pair (`50%x180`), `0%`, `150%` and fractions are not dimensions and stay part of the description, and after a note's name the pipe is still the alias. The renderer draws it as a `max-width` in reading and in edit mode, `renderAttachment` and the `attachment` slot receive it as `percent`, and `readDimensions` and `readImageAlt` answer it; `writeDimensions` and the type `Dimensions` are exported. Two conformance cases hold it (#108).
+
 ### Changed
+
+- `readDimensions` answers `width: null` and `percent` for a share of the page, so its `width` is `number | null`; every answer and `readImageAlt`'s carry `percent` (#108).
 
 - The menu of a right-click in edit mode opens with Cut, Copy and Paste, as every other context menu a person knows does, before *Format* and *Insert*, which keep their order. The focus lands on the first entry that runs: Cut with a selection, Paste without one (#110).
 
