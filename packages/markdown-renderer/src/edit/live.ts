@@ -10,7 +10,7 @@
 import { EditorSelection, Facet, Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import katex from 'katex';
-import { Component, createElement, type ErrorInfo, type ReactNode } from 'react';
+import { Component, createElement, Fragment, useLayoutEffect, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
@@ -138,25 +138,75 @@ class BlockBoundary extends Component<{ host: ResolvedHost; source: string; chil
 }
 
 /** The React roots the widgets mounted, unmounted when CodeMirror lets the widget go. */
-const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null }>();
+const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null; render: (node: ReactNode, source: string, identity: string) => void }>();
 
-function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string, measured: (height: number) => void): void {
-  const { host } = view.state.facet(editorEnvironment);
+/** The widget an element draws now: one made again for the same block takes its element over (#99). */
+const drawing = new WeakMap<HTMLElement, BlockWidget>();
+
+/** How long a block made again holds the height it was drawn at, at most, while it draws (#99). */
+const HOLD_MS = 2000;
+
+/** Tells its block it was drawn, once React has put it in the page. */
+function Drawn({ onDrawn, children }: { onDrawn: () => void; children?: ReactNode }) {
+  useLayoutEffect(onDrawn);
+  return createElement(Fragment, null, children);
+}
+
+/**
+ * Draws `node` in `element` with React, under the editor's host. `held` is the height the block
+ * was drawn at before, which the element keeps until what it draws is as tall — the root draws on
+ * React's schedule, and an element left empty meanwhile would let the page collapse under the
+ * author (#99).
+ */
+function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string, identity: string, measured: (height: number) => void, held?: number): void {
   const root = createRoot(element);
-  // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
-  // inside a React commit, where React cannot be asked to render synchronously.
-  root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, node)));
+  let holding = held !== undefined && held > 0;
+  if (holding) element.style.minHeight = `${held}px`;
+  const release = () => {
+    holding = false;
+    element.style.minHeight = '';
+  };
+  const timer = holding ? setTimeout(release, HOLD_MS) : undefined;
+  // Released once what it draws fills the height it holds: the content's own box, margins aside.
+  const check = () => {
+    if (!holding || typeof document.createRange !== 'function') return;
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    if (range.getBoundingClientRect().height >= held! * 0.9) {
+      clearTimeout(timer);
+      release();
+    }
+  };
+  const render = (next: ReactNode, text: string, drawn: string) => {
+    const { host } = view.state.facet(editorEnvironment);
+    // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
+    // inside a React commit, where React cannot be asked to render synchronously. Keyed by what it
+    // draws: the same block is drawn again in place, another one replaces it at once on commit,
+    // what was drawn before staying until then (#99).
+    root.render(
+      createElement(HostProvider, { value: host }, createElement(BlockBoundary, { key: drawn, host, source: text }, createElement(Drawn, { onDrawn: check }, next))),
+    );
+  };
+  render(node, source, identity);
   // A block whose content arrives later — an embed, a diagram — changes its height after it is
   // measured; the editor is told so, or the lines below it would be placed by the old height.
   const observer =
     typeof ResizeObserver === 'undefined'
       ? null
       : new ResizeObserver(() => {
-          measured(element.getBoundingClientRect().height);
+          check();
+          if (!holding) measured(element.getBoundingClientRect().height);
           view.requestMeasure();
         });
   observer?.observe(element);
-  roots.set(element, { unmount: () => root.unmount(), observer });
+  roots.set(element, {
+    unmount: () => {
+      clearTimeout(timer);
+      root.unmount();
+    },
+    observer,
+    render,
+  });
 }
 
 function unmount(element: HTMLElement): void {
@@ -198,7 +248,7 @@ class BlockWidget extends WidgetType {
     this.estimate = this.estimateNow();
   }
   /** What it is remembered by once measured: what it draws, wherever in the note it stands. */
-  private get identity(): string {
+  get identity(): string {
     return `${this.options.kind ?? 'block'}\u0000${this.source}`;
   }
   /**
@@ -210,22 +260,37 @@ class BlockWidget extends WidgetType {
   override eq(other: BlockWidget): boolean {
     return other.key === this.key && other.host === this.host && other.estimate === this.estimate;
   }
-  /** The same block with a better estimate is the same drawing: it is kept as it is. */
-  override updateDOM(_dom: HTMLElement, _view: EditorView, from: BlockWidget): boolean {
-    return from.key === this.key && from.host === this.host && from.inline === this.inline;
+  /**
+   * A block of the same kind made again — because it moved, the host was given again, its
+   * estimate was learned or its source changed — keeps its element: it is drawn again in it, with
+   * this widget's positions and the host as it is now (#94, #99). The same source keeps its React
+   * tree; another source replaces it on commit, so the element is never left empty.
+   */
+  override updateDOM(dom: HTMLElement, view: EditorView, from: BlockWidget): boolean {
+    const mounted = roots.get(dom);
+    if (!mounted || from.inline !== this.inline || from.options.kind !== this.options.kind || from.revealsOnClick !== this.revealsOnClick) return false;
+    drawing.set(dom, this);
+    if (from.key !== this.key || from.host !== this.host) mounted.render(this.draw(view), this.source, this.identity);
+    return true;
   }
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
     element.className = this.inline ? 'cm-ms-inline-block' : 'cm-ms-block';
-    mount(view, element, this.draw(view), this.source, (height) => rememberHeight(this.identity, view.state.field(metricsField), height));
+    drawing.set(element, this);
+    const metrics = view.state.field(metricsField);
+    const held = this.inline ? undefined : measuredHeight(this.identity, metrics);
+    // Remembered for what the element draws now, which a widget made again may have changed.
+    const measured = (height: number) => rememberHeight((drawing.get(element) ?? this).identity, view.state.field(metricsField), height);
+    mount(view, element, this.draw(view), this.source, this.identity, measured, held);
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('[data-ms-control]')) return;
       if (event.metaKey || event.ctrlKey) return;
-      if (!this.revealsOnClick) return;
+      const widget = drawing.get(element) ?? this;
+      if (!widget.revealsOnClick) return;
       event.preventDefault();
       // At the end of its first line: after a fence's language, a callout's title, a formula's `$$`.
-      reveal(view, view.state.doc.lineAt(blockStart(view, element, this.key)).to);
+      reveal(view, view.state.doc.lineAt(blockStart(view, element, widget.key)).to);
     });
     // A link inside a drawn block is followed with a modifier only, as in the text.
     element.addEventListener('click', (event) => {

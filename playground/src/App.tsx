@@ -54,6 +54,18 @@ interface View {
    * (`?button=label`), or their word only on a wide note (`?button=responsive`).
    */
   readonly button: NoteButtons;
+  /**
+   * The host's functions given anew on every render (`?host=unstable`), as a host that does not
+   * memoize them does: no block of the editor may be drawn again for it (#99).
+   */
+  readonly unstable: boolean;
+}
+
+/** The host with each of its functions wrapped anew, the same meaning under another identity. */
+function anew(host: NoteHost): NoteHost {
+  return Object.fromEntries(
+    Object.entries(host).map(([name, value]) => [name, typeof value === 'function' ? (...args: unknown[]) => (value as (...each: unknown[]) => unknown)(...args) : value]),
+  ) as NoteHost;
 }
 
 /**
@@ -120,6 +132,7 @@ function readView(): View {
     // The note alone is what the comparison screenshots, and MemorySmith's page has no switch.
     editable: query.get('editable') !== '0' && query.get('bare') !== '1',
     button: BUTTONS.find((each) => each === query.get('button')) ?? 'icon',
+    unstable: query.get('host') === 'unstable',
   };
 }
 
@@ -265,7 +278,7 @@ export function App() {
       <NoteBody
         key={key}
         markdown={markdown}
-        {...host}
+        {...(view.unstable ? anew(host) : host)}
         theme={view.theme.theme}
         scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
