@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The switch between reading and editing is drawn as its icon alone by default, named by its word, like *Show Markdown* and *Copy Markdown* beside it, so the three buttons of a note's corner follow one rule. A host that wants the word beside the icon passes `modeButton="label"`; one that passed `modeButton="icon"` sees no difference. The playground draws the icon alone and `?button=label` the word (#92).
+
 ### Fixed
 
 - A note scrolled inside a pane of the host no longer makes the page as tall as itself: the root of a note is positioned in `structure.css`, so the live region that announces a ticked box, laid out of the flow, hangs from the note and not from the page, and the page loses the second scrollbar that scrolled nothing (#93).

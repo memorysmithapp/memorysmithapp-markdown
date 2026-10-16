@@ -46,7 +46,7 @@ The repository is made of:
 | `editable` | `boolean`: whether the note carries the switch to edit it | `false`: no switch, and the editor is never loaded |
 | `mode`, `defaultMode`, `onModeChange` | `'view' \| 'edit'`, the mode a host controls or the one the note starts in, and the mode the reader asked for | The note keeps its own, from `view` |
 | `onChange` | `(markdown) => unknown`: the note after each change in edit mode; a promise answered is its save, which the editor reports and going back to reading waits for, resolved with a `SaveOutcome` or rejected with a `SaveRefusal` when the host has something for the author to decide (#86) | Nothing is reported |
-| `modeButton` | `'icon' \| 'label'`: the switch as its icon alone, or its icon and its word | `label` |
+| `modeButton` | `'icon' \| 'label'`: the switch as its icon alone, named by its word, or its icon and its word | `icon`, as the two actions beside it are drawn (#92) |
 | `actions` | `boolean`: whether Show Markdown and Copy Markdown stand at the top right, editable or not (#87) | `true`; `false` hides them in both modes |
 
 - **The host contract** (`src/host.tsx`) is the typed props object `NoteHost`, resolved once into defaults and handed down through a React context, so every part of the surface reads the same host without props threaded through `react-markdown`:

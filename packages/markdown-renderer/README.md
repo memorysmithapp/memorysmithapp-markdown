@@ -86,7 +86,7 @@ A note the host makes `editable` carries a button at its top right that switches
   suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
   attach={(file, { name, description }, progress) => keepInNotebook(file, name, description, progress)} // the name it is kept under
   files={() => filesOfTheNotebook()}              // what the attach dialog lists: { name, mimeType, bytes, url, description }
-  modeButton="icon"                               // or "label", the icon and its word
+  modeButton="label"                              // the icon and its word; "icon", the default, the icon alone
 />
 ```
 

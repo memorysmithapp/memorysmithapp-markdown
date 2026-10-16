@@ -42,7 +42,10 @@ export interface NoteBodyProps extends NoteHost {
    * a dialog with the host's words and its actions (#86).
    */
   readonly onChange?: (markdown: string) => unknown;
-  /** Whether the switch shows its icon alone or its icon and its word. Defaults to `label`. */
+  /**
+   * Whether the switch shows its icon alone or its icon and its word. Defaults to `icon`, like Show
+   * Markdown and Copy Markdown beside it, its word then its name and its title (#92).
+   */
   readonly modeButton?: 'icon' | 'label';
   /**
    * Whether the note offers Show Markdown and Copy Markdown at its top right, editable or not:
@@ -92,7 +95,7 @@ export function NoteBody({
   defaultMode = 'view',
   onModeChange,
   onChange,
-  modeButton = 'label',
+  modeButton = 'icon',
   actions = true,
   ...rest
 }: NoteBodyProps) {
