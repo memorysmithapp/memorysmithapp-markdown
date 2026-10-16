@@ -20,6 +20,7 @@ import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
 import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
+import { caretAt, sourceOffsetOf } from './click-source.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
 
@@ -289,8 +290,12 @@ class BlockWidget extends WidgetType {
       const widget = drawing.get(element) ?? this;
       if (!widget.revealsOnClick) return;
       event.preventDefault();
-      // At the end of its first line: after a fence's language, a callout's title, a formula's `$$`.
-      reveal(view, view.state.doc.lineAt(blockStart(view, element, widget.key)).to);
+      // Where the text clicked is written in the source (#102); else at the end of its first line,
+      // after a callout's title or a diagram's fence.
+      const start = blockStart(view, element, widget.key);
+      const caret = caretAt(event.clientX, event.clientY);
+      const offset = caret ? sourceOffsetOf(element, widget.source, caret.node, caret.offset) : null;
+      reveal(view, offset === null ? view.state.doc.lineAt(start).to : Math.min(start + offset, view.state.doc.length));
     });
     // A link inside a drawn block is followed with a modifier only, as in the text.
     element.addEventListener('click', (event) => {

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A click on a drawn callout in edit mode puts the caret where the author clicked, in the line of its source that draws the text clicked, rather than at the end of its title line, where the next key was typed. The same holds for a diagram or an embed whose drawing shows text its source writes; elsewhere the caret goes to the end of the block's first line, as before (#102).
+
 ## [0.7.0] - 2026-10-16
 
 ### Added
