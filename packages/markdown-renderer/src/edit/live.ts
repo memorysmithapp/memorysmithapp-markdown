@@ -18,7 +18,7 @@ import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
 import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
-import { DEFAULT_METRICS, estimateHeight, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
+import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
 import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
@@ -51,8 +51,11 @@ export const grammarArrived = StateEffect.define<string>();
 /** The editor's metrics changed: the blocks made from now on estimate their height by them (#91). */
 const setBlockMetrics = StateEffect.define<BlockMetrics>();
 
+/** A block's height was learned before it was drawn: the blocks are made again with it (#94). */
+const heightsLearned = StateEffect.define<null>();
+
 /** The metrics of the editor's text column, which a drawn block estimates its height by (#91). */
-const metricsField = StateField.define<BlockMetrics>({
+export const metricsField = StateField.define<BlockMetrics>({
   create: () => DEFAULT_METRICS,
   update: (metrics, transaction) => {
     for (const effect of transaction.effects) if (effect.is(setBlockMetrics)) return effect.value;
@@ -65,10 +68,22 @@ const metricsWatcher = ViewPlugin.define((view) => {
   let destroyed = false;
   const check = () =>
     view.requestMeasure({
-      read: () => withinReason({ width: view.contentDOM.clientWidth, lineHeight: view.defaultLineHeight, charWidth: view.defaultCharacterWidth }),
+      read: () =>
+        withinReason({
+          width: view.contentDOM.clientWidth,
+          lineHeight: view.defaultLineHeight,
+          charWidth: view.defaultCharacterWidth,
+          ...measureLines(view.dom),
+        }),
       write: (next) => {
         const now = view.state.field(metricsField);
-        const moved = Math.abs(next.width - now.width) >= 1 || Math.abs(next.lineHeight - now.lineHeight) >= 0.5 || Math.abs(next.charWidth - now.charWidth) >= 0.05;
+        const lines = (metrics: BlockMetrics) =>
+          [...(metrics.headings ?? []), ...(metrics.code ? [metrics.code] : [])].map((each) => `${each.lineHeight.toFixed(1)}/${each.charWidth.toFixed(2)}/${each.padding.toFixed(1)}/${each.inset.toFixed(1)}`).join();
+        const moved =
+          Math.abs(next.width - now.width) >= 1 ||
+          Math.abs(next.lineHeight - now.lineHeight) >= 0.5 ||
+          Math.abs(next.charWidth - now.charWidth) >= 0.05 ||
+          lines(next) !== lines(now);
         // Not inside the measure, where CodeMirror takes no transaction.
         if (moved) queueMicrotask(() => destroyed || view.dispatch({ effects: setBlockMetrics.of(next) }));
       },
@@ -180,13 +195,24 @@ class BlockWidget extends WidgetType {
     super();
     this.inline = options.inline ?? false;
     this.source = options.source ?? '';
+    this.estimate = this.estimateNow();
   }
   /** What it is remembered by once measured: what it draws, wherever in the note it stands. */
   private get identity(): string {
     return `${this.options.kind ?? 'block'}\u0000${this.source}`;
   }
+  /**
+   * The height it is laid out at until drawn, read when it is made: a block whose height was learned
+   * since — measured, or measured ahead of being drawn (#94) — is made again with it, so CodeMirror
+   * reads the new one, and keeps its drawing through `updateDOM`.
+   */
+  private readonly estimate: number;
   override eq(other: BlockWidget): boolean {
-    return other.key === this.key && other.host === this.host;
+    return other.key === this.key && other.host === this.host && other.estimate === this.estimate;
+  }
+  /** The same block with a better estimate is the same drawing: it is kept as it is. */
+  override updateDOM(_dom: HTMLElement, _view: EditorView, from: BlockWidget): boolean {
+    return from.key === this.key && from.host === this.host && from.inline === this.inline;
   }
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
@@ -219,6 +245,9 @@ class BlockWidget extends WidgetType {
    * block is made: the height it was drawn at before at this width, or its estimate (#91).
    */
   override get estimatedHeight(): number {
+    return this.estimate;
+  }
+  private estimateNow(): number {
     const metrics = this.options.metrics ?? DEFAULT_METRICS;
     const kind = this.options.kind;
     // Within a line only an image estimates, as tall as the line it stands in (#91).
@@ -243,6 +272,28 @@ function blockStart(view: EditorView, element: HTMLElement, key: string): number
     return undefined;
   });
   return found === -1 ? near : found;
+}
+
+/**
+ * Nothing drawn, at the start of a line CodeMirror would estimate too short — a heading, larger than
+ * the text and spaced from it — telling it how tall the line is until it is drawn (#94). CodeMirror
+ * lays a line out at the tallest of its widgets' estimates and its own, so this only ever raises it.
+ */
+class LineEstimate extends WidgetType {
+  constructor(readonly height: number) {
+    super();
+  }
+  override eq(other: LineEstimate): boolean {
+    return other.height === this.height;
+  }
+  toDOM(): HTMLElement {
+    const element = document.createElement('span');
+    element.className = 'cm-ms-line-estimate';
+    return element;
+  }
+  override get estimatedHeight(): number {
+    return this.height;
+  }
 }
 
 class BulletWidget extends WidgetType {
@@ -362,6 +413,8 @@ function build(state: EditorState): DecorationSet {
   const ranges = state.selection.ranges;
   const out: Range<Decoration>[] = [];
   const covered: { from: number; to: number }[] = [];
+  /** The level of each heading, by its line's number, which its estimate is made for (#94). */
+  const headingLevels = new Map<number, number>();
 
   /** Whether the author's cursor or selection is on this range, ends included. */
   const touches = (from: number, to: number) => focused && ranges.some((range) => range.from <= to && range.to >= from);
@@ -479,6 +532,7 @@ function build(state: EditorState): DecorationSet {
       case 'heading': {
         out.push(line(`cm-ms-heading cm-ms-h${construct.level}`).range(doc.lineAt(from).from));
         const { marker } = construct;
+        headingLevels.set(doc.lineAt(from).number, construct.level);
         if (touches(doc.lineAt(from).from, doc.lineAt(from).to)) out.push(syntax.range(marker.from, marker.to));
         else out.push(hide.range(marker.from, marker.to));
         break;
@@ -601,7 +655,47 @@ function build(state: EditorState): DecorationSet {
         break;
     }
   }
+  out.push(...lineEstimates(state, out, covered, headingLevels, metrics));
   return Decoration.set(out, true);
+}
+
+/**
+ * A `LineEstimate` for each line CodeMirror would lay out shorter than the page draws it (#94): a
+ * heading, a line of code, a line of text that wraps. Its length is what the reader sees of it, the
+ * notation the decorations hide taken away; a line a drawn block covers estimates nothing.
+ */
+function lineEstimates(
+  state: EditorState,
+  decorations: readonly Range<Decoration>[],
+  covered: readonly { from: number; to: number }[],
+  headingLevels: ReadonlyMap<number, number>,
+  metrics: BlockMetrics,
+): Range<Decoration>[] {
+  const doc = state.doc;
+  const hidden = new Map<number, number>();
+  for (const range of decorations) {
+    if (range.value !== hide || range.to <= range.from) continue;
+    const number = doc.lineAt(range.from).number;
+    hidden.set(number, (hidden.get(number) ?? 0) + range.to - range.from);
+  }
+  const code = new Set<number>();
+  for (const construct of state.field(analysisField).constructs) {
+    if (construct.kind !== 'code') continue;
+    for (let at = doc.lineAt(construct.from).number; at <= doc.lineAt(Math.max(construct.from, construct.to - 1)).number; at++) code.add(at);
+  }
+  const out: Range<Decoration>[] = [];
+  for (let number = 1; number <= doc.lines; number++) {
+    const line = doc.line(number);
+    if (line.length === 0) continue;
+    if (covered.some((each) => line.from >= each.from && line.to <= each.to)) continue;
+    const level = headingLevels.get(number);
+    const length = line.length - (hidden.get(number) ?? 0);
+    const height = lineHeightOf(level !== undefined ? { heading: level } : code.has(number) ? 'code' : 'text', length, metrics);
+    // Said of every line, even one text line tall: a line with no decoration is laid out in a gap,
+    // which CodeMirror estimates by the length of all its lines together, too tall on a wide column.
+    if (height !== null) out.push(Decoration.widget({ widget: new LineEstimate(height), side: -1 }).range(line.from));
+  }
+  return out;
 }
 
 /** A code block's lines, as source: its frame, its fences dimmed, its tokens coloured. */
@@ -638,7 +732,7 @@ export const decorationsField = StateField.define<DecorationSet>({
   update: (decorations, transaction) =>
     transaction.docChanged ||
     transaction.selection ||
-    transaction.effects.some((effect) => effect.is(setFocused) || effect.is(grammarArrived)) ||
+    transaction.effects.some((effect) => effect.is(setFocused) || effect.is(grammarArrived) || effect.is(setBlockMetrics) || effect.is(heightsLearned)) ||
     transaction.startState.facet(editorEnvironment) !== transaction.state.facet(editorEnvironment)
       ? build(transaction.state)
       : decorations,
@@ -728,6 +822,90 @@ const follow = EditorView.domEventHandlers({
   },
 });
 
+/** How long an embed measured ahead of being drawn may take to load before it is let go (#94). */
+const PREMEASURE_TIMEOUT = 8000;
+
+/**
+ * Draws, out of sight and at the editor's width, every embed of a note whose height is not known
+ * yet, and remembers the height it is drawn at, so the page is laid out with it before the author
+ * scrolls to it (#94). What an embed draws is a note the host loads, which no estimate can know; it
+ * is asked for as the editor opens, and once measured the blocks are made again with the height.
+ */
+const embedPremeasure = ViewPlugin.define((view) => {
+  const asked = new Set<string>();
+  const pending = new Set<() => void>();
+  const premeasure = (source: string, identity: string, metrics: BlockMetrics) => {
+    const { host } = view.state.facet(editorEnvironment);
+    const container = document.createElement('div');
+    container.className = 'cm-ms-block cm-ms-premeasure';
+    container.setAttribute('aria-hidden', 'true');
+    container.style.cssText = `position: absolute; top: 0; left: 0; width: ${metrics.width}px; visibility: hidden; pointer-events: none; contain: layout style`;
+    // Outside the text, it is given the text's own face and line, which a drawn block inherits.
+    const text = getComputedStyle(view.contentDOM);
+    container.style.fontFamily = text.fontFamily;
+    container.style.fontSize = text.fontSize;
+    container.style.lineHeight = text.lineHeight;
+    (view.dom.parentElement ?? view.dom).appendChild(container);
+    const root = createRoot(container);
+    root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, createElement(Snippet, { text: source }))));
+    let finished = false;
+    const finish = (height: number | null) => {
+      if (finished) return;
+      finished = true;
+      pending.delete(stop);
+      clearTimeout(timer);
+      observer?.disconnect();
+      queueMicrotask(() => {
+        root.unmount();
+        container.remove();
+      });
+      // Remembered at the width it was drawn at; at another one it says nothing.
+      const now = view.state.field(metricsField);
+      if (height === null || Math.round(now.width) !== Math.round(metrics.width)) return;
+      rememberHeight(identity, now, height);
+      view.dispatch({ effects: heightsLearned.of(null) });
+    };
+    const stop = () => finish(null);
+    pending.add(stop);
+    // Drawn once the note arrived: no skeleton left, and a frame later, laid out.
+    const check = () => {
+      if (finished || !container.firstElementChild || container.querySelector('.embed-skeleton')) return;
+      requestAnimationFrame(() => {
+        if (!finished && !container.querySelector('.embed-skeleton')) finish(container.getBoundingClientRect().height);
+      });
+    };
+    const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(check);
+    observer?.observe(container, { childList: true, subtree: true });
+    const timer = setTimeout(stop, PREMEASURE_TIMEOUT);
+  };
+  const run = () => {
+    const { host } = view.state.facet(editorEnvironment);
+    if (!host.loadNote || typeof requestAnimationFrame === 'undefined') return;
+    const metrics = view.state.field(metricsField);
+    const doc = view.state.doc;
+    for (const construct of view.state.field(analysisField).constructs) {
+      if (construct.kind !== 'embed' || host.keeps(construct.target) || host.reaches(construct.target) !== 1) continue;
+      const end = construct.to > construct.from && doc.sliceString(construct.to - 1, construct.to) === '\n' ? construct.to - 1 : construct.to;
+      const source = doc.sliceString(doc.lineAt(construct.from).from, doc.lineAt(end).to);
+      const identity = `embed\u0000${source}`;
+      const key = `${Math.round(metrics.width)}\u0000${identity}`;
+      if (asked.has(key) || measuredHeight(identity, metrics) !== undefined) continue;
+      asked.add(key);
+      premeasure(source, identity, metrics);
+    }
+  };
+  // Not inside the update that made the plugin, where CodeMirror takes no transaction.
+  queueMicrotask(run);
+  return {
+    update: (update: ViewUpdate) => {
+      if (update.docChanged || update.startState.field(metricsField) !== update.state.field(metricsField)) queueMicrotask(run);
+    },
+    destroy: () => {
+      for (const stop of [...pending]) stop();
+    },
+  };
+});
+
 /**
  * Fetches the grammar of every code block that names one not registered yet, and has the page
  * drawn again once it arrives, its tokens coloured (#84).
@@ -772,6 +950,7 @@ export function livePage(metrics?: BlockMetrics): Extension {
     EditorView.focusChangeEffect.of((_state, focusing) => setFocused.of(focusing)),
     focusKeeper,
     grammarLoader,
+    embedPremeasure,
     blockKeys,
     follow,
   ];

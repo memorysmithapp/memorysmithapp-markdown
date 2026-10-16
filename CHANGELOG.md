@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- The page in edit mode keeps its height as a note is scrolled, on a phone too. Every line of text tells the editor how tall it is drawn — a heading at its size and with the space above it, a line of text or of code wrapped at the column's width, measured from the theme's own lines — instead of the editor's guess from the text's metrics; a note an embed draws is drawn out of sight as the editor opens, and the page is laid out at its height before the author reaches it; and a block whose height is learned after it was made is laid out at it, its drawing kept. Measured in the playground on a long note (six notes of the notebooks, twice) scrolled once to its end, the page changed by −0.8% on a computer and +1.0% on a phone, where it grew by 1.0% and 10.6% (8% and 23% at 0.6.0). A host's `loadNote` is asked once more for each embedded note when the editor opens (#94).
 - The playground keeps the window's width on a phone: a block of code wider than the note scrolls inside it rather than widening the page (#97).
 
 ## [0.6.0] - 2026-10-16

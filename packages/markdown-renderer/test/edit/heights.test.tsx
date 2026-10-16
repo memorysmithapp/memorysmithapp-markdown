@@ -6,10 +6,10 @@
 
 import { EditorView, type WidgetType } from '@codemirror/view';
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NoteEditor } from '../../src/edit/index.js';
-import { decorationsField } from '../../src/edit/live.js';
-import { DEFAULT_METRICS, estimateHeight, measuredHeight, rememberHeight, withinReason, type BlockMetrics } from '../../src/edit/heights.js';
+import { decorationsField, metricsField } from '../../src/edit/live.js';
+import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measuredHeight, rememberHeight, withinReason, type BlockMetrics, type LineMetrics } from '../../src/edit/heights.js';
 import { mount, type Mounted } from '../render.js';
 
 const DESKTOP: BlockMetrics = { width: 700, lineHeight: 24, charWidth: 7.75 };
@@ -93,7 +93,8 @@ describe('the blocks of the editor', () => {
   it('estimates each of them by what it draws, never one line for all', async () => {
     const view = await open(NOTE);
     const heights = widgets(view).map(({ widget }) => widget.estimatedHeight);
-    const metrics = DEFAULT_METRICS;
+    // The editor's own metrics, as it read them once it was laid out.
+    const metrics = view.state.field(metricsField);
     expect(heights).toContain(estimateHeight('frontmatter', '---\nname: A note\nstatus: draft\n---', metrics));
     expect(heights).toContain(estimateHeight('callout', CALLOUT, metrics));
     expect(heights).toContain(estimateHeight('table', TABLE, metrics));
@@ -115,5 +116,82 @@ describe('the blocks of the editor', () => {
     rememberHeight(`callout\u0000${CALLOUT}`, metrics, 321);
     await act(async () => view.dispatch({ changes: { from: NOTE.indexOf('> [!note]'), insert: 'Above.\n\n' } }));
     expect(widgets(view).map(({ widget }) => widget.estimatedHeight)).toContain(321);
+  });
+
+  it('says how tall each line of text is, so no line is left to the estimate of a gap (#94)', async () => {
+    const note = '# A title\n\nA line.\n\nAnother line, and a third.\n';
+    const view = await open(note);
+    const estimates = widgets(view).filter(({ widget }) => widget.constructor.name === 'LineEstimate');
+    const lines = estimates.map(({ from }) => view.state.doc.lineAt(from).number);
+    // Every line with text, the heading included where headings were measured; never a blank one.
+    expect(lines).toEqual(expect.arrayContaining([3, 5]));
+    expect(lines).not.toContain(2);
+    expect(lines).not.toContain(4);
+  });
+
+  it('makes a block again with the height learned for it, keeping what it drew (#94)', async () => {
+    const view = await open(NOTE);
+    const metrics = view.state.field(metricsField);
+    const drawn = view.dom.querySelector('.cm-ms-block .callout')?.closest('.cm-ms-block');
+    rememberHeight(`callout\u0000${CALLOUT}`, metrics, 432);
+    // Any rebuild of the page reads the height learned.
+    await act(async () => view.dispatch({ selection: { anchor: 0 } }));
+    expect(widgets(view).map(({ widget }) => widget.estimatedHeight)).toContain(432);
+    if (drawn) expect(view.dom.querySelector('.cm-ms-block .callout')?.closest('.cm-ms-block')).toBe(drawn);
+  });
+});
+
+describe('an embedded note (#94)', () => {
+  let mounted: Mounted | null = null;
+  afterEach(() => {
+    mounted?.unmount();
+    mounted = null;
+    vi.unstubAllGlobals();
+  });
+
+  it('is drawn out of sight as the editor opens, and let go once it is drawn', async () => {
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => setTimeout(() => callback(0), 0));
+    let answer: (note: { markdown: string; name: string; address: null }) => void = () => undefined;
+    const loadNote = vi.fn(() => new Promise<{ markdown: string; name: string; address: null }>((done) => (answer = done)));
+    mounted = await mount(<NoteEditor markdown={'Text.\n\n![[Other]]\n'} loadNote={loadNote} reaches={() => 1} />);
+    const settle = async () => {
+      for (let i = 0; i < 5; i++) await act(async () => new Promise((done) => setTimeout(done, 0)));
+    };
+    await settle();
+    // Asked for once by the page, and once ahead of it, out of sight and hidden from a reader.
+    expect(loadNote).toHaveBeenCalledWith('Other');
+    const hidden = mounted.container.querySelector<HTMLElement>('.cm-ms-premeasure');
+    expect(hidden?.getAttribute('aria-hidden')).toBe('true');
+    expect(hidden?.style.visibility).toBe('hidden');
+    await act(async () => answer({ markdown: '# Other\n\nIts text.\n', name: 'Other', address: null }));
+    await settle();
+    expect(mounted.container.querySelector('.cm-ms-premeasure')).toBeNull();
+  });
+});
+
+describe('the estimate of a line (#94)', () => {
+  const HEADING: LineMetrics = { lineHeight: 36, charWidth: 14, padding: 14, inset: 0 };
+  const CODE: LineMetrics = { lineHeight: 21, charWidth: 7.5, padding: 0, inset: 16 };
+  const metrics = (width: number): BlockMetrics => ({ width, lineHeight: 24, charWidth: 8.6, headings: [HEADING, HEADING, HEADING, HEADING, HEADING, HEADING], code: CODE });
+
+  it('wraps a line of text at the width of the column, which a phone reaches sooner', () => {
+    // Measured in the default theme: a line of 60 characters is one line on a computer, two on a phone.
+    expect(lineHeightOf('text', 60, metrics(700))).toBe(24);
+    expect(lineHeightOf('text', 60, metrics(358))).toBe(48);
+  });
+
+  it('draws a heading at its own size, with the space above it', () => {
+    expect(lineHeightOf({ heading: 1 }, 10, metrics(700))).toBe(14 + 36);
+    expect(lineHeightOf({ heading: 1 }, 40, metrics(358))).toBe(14 + 2 * 36);
+  });
+
+  it('wraps a line of code at the width its sides leave', () => {
+    expect(lineHeightOf('code', 60, metrics(700))).toBe(21);
+    expect(lineHeightOf('code', 60, metrics(358))).toBe(42);
+  });
+
+  it('says nothing of a kind of line that was not measured', () => {
+    expect(lineHeightOf({ heading: 2 }, 10, DEFAULT_METRICS)).toBeNull();
+    expect(lineHeightOf('code', 10, DEFAULT_METRICS)).toBeNull();
   });
 });
