@@ -24,6 +24,7 @@
 import type { ReactNode } from 'react';
 import type { FileShape } from './file-types.js';
 import type { KeptFile } from './host.js';
+import type { NoteButtons } from './NoteActions.js';
 import type { PropertyEntry } from './properties.js';
 
 export type Scheme = 'light' | 'dark';
@@ -139,6 +140,8 @@ export interface ThemeProperties {
   readonly chipBg?: string;
   readonly chipColor?: string;
   readonly chipFont?: string;
+  // The narrowest note on which a `responsive` button shows its word beside its icon (#96).
+  readonly buttonWordsFrom?: string;
 }
 
 /** The names of `ThemeProperties`, in the order the documentation lists them. */
@@ -163,6 +166,7 @@ export const THEME_PROPERTIES = Object.keys({
   propertiesRule: 1, propertiesLabelFont: 1, propertiesLabelColor: 1, propertiesKeyColor: 1,
   iconPropertyText: 1, iconPropertyList: 1, iconPropertyDate: 1, iconPropertyBoolean: 1,
   chipBg: 1, chipColor: 1, chipFont: 1,
+  buttonWordsFrom: 1,
 } satisfies Record<keyof ThemeProperties, 1>) as (keyof ThemeProperties)[];
 
 /** `textSoft` → `--markdown-text-soft`, `h1Size` → `--markdown-h1-size`. */
@@ -311,8 +315,11 @@ export interface ModeSwitchSlotProps {
   readonly label: string;
   /** The default theme's icon of that action: a pencil to edit, an eye to read. */
   readonly icon: ReactNode;
-  /** Whether the host asked for the icon alone or the icon and its word. */
-  readonly display: 'icon' | 'label';
+  /**
+   * How the host asked the buttons around the note to show their word (#96): the icon alone, the
+   * icon and its word, or the word only on a wide note (`responsive`).
+   */
+  readonly display: NoteButtons;
   /** Switches to the other mode. */
   readonly toggle: () => void;
 }

@@ -10,7 +10,7 @@
 import { EditorSelection, Facet, Prec, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import katex from 'katex';
-import { Component, createElement, type ErrorInfo, type ReactNode } from 'react';
+import { Component, createElement, Fragment, useLayoutEffect, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
@@ -18,8 +18,8 @@ import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
 import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
-import { DEFAULT_METRICS, estimateHeight, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
-import { AddProperties, CalloutBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
+import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
+import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
 
@@ -51,8 +51,11 @@ export const grammarArrived = StateEffect.define<string>();
 /** The editor's metrics changed: the blocks made from now on estimate their height by them (#91). */
 const setBlockMetrics = StateEffect.define<BlockMetrics>();
 
+/** A block's height was learned before it was drawn: the blocks are made again with it (#94). */
+const heightsLearned = StateEffect.define<null>();
+
 /** The metrics of the editor's text column, which a drawn block estimates its height by (#91). */
-const metricsField = StateField.define<BlockMetrics>({
+export const metricsField = StateField.define<BlockMetrics>({
   create: () => DEFAULT_METRICS,
   update: (metrics, transaction) => {
     for (const effect of transaction.effects) if (effect.is(setBlockMetrics)) return effect.value;
@@ -65,10 +68,22 @@ const metricsWatcher = ViewPlugin.define((view) => {
   let destroyed = false;
   const check = () =>
     view.requestMeasure({
-      read: () => withinReason({ width: view.contentDOM.clientWidth, lineHeight: view.defaultLineHeight, charWidth: view.defaultCharacterWidth }),
+      read: () =>
+        withinReason({
+          width: view.contentDOM.clientWidth,
+          lineHeight: view.defaultLineHeight,
+          charWidth: view.defaultCharacterWidth,
+          ...measureLines(view.dom),
+        }),
       write: (next) => {
         const now = view.state.field(metricsField);
-        const moved = Math.abs(next.width - now.width) >= 1 || Math.abs(next.lineHeight - now.lineHeight) >= 0.5 || Math.abs(next.charWidth - now.charWidth) >= 0.05;
+        const lines = (metrics: BlockMetrics) =>
+          [...(metrics.headings ?? []), ...(metrics.code ? [metrics.code] : [])].map((each) => `${each.lineHeight.toFixed(1)}/${each.charWidth.toFixed(2)}/${each.padding.toFixed(1)}/${each.inset.toFixed(1)}`).join();
+        const moved =
+          Math.abs(next.width - now.width) >= 1 ||
+          Math.abs(next.lineHeight - now.lineHeight) >= 0.5 ||
+          Math.abs(next.charWidth - now.charWidth) >= 0.05 ||
+          lines(next) !== lines(now);
         // Not inside the measure, where CodeMirror takes no transaction.
         if (moved) queueMicrotask(() => destroyed || view.dispatch({ effects: setBlockMetrics.of(next) }));
       },
@@ -123,25 +138,75 @@ class BlockBoundary extends Component<{ host: ResolvedHost; source: string; chil
 }
 
 /** The React roots the widgets mounted, unmounted when CodeMirror lets the widget go. */
-const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null }>();
+const roots = new WeakMap<HTMLElement, { unmount: () => void; observer: ResizeObserver | null; render: (node: ReactNode, source: string, identity: string) => void }>();
 
-function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string, measured: (height: number) => void): void {
-  const { host } = view.state.facet(editorEnvironment);
+/** The widget an element draws now: one made again for the same block takes its element over (#99). */
+const drawing = new WeakMap<HTMLElement, BlockWidget>();
+
+/** How long a block made again holds the height it was drawn at, at most, while it draws (#99). */
+const HOLD_MS = 2000;
+
+/** Tells its block it was drawn, once React has put it in the page. */
+function Drawn({ onDrawn, children }: { onDrawn: () => void; children?: ReactNode }) {
+  useLayoutEffect(onDrawn);
+  return createElement(Fragment, null, children);
+}
+
+/**
+ * Draws `node` in `element` with React, under the editor's host. `held` is the height the block
+ * was drawn at before, which the element keeps until what it draws is as tall — the root draws on
+ * React's schedule, and an element left empty meanwhile would let the page collapse under the
+ * author (#99).
+ */
+function mount(view: EditorView, element: HTMLElement, node: ReactNode, source: string, identity: string, measured: (height: number) => void, held?: number): void {
   const root = createRoot(element);
-  // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
-  // inside a React commit, where React cannot be asked to render synchronously.
-  root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, node)));
+  let holding = held !== undefined && held > 0;
+  if (holding) element.style.minHeight = `${held}px`;
+  const release = () => {
+    holding = false;
+    element.style.minHeight = '';
+  };
+  const timer = holding ? setTimeout(release, HOLD_MS) : undefined;
+  // Released once what it draws fills the height it holds: the content's own box, margins aside.
+  const check = () => {
+    if (!holding || typeof document.createRange !== 'function') return;
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    if (range.getBoundingClientRect().height >= held! * 0.9) {
+      clearTimeout(timer);
+      release();
+    }
+  };
+  const render = (next: ReactNode, text: string, drawn: string) => {
+    const { host } = view.state.facet(editorEnvironment);
+    // Drawn on React's own schedule: CodeMirror builds its widgets inside its update, which may run
+    // inside a React commit, where React cannot be asked to render synchronously. Keyed by what it
+    // draws: the same block is drawn again in place, another one replaces it at once on commit,
+    // what was drawn before staying until then (#99).
+    root.render(
+      createElement(HostProvider, { value: host }, createElement(BlockBoundary, { key: drawn, host, source: text }, createElement(Drawn, { onDrawn: check }, next))),
+    );
+  };
+  render(node, source, identity);
   // A block whose content arrives later — an embed, a diagram — changes its height after it is
   // measured; the editor is told so, or the lines below it would be placed by the old height.
   const observer =
     typeof ResizeObserver === 'undefined'
       ? null
       : new ResizeObserver(() => {
-          measured(element.getBoundingClientRect().height);
+          check();
+          if (!holding) measured(element.getBoundingClientRect().height);
           view.requestMeasure();
         });
   observer?.observe(element);
-  roots.set(element, { unmount: () => root.unmount(), observer });
+  roots.set(element, {
+    unmount: () => {
+      clearTimeout(timer);
+      root.unmount();
+    },
+    observer,
+    render,
+  });
 }
 
 function unmount(element: HTMLElement): void {
@@ -180,26 +245,52 @@ class BlockWidget extends WidgetType {
     super();
     this.inline = options.inline ?? false;
     this.source = options.source ?? '';
+    this.estimate = this.estimateNow();
   }
   /** What it is remembered by once measured: what it draws, wherever in the note it stands. */
-  private get identity(): string {
+  get identity(): string {
     return `${this.options.kind ?? 'block'}\u0000${this.source}`;
   }
+  /**
+   * The height it is laid out at until drawn, read when it is made: a block whose height was learned
+   * since — measured, or measured ahead of being drawn (#94) — is made again with it, so CodeMirror
+   * reads the new one, and keeps its drawing through `updateDOM`.
+   */
+  private readonly estimate: number;
   override eq(other: BlockWidget): boolean {
-    return other.key === this.key && other.host === this.host;
+    return other.key === this.key && other.host === this.host && other.estimate === this.estimate;
+  }
+  /**
+   * A block of the same kind made again — because it moved, the host was given again, its
+   * estimate was learned or its source changed — keeps its element: it is drawn again in it, with
+   * this widget's positions and the host as it is now (#94, #99). The same source keeps its React
+   * tree; another source replaces it on commit, so the element is never left empty.
+   */
+  override updateDOM(dom: HTMLElement, view: EditorView, from: BlockWidget): boolean {
+    const mounted = roots.get(dom);
+    if (!mounted || from.inline !== this.inline || from.options.kind !== this.options.kind || from.revealsOnClick !== this.revealsOnClick) return false;
+    drawing.set(dom, this);
+    if (from.key !== this.key || from.host !== this.host) mounted.render(this.draw(view), this.source, this.identity);
+    return true;
   }
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
     element.className = this.inline ? 'cm-ms-inline-block' : 'cm-ms-block';
-    mount(view, element, this.draw(view), this.source, (height) => rememberHeight(this.identity, view.state.field(metricsField), height));
+    drawing.set(element, this);
+    const metrics = view.state.field(metricsField);
+    const held = this.inline ? undefined : measuredHeight(this.identity, metrics);
+    // Remembered for what the element draws now, which a widget made again may have changed.
+    const measured = (height: number) => rememberHeight((drawing.get(element) ?? this).identity, view.state.field(metricsField), height);
+    mount(view, element, this.draw(view), this.source, this.identity, measured, held);
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
       if (target.closest('[data-ms-control]')) return;
       if (event.metaKey || event.ctrlKey) return;
-      if (!this.revealsOnClick) return;
+      const widget = drawing.get(element) ?? this;
+      if (!widget.revealsOnClick) return;
       event.preventDefault();
       // At the end of its first line: after a fence's language, a callout's title, a formula's `$$`.
-      reveal(view, view.state.doc.lineAt(blockStart(view, element, this.key)).to);
+      reveal(view, view.state.doc.lineAt(blockStart(view, element, widget.key)).to);
     });
     // A link inside a drawn block is followed with a modifier only, as in the text.
     element.addEventListener('click', (event) => {
@@ -219,9 +310,13 @@ class BlockWidget extends WidgetType {
    * block is made: the height it was drawn at before at this width, or its estimate (#91).
    */
   override get estimatedHeight(): number {
-    if (this.inline) return -1;
+    return this.estimate;
+  }
+  private estimateNow(): number {
     const metrics = this.options.metrics ?? DEFAULT_METRICS;
     const kind = this.options.kind;
+    // Within a line only an image estimates, as tall as the line it stands in (#91).
+    if (this.inline && !kind) return -1;
     return measuredHeight(this.identity, metrics) ?? (kind ? estimateHeight(kind, this.source, metrics) : 2 * metrics.lineHeight);
   }
 }
@@ -242,6 +337,28 @@ function blockStart(view: EditorView, element: HTMLElement, key: string): number
     return undefined;
   });
   return found === -1 ? near : found;
+}
+
+/**
+ * Nothing drawn, at the start of a line CodeMirror would estimate too short — a heading, larger than
+ * the text and spaced from it — telling it how tall the line is until it is drawn (#94). CodeMirror
+ * lays a line out at the tallest of its widgets' estimates and its own, so this only ever raises it.
+ */
+class LineEstimate extends WidgetType {
+  constructor(readonly height: number) {
+    super();
+  }
+  override eq(other: LineEstimate): boolean {
+    return other.height === this.height;
+  }
+  toDOM(): HTMLElement {
+    const element = document.createElement('span');
+    element.className = 'cm-ms-line-estimate';
+    return element;
+  }
+  override get estimatedHeight(): number {
+    return this.height;
+  }
 }
 
 class BulletWidget extends WidgetType {
@@ -329,47 +446,16 @@ class MathWidget extends WidgetType {
   }
 }
 
-/** What an image declares no height for is drawn at before it loads, near enough (#91). */
-const UNDECLARED_IMAGE_HEIGHT = 200;
+/** A Markdown image's description and address, when its address is one the page follows. */
+function readImage(source: string): { alt: ImageAlt; address: string } | null {
+  const match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
+  const address = match ? followable(match[2] ?? '') : '';
+  return match && address ? { alt: readImageAlt(match[1] ?? ''), address } : null;
+}
 
-class ImageWidget extends WidgetType {
-  readonly match: RegExpExecArray | null;
-  readonly alt: ImageAlt;
-  constructor(readonly source: string) {
-    super();
-    this.match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
-    this.alt = readImageAlt(this.match?.[1] ?? '');
-  }
-  override eq(other: ImageWidget): boolean {
-    return other.source === this.source;
-  }
-  toDOM(): HTMLElement {
-    const match = this.match;
-    const address = match ? followable(match[2] ?? '') : '';
-    if (!match || !address) {
-      const text = document.createElement('span');
-      text.className = 'cm-ms-raw';
-      text.textContent = this.source;
-      return text;
-    }
-    const image = document.createElement('img');
-    image.className = 'cm-ms-image';
-    image.src = address;
-    // Its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14).
-    image.alt = this.alt.description;
-    if (this.alt.width !== null) image.width = this.alt.width;
-    if (this.alt.height !== null) image.height = this.alt.height;
-    return image;
-  }
-  /** The line it stands in is as tall as the image: the height it declares, or a guess (#91). */
-  override get estimatedHeight(): number {
-    if (!this.match) return -1;
-    if (this.alt.height !== null) return this.alt.height;
-    return this.alt.width !== null ? Math.round(this.alt.width * 0.75) : UNDECLARED_IMAGE_HEIGHT;
-  }
-  override ignoreEvent(): boolean {
-    return false;
-  }
+/** An image drawn with its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14). */
+function drawImage({ alt, address }: { alt: ImageAlt; address: string }): ReactNode {
+  return createElement('img', { className: 'cm-ms-image', src: address, alt: alt.description, width: alt.width ?? undefined, height: alt.height ?? undefined });
 }
 
 // ── Decorations ──────────────────────────────────────────────────────────────
@@ -392,6 +478,8 @@ function build(state: EditorState): DecorationSet {
   const ranges = state.selection.ranges;
   const out: Range<Decoration>[] = [];
   const covered: { from: number; to: number }[] = [];
+  /** The level of each heading, by its line's number, which its estimate is made for (#94). */
+  const headingLevels = new Map<number, number>();
 
   /** Whether the author's cursor or selection is on this range, ends included. */
   const touches = (from: number, to: number) => focused && ranges.some((range) => range.from <= to && range.to >= from);
@@ -462,6 +550,8 @@ function build(state: EditorState): DecorationSet {
         break;
       case 'embed':
         if (open) out.push(mark('cm-ms-wikilink').range(from, to));
+        // A kept image is sized from the image itself (#98); a note's embed draws no image of its own.
+        else if (host.keeps(construct.target)) block(from, to, 'embed', `embed:${source}`, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })));
         else block(from, to, 'embed', `embed:${source}`, () => createElement(Snippet, { text: source }));
         break;
       case 'rule':
@@ -507,6 +597,7 @@ function build(state: EditorState): DecorationSet {
       case 'heading': {
         out.push(line(`cm-ms-heading cm-ms-h${construct.level}`).range(doc.lineAt(from).from));
         const { marker } = construct;
+        headingLevels.set(doc.lineAt(from).number, construct.level);
         if (touches(doc.lineAt(from).from, doc.lineAt(from).to)) out.push(syntax.range(marker.from, marker.to));
         else out.push(hide.range(marker.from, marker.to));
         break;
@@ -544,7 +635,10 @@ function build(state: EditorState): DecorationSet {
         if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
           const source = text.slice(from, to);
           out.push(
-            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, { inline: true, source }) }).range(from, to),
+            Decoration.replace({
+              // A kept image is sized from the image itself, as a Markdown one is (#98).
+              widget: new BlockWidget(`attachment:${source}`, host, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })), true, { inline: true, source }),
+            }).range(from, to),
           );
           break;
         }
@@ -563,9 +657,21 @@ function build(state: EditorState): DecorationSet {
         }
         break;
       }
-      case 'image':
-        if (!touches(from, to)) out.push(Decoration.replace({ widget: new ImageWidget(text.slice(from, to)) }).range(from, to));
+      case 'image': {
+        if (touches(from, to)) break;
+        const source = text.slice(from, to);
+        const image = readImage(source);
+        // An image the page cannot follow shows its notation, as written.
+        if (!image) out.push(mark('cm-ms-raw').range(from, to));
+        else {
+          // Its size is set from the image itself (#98).
+          const draw = (view: EditorView) => createElement(ImageBlock, { view, source }, drawImage(image));
+          out.push(
+            Decoration.replace({ widget: new BlockWidget(`image:${source}`, host, draw, true, { inline: true, source, kind: 'image', metrics }) }).range(from, to),
+          );
+        }
         break;
+      }
       case 'inlineMath':
         if (touches(from, to)) out.push(mark('cm-ms-math-source').range(from, to));
         else out.push(Decoration.replace({ widget: new MathWidget(construct.tex, false) }).range(from, to));
@@ -614,7 +720,47 @@ function build(state: EditorState): DecorationSet {
         break;
     }
   }
+  out.push(...lineEstimates(state, out, covered, headingLevels, metrics));
   return Decoration.set(out, true);
+}
+
+/**
+ * A `LineEstimate` for each line CodeMirror would lay out shorter than the page draws it (#94): a
+ * heading, a line of code, a line of text that wraps. Its length is what the reader sees of it, the
+ * notation the decorations hide taken away; a line a drawn block covers estimates nothing.
+ */
+function lineEstimates(
+  state: EditorState,
+  decorations: readonly Range<Decoration>[],
+  covered: readonly { from: number; to: number }[],
+  headingLevels: ReadonlyMap<number, number>,
+  metrics: BlockMetrics,
+): Range<Decoration>[] {
+  const doc = state.doc;
+  const hidden = new Map<number, number>();
+  for (const range of decorations) {
+    if (range.value !== hide || range.to <= range.from) continue;
+    const number = doc.lineAt(range.from).number;
+    hidden.set(number, (hidden.get(number) ?? 0) + range.to - range.from);
+  }
+  const code = new Set<number>();
+  for (const construct of state.field(analysisField).constructs) {
+    if (construct.kind !== 'code') continue;
+    for (let at = doc.lineAt(construct.from).number; at <= doc.lineAt(Math.max(construct.from, construct.to - 1)).number; at++) code.add(at);
+  }
+  const out: Range<Decoration>[] = [];
+  for (let number = 1; number <= doc.lines; number++) {
+    const line = doc.line(number);
+    if (line.length === 0) continue;
+    if (covered.some((each) => line.from >= each.from && line.to <= each.to)) continue;
+    const level = headingLevels.get(number);
+    const length = line.length - (hidden.get(number) ?? 0);
+    const height = lineHeightOf(level !== undefined ? { heading: level } : code.has(number) ? 'code' : 'text', length, metrics);
+    // Said of every line, even one text line tall: a line with no decoration is laid out in a gap,
+    // which CodeMirror estimates by the length of all its lines together, too tall on a wide column.
+    if (height !== null) out.push(Decoration.widget({ widget: new LineEstimate(height), side: -1 }).range(line.from));
+  }
+  return out;
 }
 
 /** A code block's lines, as source: its frame, its fences dimmed, its tokens coloured. */
@@ -651,7 +797,7 @@ export const decorationsField = StateField.define<DecorationSet>({
   update: (decorations, transaction) =>
     transaction.docChanged ||
     transaction.selection ||
-    transaction.effects.some((effect) => effect.is(setFocused) || effect.is(grammarArrived)) ||
+    transaction.effects.some((effect) => effect.is(setFocused) || effect.is(grammarArrived) || effect.is(setBlockMetrics) || effect.is(heightsLearned)) ||
     transaction.startState.facet(editorEnvironment) !== transaction.state.facet(editorEnvironment)
       ? build(transaction.state)
       : decorations,
@@ -741,6 +887,90 @@ const follow = EditorView.domEventHandlers({
   },
 });
 
+/** How long an embed measured ahead of being drawn may take to load before it is let go (#94). */
+const PREMEASURE_TIMEOUT = 8000;
+
+/**
+ * Draws, out of sight and at the editor's width, every embed of a note whose height is not known
+ * yet, and remembers the height it is drawn at, so the page is laid out with it before the author
+ * scrolls to it (#94). What an embed draws is a note the host loads, which no estimate can know; it
+ * is asked for as the editor opens, and once measured the blocks are made again with the height.
+ */
+const embedPremeasure = ViewPlugin.define((view) => {
+  const asked = new Set<string>();
+  const pending = new Set<() => void>();
+  const premeasure = (source: string, identity: string, metrics: BlockMetrics) => {
+    const { host } = view.state.facet(editorEnvironment);
+    const container = document.createElement('div');
+    container.className = 'cm-ms-block cm-ms-premeasure';
+    container.setAttribute('aria-hidden', 'true');
+    container.style.cssText = `position: absolute; top: 0; left: 0; width: ${metrics.width}px; visibility: hidden; pointer-events: none; contain: layout style`;
+    // Outside the text, it is given the text's own face and line, which a drawn block inherits.
+    const text = getComputedStyle(view.contentDOM);
+    container.style.fontFamily = text.fontFamily;
+    container.style.fontSize = text.fontSize;
+    container.style.lineHeight = text.lineHeight;
+    (view.dom.parentElement ?? view.dom).appendChild(container);
+    const root = createRoot(container);
+    root.render(createElement(HostProvider, { value: host }, createElement(BlockBoundary, { host, source }, createElement(Snippet, { text: source }))));
+    let finished = false;
+    const finish = (height: number | null) => {
+      if (finished) return;
+      finished = true;
+      pending.delete(stop);
+      clearTimeout(timer);
+      observer?.disconnect();
+      queueMicrotask(() => {
+        root.unmount();
+        container.remove();
+      });
+      // Remembered at the width it was drawn at; at another one it says nothing.
+      const now = view.state.field(metricsField);
+      if (height === null || Math.round(now.width) !== Math.round(metrics.width)) return;
+      rememberHeight(identity, now, height);
+      view.dispatch({ effects: heightsLearned.of(null) });
+    };
+    const stop = () => finish(null);
+    pending.add(stop);
+    // Drawn once the note arrived: no skeleton left, and a frame later, laid out.
+    const check = () => {
+      if (finished || !container.firstElementChild || container.querySelector('.embed-skeleton')) return;
+      requestAnimationFrame(() => {
+        if (!finished && !container.querySelector('.embed-skeleton')) finish(container.getBoundingClientRect().height);
+      });
+    };
+    const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(check);
+    observer?.observe(container, { childList: true, subtree: true });
+    const timer = setTimeout(stop, PREMEASURE_TIMEOUT);
+  };
+  const run = () => {
+    const { host } = view.state.facet(editorEnvironment);
+    if (!host.loadNote || typeof requestAnimationFrame === 'undefined') return;
+    const metrics = view.state.field(metricsField);
+    const doc = view.state.doc;
+    for (const construct of view.state.field(analysisField).constructs) {
+      if (construct.kind !== 'embed' || host.keeps(construct.target) || host.reaches(construct.target) !== 1) continue;
+      const end = construct.to > construct.from && doc.sliceString(construct.to - 1, construct.to) === '\n' ? construct.to - 1 : construct.to;
+      const source = doc.sliceString(doc.lineAt(construct.from).from, doc.lineAt(end).to);
+      const identity = `embed\u0000${source}`;
+      const key = `${Math.round(metrics.width)}\u0000${identity}`;
+      if (asked.has(key) || measuredHeight(identity, metrics) !== undefined) continue;
+      asked.add(key);
+      premeasure(source, identity, metrics);
+    }
+  };
+  // Not inside the update that made the plugin, where CodeMirror takes no transaction.
+  queueMicrotask(run);
+  return {
+    update: (update: ViewUpdate) => {
+      if (update.docChanged || update.startState.field(metricsField) !== update.state.field(metricsField)) queueMicrotask(run);
+    },
+    destroy: () => {
+      for (const stop of [...pending]) stop();
+    },
+  };
+});
+
 /**
  * Fetches the grammar of every code block that names one not registered yet, and has the page
  * drawn again once it arrives, its tokens coloured (#84).
@@ -785,6 +1015,7 @@ export function livePage(metrics?: BlockMetrics): Extension {
     EditorView.focusChangeEffect.of((_state, focusing) => setFocused.of(focusing)),
     focusKeeper,
     grammarLoader,
+    embedPremeasure,
     blockKeys,
     follow,
   ];

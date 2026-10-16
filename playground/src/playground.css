@@ -30,9 +30,11 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
+/* The note's column never grows to its widest line: a block of code scrolls
+   inside it, and the page keeps the window's width. */
 .layout {
   display: grid;
-  grid-template-columns: 18rem 1fr;
+  grid-template-columns: 18rem minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -116,7 +118,7 @@ body {
 }
 @media (max-width: 860px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     border-right: 0;

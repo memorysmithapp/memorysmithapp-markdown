@@ -97,10 +97,14 @@
    and the text of a title flows around it. In edit mode it stays there, at
    the end of a bar that holds the toolbar to its left and the save's status
    under it, and the bar stays at the top of the note while it scrolls. */
-/* The group at the top right: Show Markdown, Copy Markdown and the switch (#76). */
+/* The group at the top right: Show Markdown, Copy Markdown and the switch (#76).
+   It stays at the top of what is in view while the note is read and scrolled,
+   as the bar does in edit mode, and the text flows around the place it takes
+   at the top of the note (#97). */
 .markdown .note-corner {
   float: right;
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 2;
   display: inline-flex;
   align-items: stretch;
@@ -115,6 +119,30 @@
 }
 .markdown .mode-switch-glyph {
   flex: none;
+}
+/* The buttons around a note show their word as the host asked (#96). A
+   `responsive` one measures what it stands in — the note in reading, the bar
+   in edit mode, the dialog of Show Markdown — as a container, and shows its
+   word only from `--markdown-button-words-from` on. A container query cannot
+   read a custom property, so the threshold is a switch computed from the
+   container's width: 0px on a narrower one and 1px from it on, which the
+   word's width and the space before it are multiplied by. The editor's root
+   is never the container, because a container holds what is fixed, and the
+   menu of a right-click is fixed to the window. */
+.markdown.has-responsive-buttons,
+.markdown .has-responsive-buttons {
+  container-type: inline-size;
+}
+.markdown .note-button-word {
+  white-space: nowrap;
+}
+.markdown [data-buttons='responsive'] {
+  gap: 0;
+}
+.markdown [data-buttons='responsive'] .note-button-word {
+  overflow: hidden;
+  max-width: calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000);
+  margin-inline-start: min(calc(clamp(0px, (100cqi - var(--markdown-button-words-from, 560px)) * 1000, 1px) * 10000), 0.35em);
 }
 .markdown .edit-bar {
   position: sticky;
@@ -146,6 +174,7 @@
 }
 .markdown .edit-corner .note-corner {
   float: none;
+  position: relative;
 }
 /* On a phone the corner keeps the top right, and the tools take the whole
    width under it rather than a narrow column beside it. */
@@ -429,4 +458,29 @@
 .markdown .cm-ms-image {
   max-width: 100%;
   vertical-align: middle;
+}
+/* An image in edit mode carries its size's controls over its top right and a
+   handle at its bottom right corner that drags it (#98). */
+.markdown .edit-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.markdown .edit-image-controls {
+  align-items: center;
+  white-space: nowrap;
+}
+.markdown .edit-image-width {
+  width: 5em;
+}
+.markdown .edit-image-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 0.9rem;
+  height: 0.9rem;
+  cursor: nwse-resize;
+  touch-action: none;
 }

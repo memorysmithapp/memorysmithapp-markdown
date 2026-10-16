@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ICON_EDIT, ICON_VIEW } from './mode-icons.js';
-import { NoteActions } from './NoteActions.js';
+import { ButtonFace, NoteActions, type NoteButtons } from './NoteActions.js';
 import { drawSlot } from './slots.js';
 import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type ResolvedHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
@@ -43,8 +43,19 @@ export interface NoteBodyProps extends NoteHost {
    */
   readonly onChange?: (markdown: string) => unknown;
   /**
-   * Whether the switch shows its icon alone or its icon and its word. Defaults to `icon`, like Show
-   * Markdown and Copy Markdown beside it, its word then its name and its title (#92).
+   * How every button the note draws around its text shows its word — Show Markdown, Copy Markdown,
+   * the switch, and Copy in the dialog of Show Markdown (#96): `icon`, the icon alone; `label`, the
+   * icon and the word; `responsive`, the word beside the icon on a note at least
+   * `--markdown-button-words-from` wide (560px by default) and hidden on a narrower one. Wherever
+   * the word is not drawn, or may be hidden, it is the button's name and its title. Defaults to
+   * `icon`, or to `modeButton` when only that is given.
+   */
+  readonly buttons?: NoteButtons;
+  /**
+   * The switch alone as its icon or its icon and its word (#92).
+   *
+   * @deprecated Use `buttons`, which governs the switch and the buttons beside it; this is read
+   * only when `buttons` is left out.
    */
   readonly modeButton?: 'icon' | 'label';
   /**
@@ -62,7 +73,7 @@ export type NoteMode = 'view' | 'edit';
 const NoteEditor = lazy(() => import('./edit/NoteEditor.js').then((module) => ({ default: module.NoteEditor })));
 
 /** The switch between reading and editing, drawn by the theme's slot or as the default theme draws it. */
-function ModeSwitch({ mode, display, toggle }: { mode: NoteMode; display: 'icon' | 'label'; toggle: () => void }) {
+function ModeSwitch({ mode, display, toggle }: { mode: NoteMode; display: NoteButtons; toggle: () => void }) {
   const host = useHost();
   const slot = host.theme.components?.modeSwitch;
   const label = mode === 'view' ? host.strings.edit : host.strings.view;
@@ -73,12 +84,12 @@ function ModeSwitch({ mode, display, toggle }: { mode: NoteMode; display: 'icon'
       type="button"
       className={`mode-switch mode-switch-${display}`}
       data-mode={mode}
+      data-buttons={display}
       title={label}
-      aria-label={display === 'icon' ? label : undefined}
+      aria-label={display === 'label' ? undefined : label}
       onClick={toggle}
     >
-      {icon}
-      {display === 'label' && <span className="mode-switch-label">{label}</span>}
+      <ButtonFace icon={icon} word={label} display={display} wordClass="mode-switch-label" />
     </button>
   );
 }
@@ -95,6 +106,7 @@ export function NoteBody({
   defaultMode = 'view',
   onModeChange,
   onChange,
+  buttons,
   modeButton = 'icon',
   actions = true,
   ...rest
@@ -105,6 +117,7 @@ export function NoteBody({
   // The last text handed to the host in edit mode, which Show and Copy Markdown give there (#76).
   const handed = useRef<string | null>(null);
   const current: NoteMode = editable ? (mode ?? own) : 'view';
+  const display = buttons ?? modeButton;
   if (!editable && !actions) return <NoteView {...rest} />;
   const go = (next: NoteMode) => {
     if (mode === undefined) setOwn(next);
@@ -133,16 +146,16 @@ export function NoteBody({
         const corner = (
           <HostProvider value={resolved}>
             <div className="note-corner">
-              {actions && <NoteActions text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />}
-              {editable && <ModeSwitch mode={current} display={modeButton} toggle={toggle} />}
+              {actions && <NoteActions display={display} text={() => (current === 'edit' ? (handed.current ?? rest.markdown) : rest.markdown)} />}
+              {editable && <ModeSwitch mode={current} display={display} toggle={toggle} />}
             </div>
           </HostProvider>
         );
-        if (current === 'view') return <NoteView {...rest} corner={corner} switched={editable} />;
+        if (current === 'view') return <NoteView {...rest} corner={corner} switched={editable} buttons={display} />;
         return (
           // While the editor loads, the note stays on the page as it was.
-          <Suspense fallback={<NoteView {...rest} corner={corner} switched />}>
-            <NoteEditor {...host} onChange={hand} corner={corner} autoFocus leaving={leaving} onLeave={onLeave} />
+          <Suspense fallback={<NoteView {...rest} corner={corner} switched buttons={display} />}>
+            <NoteEditor {...host} onChange={hand} corner={corner} buttons={display} autoFocus leaving={leaving} onLeave={onLeave} />
           </Suspense>
         );
       }}
@@ -166,8 +179,9 @@ function NoteView({
   onToggleTask,
   corner,
   switched = false,
+  buttons = 'icon',
   ...host
-}: NoteHost & { markdown: string; corner?: ReactNode; switched?: boolean }) {
+}: NoteHost & { markdown: string; corner?: ReactNode; switched?: boolean; buttons?: NoteButtons }) {
   const resolved = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
@@ -249,7 +263,7 @@ function NoteView({
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
-        className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-note-corner' : ''}${switched ? ' has-mode-switch' : ''}`}
+        className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-note-corner' : ''}${switched ? ' has-mode-switch' : ''}${corner && buttons === 'responsive' ? ' has-responsive-buttons' : ''}`}
         data-theme={resolved.scheme}
         style={rootStyle(resolved.theme, resolved.scheme)}
       >

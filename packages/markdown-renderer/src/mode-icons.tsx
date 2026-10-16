@@ -24,3 +24,6 @@ export const ICON_MARKDOWN = svg('M10 12.5 8 15l2 2.5', 'm14 12.5 2 2.5-2 2.5', 
 export const ICON_COPY = svg('M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z', 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2');
 export const ICON_CHECK = svg('M20 6 9 17l-5-5');
 export const ICON_CLOSE = svg('M18 6 6 18', 'm6 6 12 12');
+
+// The button that draws an image at its own size (#98): Lucide's scaling (ISC).
+export const ICON_OWN_SIZE = svg('M21 3 9 15', 'M12 3H3v18h18v-9', 'M16 3h5v5', 'M14 15H9v-5');

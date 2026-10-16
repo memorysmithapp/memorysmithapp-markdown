@@ -1,5 +1,6 @@
 // The entry point of @memorysmithapp/markdown-renderer.
 export { NoteBody, type NoteBodyProps, type NoteMode } from './NoteBody.js';
+export type { NoteButtons } from './NoteActions.js';
 // Types only: the editor, which follows them, stays on its own subpath until a note is edited.
 export type { SaveAction, SaveNotice, SaveOutcome, SaveRefusal } from './edit/saves.js';
 export { isAttachRefusal } from './host.js';

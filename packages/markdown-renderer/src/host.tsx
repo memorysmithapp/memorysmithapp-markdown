@@ -39,7 +39,9 @@ export interface NoteHost {
   /**
    * The note a target names, for an embed to draw in place: its body as the host keeps it, its name
    * and its address. Asked only for a target exactly one note reaches; `null` draws the embed as
-   * pending. Without it, every embed of a note is pending. The package never fetches.
+   * pending. Without it, every embed of a note is pending. The package never fetches. In edit mode
+   * each embedded note is also asked for as the editor opens, to lay the page out at its height
+   * before it is reached (#94): a host that loads from the network may cache what it answered.
    */
   readonly loadNote?: (name: string) => Promise<EmbeddedNote | null>;
   /**

@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
+### Added
+
+- `NoteBody` takes `buttons`, one option for every button it draws around a note: *Show Markdown*, *Copy Markdown* and the switch at its top right, and *Copy* in the dialog of *Show Markdown*. `icon`, the default, draws each as its icon alone; `label`, its icon and its word; `responsive`, its word beside its icon on a note at least 560px wide and its icon alone on a narrower one, measured on the note and not on the window, so a host draws MemorySmith's rule of a word on a computer and an icon on a phone. A host moves the threshold with `--markdown-button-words-from`, or a theme's `buttonWordsFrom`. Wherever the word is not drawn or may be hidden it is the button's name and title, the dialog's *Copy* included, which also gets the icon of *Copy Markdown*. `NoteEditor` takes `buttons` too, and the type `NoteButtons` is exported. The playground's `?button=responsive` shows it (#96).
+
+- An image in edit mode is sized where it is drawn: over it, a field with the width it is drawn at, its height following, and a button back to its own size, and at its corner a handle that drags it. Each writes only the dimensions of its notation — `![description|300](address)` (`SPEC.md` §3.14) or `![[photo.jpg|300]]` (§5.7) — and reading draws it at that size. A kept file is offered a size only once it is drawn as an image, and an embed whose pipe holds anything but dimensions is offered none. On a screen with no hover the controls are always shown. `strings.editor` words them with `imageWidth`, `imageOwnSize` and `imageResize` (#98).
+
+### Changed
+
+- The buttons at the top right of a note that is read — *Show Markdown*, *Copy Markdown* and the switch — stay at the top of what is in view while the note is scrolled, as the toolbar does in edit mode, so a reader far down a long note no longer scrolls back to the top to edit or copy it. The text still flows around the place they take at the top of the note (#97).
+- The `display` a theme's `modeSwitch` slot receives may also be `responsive` (#96).
+
+### Deprecated
+
+- `modeButton`, which governed the switch alone: `buttons` governs it with the buttons beside it. `modeButton` is still read when `buttons` is left out (#96).
+
+### Fixed
+
+- Typing in edit mode no longer moves the page under the author. Every drawn block — the properties, a callout, a table, an embed — was removed and drawn anew whenever the host rendered with props of a new identity, as one that shows its save's status does on the first key and after each save, and the empty blocks let the page collapse under the caret until they drew. A block made again now keeps its element and is drawn again in it — the same source keeping its React tree, a changed one replacing it at once — so typing removes or adds no block, a host's render with the same meaning redraws none in a way the page sees, and a block that is made anew holds the height it was drawn at until it is drawn. The playground's `?host=unstable` gives the host's functions anew on every render (#99).
+- The page in edit mode keeps its height as a note is scrolled, on a phone too. Every line of text tells the editor how tall it is drawn — a heading at its size and with the space above it, a line of text or of code wrapped at the column's width, measured from the theme's own lines — instead of the editor's guess from the text's metrics; a note an embed draws is drawn out of sight as the editor opens, and the page is laid out at its height before the author reaches it; and a block whose height is learned after it was made is laid out at it, its drawing kept. Measured in the playground on a long note (six notes of the notebooks, twice) scrolled once to its end, the page changed by −0.8% on a computer and +1.0% on a phone, where it grew by 1.0% and 10.6% (8% and 23% at 0.6.0). A host's `loadNote` is asked once more for each embedded note when the editor opens (#94).
+- The playground keeps the window's width on a phone: a block of code wider than the note scrolls inside it rather than widening the page (#97).
+
 ## [0.6.0] - 2026-10-16
 
 ### Changed
@@ -149,7 +172,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
