@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-15
+
 ### Added
 
 - Attaching a file shows what the host says while it keeps it, and why it refused it (#88). `attach` receives a third argument, `progress`, which takes `{ message, fraction? }`: the paperclip shows the message on hover and announces it, with how many files wait behind it, and draws a fraction as a bar that fills under it. A promise rejected with an `AttachRefusal`, a plain `{ message }`, has the paperclip say that message instead of *The file was not attached*, until the author opens the paperclip again, whose dialog says it once more. Pasted and dropped files report in the same place. A host that ignores `progress` and rejects with an `Error` sees no difference. `AttachProgress`, `AttachRefusal` and `isAttachRefusal` are exported, and `strings.editor.attachQueued` words the files waiting. The playground reports a file's parts under a simulated save, and `?save=refuse` refuses it.
@@ -135,7 +137,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.0...v0.3.1
