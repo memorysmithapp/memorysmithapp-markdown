@@ -80,7 +80,7 @@ describe('a width as a share of the page (#108)', () => {
 describe('a Markdown image at a share of the page (#108)', () => {
   it('is drawn at most at that share, and the rest stays the description', async () => {
     const { html } = await import('./render.js');
-    expect(html('![Curva|50%](https://example.org/curva.png)')).toContain('<img src="https://example.org/curva.png" alt="Curva" style="max-width:50%"/>');
+    expect(html('![Curva|50%](https://example.org/curva.png)')).toContain('<img src="https://example.org/curva.png" alt="Curva" title="Curva" style="max-width:50%"/>');
     expect(html('![Curva|50%x180](https://example.org/curva.png)')).toContain('alt="Curva|50%x180"');
   });
 });

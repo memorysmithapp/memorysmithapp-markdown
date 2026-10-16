@@ -30,14 +30,14 @@ afterEach(() => {
 describe('a kept file, drawn by its type (#77)', () => {
   it('is an image by its media type, whatever its name, with the dimensions the embed declared', () => {
     const out = html('![[diagram.pdf|200x60]]', host);
-    expect(out).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones" width="200" height="60" style="height:60px"/>');
+    expect(out).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones" title="The zones" width="200" height="60" style="height:60px"/>');
   });
 
   it('is drawn at most at a share of the page the embed declared, never wider than its own pixels (#108)', () => {
-    expect(html('![[diagram.pdf|50%]]', host)).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones" style="max-width:50%"/>');
+    expect(html('![[diagram.pdf|50%]]', host)).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones" title="The zones" style="max-width:50%"/>');
     expect(html('![[demo.mov|100%]]', host)).toContain('<video class="attachment-player" controls="" src="https://files.test/demo" style="max-width:100%"></video>');
     // Not a dimension: the embed draws the file at its own size.
-    expect(html('![[diagram.pdf|150%]]', host)).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones"/>');
+    expect(html('![[diagram.pdf|150%]]', host)).toContain('<img class="attachment-image" src="https://files.test/diagram" alt="The zones" title="The zones"/>');
   });
 
   it('hands renderAttachment the share it declared, with no pixels', () => {

@@ -47,13 +47,13 @@ describe('the name an image destination gives', () => {
 describe('an image that names a kept file', () => {
   it('is drawn from the file, at the dimensions after its pipe, with its description', () => {
     expect(images(html('![Curva|300x180](curva-2026.png)', host))).toEqual([
-      `<img class="attachment-image" src="${U}" alt="Curva" width="300" height="180" style="height:180px"/>`,
+      `<img class="attachment-image" src="${U}" alt="Curva" title="Curva" width="300" height="180" style="height:180px"/>`,
     ]);
-    expect(images(html('![Curva|300](../assets/curva-2026.png)', host))).toEqual([`<img class="attachment-image" src="${U}" alt="Curva" width="300"/>`]);
+    expect(images(html('![Curva|300](../assets/curva-2026.png)', host))).toEqual([`<img class="attachment-image" src="${U}" alt="Curva" title="Curva" width="300"/>`]);
   });
 
   it('takes the file\'s own description when it wrote none, so its alt is never empty', () => {
-    expect(images(html('![](curva-2026.png)', host))).toEqual([`<img class="attachment-image" src="${U}" alt="Curva de maturação da safra"/>`]);
+    expect(images(html('![](curva-2026.png)', host))).toEqual([`<img class="attachment-image" src="${U}" alt="Curva de maturação da safra" title="Curva de maturação da safra"/>`]);
   });
 
   it('keeps the title it wrote, which never changes the target', () => {
@@ -97,7 +97,7 @@ describe('an image that names a kept file', () => {
 
   it('leaves a remote image as it was, an image of its address', () => {
     expect(images(html('![Remota|300](https://example.org/curva-2026.png)', host))).toEqual([
-      '<img src="https://example.org/curva-2026.png" alt="Remota" width="300"/>',
+      '<img src="https://example.org/curva-2026.png" alt="Remota" title="Remota" width="300"/>',
     ]);
   });
 });
@@ -119,8 +119,36 @@ describe('an image that names a kept file, in edit mode', () => {
     const drawn = [...mounted.container.querySelectorAll('img[src]')];
     expect(drawn.map((image) => image.getAttribute('src'))).toEqual([U]);
     expect(drawn[0]!.getAttribute('alt')).toBe('Curva');
+    // Its hover hint too, as the page draws it (#109).
+    expect(drawn[0]!.getAttribute('title')).toBe('Curva');
     expect(mounted.container.querySelector('.attachment-missing')?.textContent).toBe('Falta');
     // Sized from the image itself, as any other (#98).
     expect(mounted.container.querySelector<HTMLInputElement>('.edit-image-width')!.value).toBe('300');
+  });
+});
+
+describe('the description of an image is its hover hint (#109)', () => {
+  const FILES_109: Record<string, KeptFile> = {
+    'file.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/file', description: 'Assinatura vertical, fundo claro' },
+    'bare.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/bare' },
+    'curva.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/curva', description: 'Curva de maturação' },
+  };
+  const kept: NoteHost = { keeps: (name) => name in FILES_109, fileOf: (name) => FILES_109[name] ?? null };
+  const attributes = (markdown: string) => {
+    const image = images(html(markdown, kept))[0] ?? '';
+    return { alt: /alt="([^"]*)"/.exec(image)?.[1] ?? null, title: /title="([^"]*)"/.exec(image)?.[1] ?? null };
+  };
+
+  it.each([
+    ['![[file.png]]', 'Assinatura vertical, fundo claro', 'Assinatura vertical, fundo claro'],
+    ['![[file.png|171]]', 'Assinatura vertical, fundo claro', 'Assinatura vertical, fundo claro'],
+    ['![[bare.png]]', 'bare.png', null],
+    ['![Curva|300](curva.png)', 'Curva', 'Curva'],
+    ['![Curva|300](https://example.org/curva.png)', 'Curva', 'Curva'],
+    ['![Curva](curva.png "Safra 2026")', 'Curva', 'Safra 2026'],
+    ['![Curva](https://example.org/curva.png "Safra 2026")', 'Curva', 'Safra 2026'],
+    ['![](curva.png)', 'Curva de maturação', 'Curva de maturação'],
+  ])('%s has that alt and that title', (markdown, alt, title) => {
+    expect(attributes(markdown)).toEqual({ alt, title });
   });
 });

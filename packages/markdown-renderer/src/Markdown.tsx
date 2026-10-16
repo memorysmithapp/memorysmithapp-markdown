@@ -83,7 +83,9 @@ export function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAtt
   const read = readImageAlt(alt ?? '');
   const name = typeof rest.src === 'string' ? keptImageName(rest.src) : null;
   if (name !== null) return <Attachment name={name} size={read} description={read.description} title={rest.title} />;
-  return <img {...rest} alt={read.description} {...sizedAttributes(read)} />;
+  // The description is the hover hint too, so a person who sees the picture can read it (#109); a title written wins.
+  const title = rest.title || read.description || undefined;
+  return <img {...rest} alt={read.description} title={title} {...sizedAttributes(read)} />;
 }
 
 /**
@@ -230,7 +232,10 @@ function KeptAttachment({ name, size: declared, ...written }: { name: string; si
   if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, ...declared, title: written.title ?? null })}</>;
   const sized = sizedAttributes(declared);
   if (shape === 'image') {
-    return <img className="attachment-image" src={file.url} alt={file.description || name} {...(written.title ? { title: written.title } : {})} {...sized} />;
+    // Described, its description is also the hover hint, a title written winning (#109); a picture
+    // with none takes its name as its `alt` and no hint, which would only say the name again.
+    const title = written.title || file.description;
+    return <img className="attachment-image" src={file.url} alt={file.description || name} {...(title ? { title } : {})} {...sized} />;
   }
   if (shape === 'audio') return <audio className="attachment-player" controls src={file.url} />;
   if (shape === 'video') return <video className="attachment-player" controls src={file.url} {...sized} />;
