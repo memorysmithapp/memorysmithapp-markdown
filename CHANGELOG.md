@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A note scrolled inside a pane of the host no longer makes the page as tall as itself: the root of a note is positioned in `structure.css`, so the live region that announces a ticked box, laid out of the flow, hangs from the note and not from the page, and the page loses the second scrollbar that scrolled nothing (#93).
+
 ## [0.5.0] - 2026-10-15
 
 ### Added

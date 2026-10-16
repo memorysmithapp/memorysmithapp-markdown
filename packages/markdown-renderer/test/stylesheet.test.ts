@@ -109,6 +109,13 @@ describe('the stylesheet', () => {
     expect(source).not.toContain('.edit-toolbar-group + .edit-toolbar-group');
   });
 
+  it('positions the root of a note, so nothing out of the flow hangs from the page, whatever the theme (#93)', () => {
+    const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /(?:^|\})\s*\.markdown \{([^}]*)\}/.exec(structure)?.[1] ?? '';
+    expect(rule).toContain('position: relative;');
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/(?:^|\})\s*\.markdown \{[^}]*position: (?!relative)/);
+  });
+
   it('keeps an empty table cell wide enough to click, whatever the theme (#68)', () => {
     const structure = readFileSync(resolve(PACKAGE, 'structure.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const rule = /\.markdown \.edit-cell \{([^}]*)\}/.exec(structure)?.[1] ?? '';

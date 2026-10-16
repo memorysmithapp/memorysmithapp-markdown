@@ -15,6 +15,13 @@
   box-sizing: border-box;
 }
 
+/* What is laid out of the flow hangs from the note, never from the page: a
+   host that scrolls the note in a pane of its own keeps a page of its own
+   height (#93). */
+.markdown {
+  position: relative;
+}
+
 .markdown img {
   max-width: 100%;
 }
