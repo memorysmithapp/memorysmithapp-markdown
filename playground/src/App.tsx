@@ -49,7 +49,7 @@ interface View {
   readonly delay: number;
   /** Whether the note offers the switch to edit it: every note does, unless `?editable=0` or `?bare=1`. */
   readonly editable: boolean;
-  /** The switch drawn as its icon alone, or its icon and its word (`?button=icon` or `label`). */
+  /** The switch drawn as its icon alone, as by default, or its icon and its word (`?button=label`). */
   readonly button: 'icon' | 'label';
 }
 
@@ -113,7 +113,7 @@ function readView(): View {
     delay: Math.max(0, Number(query.get('delay') ?? '') || 2000),
     // The note alone is what the comparison screenshots, and MemorySmith's page has no switch.
     editable: query.get('editable') !== '0' && query.get('bare') !== '1',
-    button: query.get('button') === 'icon' ? 'icon' : 'label',
+    button: query.get('button') === 'label' ? 'label' : 'icon',
   };
 }
 
@@ -297,7 +297,7 @@ export function App() {
           <a className={!view.editable ? 'current' : undefined} href={withQuery({ editable: view.editable ? '0' : '1' })}>
             {view.editable ? 'hide' : 'show'}
           </a>
-          {(['label', 'icon'] as const).map((button) => (
+          {(['icon', 'label'] as const).map((button) => (
             <a key={button} className={button === view.button ? 'current' : undefined} href={withQuery({ button })}>
               {button}
             </a>

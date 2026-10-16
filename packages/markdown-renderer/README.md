@@ -20,7 +20,7 @@ import 'katex/dist/katex.min.css';
   resolve={(name) => addressOfTheOneNoteNamed(name)} // or null: the link is pending
   keeps={(name) => notebookKeepsAFile(name)}       // only an embed reaches a file
   fileOf={(name) => describe(name)}               // { mimeType, bytes, url, description }: drawn by its type, as MemorySmith does
-  renderLink={({ href, className, children }) => <RouterLink to={href} className={className}>{children}</RouterLink>}
+  renderLink={({ href, className, children }) => <a href={href} className={className} onClick={follow(href)}>{children}</a>} // follow: your router's navigate, captured where it is
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches
   writable
   onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
@@ -29,7 +29,7 @@ import 'katex/dist/katex.min.css';
 />;
 ```
 
-Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
+Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. In edit mode, `renderLink`, `renderAttachment` and a theme's slots may be drawn in a root of their own, outside your React tree, so what they return must not read your context: a router's `<Link>` throws there, and the block shows its Markdown under a notice instead. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
 
 ## Themes
 
@@ -86,7 +86,7 @@ A note the host makes `editable` carries a button at its top right that switches
   suggest={(typed) => namesOfNotesLike(typed)}    // what [[ offers
   attach={(file, { name, description }, progress) => keepInNotebook(file, name, description, progress)} // the name it is kept under
   files={() => filesOfTheNotebook()}              // what the attach dialog lists: { name, mimeType, bytes, url, description }
-  modeButton="icon"                               // or "label", the icon and its word
+  modeButton="label"                              // the icon and its word; "icon", the default, the icon alone
 />
 ```
 

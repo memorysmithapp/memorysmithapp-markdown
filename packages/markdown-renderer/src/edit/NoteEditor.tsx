@@ -33,6 +33,7 @@ import {
   type Command,
 } from './commands.js';
 import { analysisField, editorEnvironment, livePage } from './live.js';
+import { measureMetrics } from './heights.js';
 import { NoteActions } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
@@ -576,7 +577,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           markdown(),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-multiline': 'true', spellcheck: 'true' }),
-          livePage(),
+          livePage(measureMetrics(parent.current)),
           autocompletion({ override: [wikilinkCompletion(() => latest.current.host)], icons: false }),
           shortcuts(() => created),
           keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),

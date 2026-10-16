@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
+### Changed
+
+- The switch between reading and editing is drawn as its icon alone by default, named by its word, like *Show Markdown* and *Copy Markdown* beside it, so the three buttons of a note's corner follow one rule. A host that wants the word beside the icon passes `modeButton="label"`; one that passed `modeButton="icon"` sees no difference. The playground draws the icon alone and `?button=label` the word (#92).
+
+### Fixed
+
+- The page no longer grows under the scrollbar as a note is scrolled in edit mode, because each block the editor draws tells it how tall it will be before it is drawn: the properties by their keys, a callout by its text wrapped at the editor's width, a table by its rows, a rule, a formula and an image by what they draw, and any block drawn once by the height it was measured at, kept when an edit above it moves it and the next time the note is edited. Measured in the playground on a long note scrolled once to its end, the page grew by 27% on a computer and 40% on a phone before, and grows by 8% and 23% now, what is left being the text between blocks and the notes an embed draws, which are not known before they are drawn. An image in edit mode is drawn at the dimensions it declares, with its description alone as its text, as reading draws it (#91).
+- A block the editor draws — a callout, a table, an embed, the properties — is no longer left empty when a host function drawn inside it throws, as a `renderLink` returning a router's `<Link>` does outside the router's context: the block shows its Markdown under a notice, `strings.editor.blockFailed`, a click on it opens its source, and the error reaches the console. The documentation of `renderLink`, `renderAttachment` and a theme's slots says that in edit mode they may be drawn outside the host's React tree, and the README's example no longer uses a router's `<Link>` (#90).
+- A note scrolled inside a pane of the host no longer makes the page as tall as itself: the root of a note is positioned in `structure.css`, so the live region that announces a ticked box, laid out of the flow, hangs from the note and not from the page, and the page loses the second scrollbar that scrolled nothing (#93).
+
 ## [0.5.0] - 2026-10-15
 
 ### Added
@@ -137,7 +149,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.3.1...v0.3.2

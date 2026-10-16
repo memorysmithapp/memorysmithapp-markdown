@@ -15,6 +15,13 @@
   box-sizing: border-box;
 }
 
+/* What is laid out of the flow hangs from the note, never from the page: a
+   host that scrolls the note in a pane of its own keeps a page of its own
+   height (#93). */
+.markdown {
+  position: relative;
+}
+
 .markdown img {
   max-width: 100%;
 }
@@ -396,6 +403,12 @@
 .markdown .cm-ms-rule,
 .markdown .cm-ms-math-block {
   display: flow-root;
+}
+/* A block that could not be drawn shows its lines as they were written (#90). */
+.markdown .cm-ms-block-failed pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 /* A table's cell is where a click edits it: it fills its column and keeps a
    size of its own when it is empty, as every cell of a new table is, or it

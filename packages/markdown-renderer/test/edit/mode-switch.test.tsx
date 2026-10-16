@@ -39,9 +39,17 @@ describe('the switch', () => {
     expect(html(NOTE, { editable: false, actions: true })).toBe(read);
   });
 
+  it('is its icon alone by default, as Show and Copy Markdown beside it are (#92)', async () => {
+    mounted = await mount(<NoteBody markdown={NOTE} editable />);
+    expect(button().classList).toContain('mode-switch-icon');
+    expect(button().textContent).toBe('');
+    expect(button().getAttribute('aria-label')).toBe('Edit');
+    expect(button().querySelector('svg')).not.toBeNull();
+  });
+
   it('says its action with its icon and its word, and switches to edit and back', async () => {
     const modes: string[] = [];
-    mounted = await mount(<NoteBody markdown={NOTE} editable onModeChange={(mode) => modes.push(mode)} />);
+    mounted = await mount(<NoteBody markdown={NOTE} editable modeButton="label" onModeChange={(mode) => modes.push(mode)} />);
     expect(button().textContent).toBe('Edit');
     expect(button().querySelector('svg')).not.toBeNull();
 
@@ -115,6 +123,6 @@ describe('the switch', () => {
     expect(button().textContent).toBe('Edit!');
     await act(async () => button().click());
     await editor();
-    expect(seen.at(-1)).toEqual({ mode: 'edit', label: 'View', display: 'label' });
+    expect(seen.at(-1)).toEqual({ mode: 'edit', label: 'View', display: 'icon' });
   });
 });

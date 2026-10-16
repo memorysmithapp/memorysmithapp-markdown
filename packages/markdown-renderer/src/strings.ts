@@ -110,6 +110,8 @@ export interface EditorWords {
   readonly attachFailed: string;
   /** Said after the host's step while more files wait their turn (#88). */
   readonly attachQueued: (count: number) => string;
+  /** Said over a drawn block's lines when drawing it failed, so the block is never left empty (#90). */
+  readonly blockFailed: string;
   /** A code block's language, chosen at its top right (#84). */
   readonly language: string;
   readonly plainText: string;
@@ -303,6 +305,7 @@ export const ENGLISH: NoteStrings = {
     attaching: 'Attaching…',
     attachFailed: 'The file was not attached',
     attachQueued: (count) => (count === 1 ? '1 more file waiting' : `${count} more files waiting`),
+    blockFailed: 'This block could not be drawn; its Markdown is below',
     language: 'Language',
     plainText: 'Plain text',
     mermaidDiagram: 'Mermaid diagram',
