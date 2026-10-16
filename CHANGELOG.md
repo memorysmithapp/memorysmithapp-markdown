@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A note that is only read offers *Show Markdown* and *Copy Markdown* at its top right, without the switch to edit it: reading a note's Markdown and copying it are reading. `NoteBody` takes `actions`, `true` unless a host passes `false` to hide the two buttons, editable or not, for a print, a preview or an embed. The playground's `?editable=0` shows the two buttons and no switch; `?bare=1`, which the comparison screenshots, shows neither (#87).
+
 ## [0.4.0] - 2026-10-15
 
 ### Added

@@ -31,9 +31,12 @@ async function editor(): Promise<EditorView> {
 const button = () => mounted!.container.querySelector<HTMLButtonElement>('.mode-switch')!;
 
 describe('the switch', () => {
-  it('is not drawn for a note that is not editable, which draws as before', () => {
-    expect(html(NOTE)).not.toContain('mode-switch');
-    expect(html(NOTE, { editable: false })).toBe(html(NOTE));
+  it('is not drawn for a note that is not editable, which keeps Show and Copy Markdown (#87)', () => {
+    const read = html(NOTE, { actions: true });
+    expect(read).not.toContain('mode-switch"');
+    expect(read).not.toContain('has-mode-switch');
+    expect(read).toContain('aria-label="Copy Markdown"');
+    expect(html(NOTE, { editable: false, actions: true })).toBe(read);
   });
 
   it('says its action with its icon and its word, and switches to edit and back', async () => {

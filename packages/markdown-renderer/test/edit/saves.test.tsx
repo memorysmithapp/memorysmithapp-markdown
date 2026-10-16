@@ -110,6 +110,37 @@ describe('Show and Copy Markdown beside the switch (#76)', () => {
   });
 });
 
+describe('Show and Copy Markdown for a note that is only read (#87)', () => {
+  const labels = () => [...($('.note-corner')?.querySelectorAll('button') ?? [])].map((each) => each.getAttribute('aria-label') ?? each.textContent);
+
+  it('stand at the top right of a note that is not editable, with no switch', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mounted = await mount(<NoteBody markdown={NOTE} />);
+    expect(labels()).toEqual(['Show Markdown', 'Copy Markdown']);
+    expect($('.mode-switch')).toBeNull();
+    await act(async () => $<HTMLButtonElement>('button[aria-label="Copy Markdown"]')!.click());
+    await settle();
+    expect(writeText).toHaveBeenCalledWith(NOTE);
+    await act(async () => $<HTMLButtonElement>('button[aria-label="Show Markdown"]')!.click());
+    expect($('.edit-source-text')!.textContent).toBe(NOTE);
+  });
+
+  it('are hidden by actions={false}, editable or not, and the switch stays where it is', async () => {
+    mounted = await mount(<NoteBody markdown={NOTE} actions={false} />);
+    expect($('.note-corner')).toBeNull();
+    expect($('button')).toBeNull();
+    mounted.unmount();
+
+    mounted = await mount(<NoteBody markdown={NOTE} editable actions={false} />);
+    expect(labels()).toEqual(['Edit']);
+    await act(async () => $<HTMLButtonElement>('.mode-switch')!.click());
+    await editor();
+    expect(labels()).toEqual(['View']);
+    expect($('button[aria-label="Show Markdown"]')).toBeNull();
+  });
+});
+
 describe("the note's Markdown (#63)", () => {
   it('opens from the toolbar, shows the bytes as saved, copies them, and closes back on its button', async () => {
     const writeText = vi.fn(() => Promise.resolve());

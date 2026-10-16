@@ -44,7 +44,7 @@ function SlowHost({ calls, pt = false }: { calls: Deferred[]; pt?: boolean }) {
 
 const items = (note: Mounted) => [...note.container.querySelectorAll<HTMLLIElement>('li.task-item')];
 const box = (item: HTMLLIElement | undefined) => item?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
-const status = (note: Mounted) => note.container.querySelector('[role="status"]')?.textContent ?? null;
+const status = (note: Mounted) => note.container.querySelector('[role="status"][aria-live="polite"]')?.textContent ?? null;
 
 let mounted: Mounted | null = null;
 afterEach(() => {

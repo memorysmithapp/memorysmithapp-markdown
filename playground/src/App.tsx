@@ -184,6 +184,8 @@ export function App() {
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         editable={view.editable}
         modeButton={view.button}
+        // The comparison screenshots the note alone, as MemorySmith's own component draws it.
+        actions={!view.bare}
         onChange={(next) => save(() => setEdited((all) => ({ ...all, [key]: next })))}
         writable
         onToggleTask={(ordinal) => {
