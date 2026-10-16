@@ -459,3 +459,28 @@
   max-width: 100%;
   vertical-align: middle;
 }
+/* An image in edit mode carries its size's controls over its top right and a
+   handle at its bottom right corner that drags it (#98). */
+.markdown .edit-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.markdown .edit-image-controls {
+  align-items: center;
+  white-space: nowrap;
+}
+.markdown .edit-image-width {
+  width: 5em;
+}
+.markdown .edit-image-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 0.9rem;
+  height: 0.9rem;
+  cursor: nwse-resize;
+  touch-action: none;
+}

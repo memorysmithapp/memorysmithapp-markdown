@@ -159,6 +159,12 @@ export interface EditorWords {
   readonly addItem: string;
   readonly removeItem: string;
   readonly calloutType: string;
+  /** The field of an image's width in edit mode, in pixels (#98). */
+  readonly imageWidth: string;
+  /** The button that draws an image at its own size again (#98). */
+  readonly imageOwnSize: string;
+  /** The handle at an image's corner that drags its size (#98). */
+  readonly imageResize: string;
   readonly fold: string;
   readonly foldNone: string;
   readonly foldOpen: string;
@@ -348,6 +354,9 @@ export const ENGLISH: NoteStrings = {
     addItem: 'Add',
     removeItem: 'Remove',
     calloutType: 'Type',
+    imageWidth: 'Width, in pixels',
+    imageOwnSize: 'Its own size',
+    imageResize: 'Drag to resize',
     fold: 'Folding',
     foldNone: 'Not foldable',
     foldOpen: 'Folds, open',

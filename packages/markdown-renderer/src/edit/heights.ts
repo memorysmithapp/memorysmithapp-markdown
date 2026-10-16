@@ -9,6 +9,8 @@
  * block made again, moved by an edit above it or in the next edit of the note, starts right.
  */
 
+import { readImageSize } from './image-size.js';
+
 /** What an estimate reads of the editor: its text column, its line height and its characters. */
 export interface BlockMetrics {
   readonly width: number;
@@ -57,8 +59,11 @@ function wrapped(lines: readonly string[], width: number, metrics: BlockMetrics)
  */
 const STACKED_PROPERTIES = 528;
 
+/** What an image declares no height for is drawn at before it loads, near enough (#91). */
+const UNDECLARED_IMAGE_HEIGHT = 200;
+
 /** What a block is, for its estimate. */
-export type BlockKind = 'frontmatter' | 'callout' | 'table' | 'embed' | 'diagram' | 'preview' | 'add-properties';
+export type BlockKind = 'frontmatter' | 'callout' | 'table' | 'embed' | 'diagram' | 'preview' | 'add-properties' | 'image';
 
 /** The height a block of this kind and these lines is drawn at, near enough to lay out the page. */
 export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMetrics): number {
@@ -95,6 +100,12 @@ export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMe
       return Math.round(lineHeight + wrapped(lines, metrics.width, metrics) * lineHeight);
     case 'add-properties':
       return Math.round(1.5 * lineHeight);
+    case 'image': {
+      // The height it declares, or its width at a photograph's proportions, or a guess (#91).
+      const size = readImageSize(source.trim());
+      if (size?.height != null) return size.height;
+      return size?.width != null ? Math.round(size.width * 0.75) : UNDECLARED_IMAGE_HEIGHT;
+    }
   }
 }
 

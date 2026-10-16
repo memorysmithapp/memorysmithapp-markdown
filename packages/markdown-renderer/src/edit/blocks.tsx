@@ -18,6 +18,8 @@ import { isTrue, readProperties } from '../properties.js';
 import { Transclusion } from '../Transclusion.js';
 import { splitEmbeds } from '../transclusion.js';
 import { wikilinkAddress } from '../wikilink-address.js';
+import { ICON_OWN_SIZE } from '../mode-icons.js';
+import { MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
 import {
   addEntry,
   readFrontmatter,
@@ -145,6 +147,144 @@ export function CalloutBlock({ view, text, marker }: { view: EditorView; text: s
       </div>
       <Snippet text={text} />
     </div>
+  );
+}
+
+// ── Images ───────────────────────────────────────────────────────────────────
+
+/** The narrowest an image is dragged to, so its handle stays within reach. */
+const MIN_DRAGGED_WIDTH = 24;
+
+/**
+ * An image drawn in edit mode with the size it is drawn at set in place (#98): a width in pixels,
+ * its height following, a handle at its corner that drags it, and a button back to its own size.
+ * Each writes the dimensions of its notation — `![description|300](…)` or `![[photo.jpg|300]]` —
+ * and no other byte. The controls appear once an image is drawn inside it, so an embed of a file
+ * that is not an image, or a host's own drawing without one, offers none.
+ */
+export function ImageBlock({ view, source, children }: { view: EditorView; source: string; children?: ReactNode }) {
+  const words = useHost().strings.editor;
+  const frame = useRef<HTMLSpanElement>(null);
+  const size = readImageSize(source);
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const [natural, setNatural] = useState<number | null>(null);
+  const [typed, setTyped] = useState<string | null>(null);
+  const [dragged, setDragged] = useState<number | null>(null);
+  const drag = useRef<{ x: number; width: number; pointer: number } | null>(null);
+
+  // An embed's image arrives when the host answers; the controls wait for it.
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const look = () => setImage(element.querySelector<HTMLImageElement>('img'));
+    look();
+    if (typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(look);
+    observer.observe(element, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!image) return;
+    const read = () => setNatural(image.naturalWidth || null);
+    read();
+    image.addEventListener('load', read);
+    return () => image.removeEventListener('load', read);
+  }, [image]);
+
+  const resize = (width: number | null) => {
+    const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
+    if (!widget) return;
+    const from = view.posAtDOM(widget);
+    // The widget stands where its source was: anything else means the note moved under it.
+    if (view.state.sliceDoc(from, from + source.length) !== source) return;
+    write(view, resizeImage(source, from, width));
+  };
+  const commitTyped = () => {
+    if (typed === null) return;
+    const width = Number(typed.trim());
+    setTyped(null);
+    if (typed.trim() === '') resize(null);
+    else if (Number.isFinite(width) && width >= 1) resize(width);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitTyped();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setTyped(null);
+    }
+  };
+
+  const shown = dragged ?? size?.width ?? null;
+  const offered = size !== null && image !== null;
+  return (
+    <span ref={frame} className="edit-image" data-resizing={dragged === null ? undefined : ''}>
+      {children}
+      {offered && (
+        <>
+          <span className="edit-block-controls edit-image-controls" data-ms-control="">
+            <input
+              className="edit-field edit-image-width"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAX_IMAGE_WIDTH}
+              aria-label={words.imageWidth}
+              title={words.imageWidth}
+              placeholder={natural === null ? '' : String(natural)}
+              value={typed ?? (shown === null ? '' : String(shown))}
+              onChange={(event) => setTyped(event.target.value)}
+              onKeyDown={onKeyDown}
+              onBlur={commitTyped}
+            />
+            <span className="edit-image-unit" aria-hidden="true">
+              px
+            </span>
+            <Control label={words.imageOwnSize} onClick={() => resize(null)} pressed={size.width === null}>
+              {ICON_OWN_SIZE}
+            </Control>
+          </span>
+          <span
+            className="edit-image-handle"
+            data-ms-control=""
+            title={words.imageResize}
+            aria-hidden="true"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              drag.current = { x: event.clientX, width: image.getBoundingClientRect().width, pointer: event.pointerId };
+              setDragged(Math.round(drag.current.width));
+            }}
+            onPointerMove={(event) => {
+              const start = drag.current;
+              if (!start || start.pointer !== event.pointerId) return;
+              const width = Math.max(MIN_DRAGGED_WIDTH, Math.round(start.width + event.clientX - start.x));
+              image.style.width = `${width}px`;
+              image.style.height = 'auto';
+              // What the page lets it be: never wider than the column.
+              setDragged(Math.round(image.getBoundingClientRect().width));
+            }}
+            onPointerUp={(event) => {
+              const start = drag.current;
+              if (!start || start.pointer !== event.pointerId) return;
+              drag.current = null;
+              const width = Math.round(image.getBoundingClientRect().width);
+              setDragged(null);
+              image.style.width = '';
+              image.style.height = '';
+              if (Math.abs(width - start.width) >= 1) resize(width);
+            }}
+            onPointerCancel={() => {
+              drag.current = null;
+              setDragged(null);
+              image.style.width = '';
+              image.style.height = '';
+            }}
+          />
+        </>
+      )}
+    </span>
   );
 }
 

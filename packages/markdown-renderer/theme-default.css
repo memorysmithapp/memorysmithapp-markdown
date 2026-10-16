@@ -1943,8 +1943,50 @@
   transition: opacity 0.12s;
 }
 .markdown .cm-ms-block:hover .edit-block-controls,
-.markdown .edit-block:focus-within .edit-block-controls {
+.markdown .edit-block:focus-within .edit-block-controls,
+.markdown .edit-image:hover .edit-block-controls,
+.markdown .edit-image:focus-within .edit-block-controls,
+.markdown .edit-image[data-resizing] .edit-block-controls {
   opacity: 1;
+}
+.markdown .edit-image-controls {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+.markdown .edit-image-width.edit-field {
+  height: 1.9rem;
+  border-color: var(--ms-border);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-size: 0.8rem;
+}
+.markdown .edit-image-unit {
+  padding-inline-end: 0.2rem;
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+}
+/* The handle is a corner of the accent's colour, shown with the controls. */
+.markdown .edit-image-handle {
+  opacity: 0;
+  border-right: 3px solid var(--ms-accent);
+  border-bottom: 3px solid var(--ms-accent);
+  border-bottom-right-radius: 3px;
+  transition: opacity 0.12s;
+}
+.markdown .edit-image:hover .edit-image-handle,
+.markdown .edit-image[data-resizing] .edit-image-handle {
+  opacity: 1;
+}
+/* Where nothing hovers, as on a phone, an image's size is always at hand. */
+@media (hover: none) {
+  .markdown .edit-image .edit-block-controls,
+  .markdown .edit-image .edit-image-handle {
+    opacity: 1;
+  }
+}
+.markdown .edit-image[data-resizing] .cm-ms-image,
+.markdown .edit-image[data-resizing] img {
+  outline: 1px dashed var(--ms-accent);
 }
 .markdown .edit-table table {
   width: 100%;

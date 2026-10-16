@@ -19,7 +19,7 @@ import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
-import { AddProperties, CalloutBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
+import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
 
@@ -219,9 +219,10 @@ class BlockWidget extends WidgetType {
    * block is made: the height it was drawn at before at this width, or its estimate (#91).
    */
   override get estimatedHeight(): number {
-    if (this.inline) return -1;
     const metrics = this.options.metrics ?? DEFAULT_METRICS;
     const kind = this.options.kind;
+    // Within a line only an image estimates, as tall as the line it stands in (#91).
+    if (this.inline && !kind) return -1;
     return measuredHeight(this.identity, metrics) ?? (kind ? estimateHeight(kind, this.source, metrics) : 2 * metrics.lineHeight);
   }
 }
@@ -329,47 +330,16 @@ class MathWidget extends WidgetType {
   }
 }
 
-/** What an image declares no height for is drawn at before it loads, near enough (#91). */
-const UNDECLARED_IMAGE_HEIGHT = 200;
+/** A Markdown image's description and address, when its address is one the page follows. */
+function readImage(source: string): { alt: ImageAlt; address: string } | null {
+  const match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
+  const address = match ? followable(match[2] ?? '') : '';
+  return match && address ? { alt: readImageAlt(match[1] ?? ''), address } : null;
+}
 
-class ImageWidget extends WidgetType {
-  readonly match: RegExpExecArray | null;
-  readonly alt: ImageAlt;
-  constructor(readonly source: string) {
-    super();
-    this.match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
-    this.alt = readImageAlt(this.match?.[1] ?? '');
-  }
-  override eq(other: ImageWidget): boolean {
-    return other.source === this.source;
-  }
-  toDOM(): HTMLElement {
-    const match = this.match;
-    const address = match ? followable(match[2] ?? '') : '';
-    if (!match || !address) {
-      const text = document.createElement('span');
-      text.className = 'cm-ms-raw';
-      text.textContent = this.source;
-      return text;
-    }
-    const image = document.createElement('img');
-    image.className = 'cm-ms-image';
-    image.src = address;
-    // Its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14).
-    image.alt = this.alt.description;
-    if (this.alt.width !== null) image.width = this.alt.width;
-    if (this.alt.height !== null) image.height = this.alt.height;
-    return image;
-  }
-  /** The line it stands in is as tall as the image: the height it declares, or a guess (#91). */
-  override get estimatedHeight(): number {
-    if (!this.match) return -1;
-    if (this.alt.height !== null) return this.alt.height;
-    return this.alt.width !== null ? Math.round(this.alt.width * 0.75) : UNDECLARED_IMAGE_HEIGHT;
-  }
-  override ignoreEvent(): boolean {
-    return false;
-  }
+/** An image drawn with its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14). */
+function drawImage({ alt, address }: { alt: ImageAlt; address: string }): ReactNode {
+  return createElement('img', { className: 'cm-ms-image', src: address, alt: alt.description, width: alt.width ?? undefined, height: alt.height ?? undefined });
 }
 
 // ── Decorations ──────────────────────────────────────────────────────────────
@@ -462,6 +432,8 @@ function build(state: EditorState): DecorationSet {
         break;
       case 'embed':
         if (open) out.push(mark('cm-ms-wikilink').range(from, to));
+        // A kept image is sized from the image itself (#98); a note's embed draws no image of its own.
+        else if (host.keeps(construct.target)) block(from, to, 'embed', `embed:${source}`, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })));
         else block(from, to, 'embed', `embed:${source}`, () => createElement(Snippet, { text: source }));
         break;
       case 'rule':
@@ -544,7 +516,10 @@ function build(state: EditorState): DecorationSet {
         if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
           const source = text.slice(from, to);
           out.push(
-            Decoration.replace({ widget: new BlockWidget(`attachment:${source}`, host, () => createElement(Snippet, { text: source }), true, { inline: true, source }) }).range(from, to),
+            Decoration.replace({
+              // A kept image is sized from the image itself, as a Markdown one is (#98).
+              widget: new BlockWidget(`attachment:${source}`, host, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })), true, { inline: true, source }),
+            }).range(from, to),
           );
           break;
         }
@@ -563,9 +538,21 @@ function build(state: EditorState): DecorationSet {
         }
         break;
       }
-      case 'image':
-        if (!touches(from, to)) out.push(Decoration.replace({ widget: new ImageWidget(text.slice(from, to)) }).range(from, to));
+      case 'image': {
+        if (touches(from, to)) break;
+        const source = text.slice(from, to);
+        const image = readImage(source);
+        // An image the page cannot follow shows its notation, as written.
+        if (!image) out.push(mark('cm-ms-raw').range(from, to));
+        else {
+          // Its size is set from the image itself (#98).
+          const draw = (view: EditorView) => createElement(ImageBlock, { view, source }, drawImage(image));
+          out.push(
+            Decoration.replace({ widget: new BlockWidget(`image:${source}`, host, draw, true, { inline: true, source, kind: 'image', metrics }) }).range(from, to),
+          );
+        }
         break;
+      }
       case 'inlineMath':
         if (touches(from, to)) out.push(mark('cm-ms-math-source').range(from, to));
         else out.push(Decoration.replace({ widget: new MathWidget(construct.tex, false) }).range(from, to));
