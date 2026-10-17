@@ -194,8 +194,9 @@ export function App() {
         title: words.refuseTitle,
         message: words.refuseMessage,
         actions: [
-          // The other version reaches the editor as the note the host passes, and replaces the edit.
-          { label: words.discard, run: () => setEdited((all) => ({ ...all, [key]: theirs })) },
+          // The other version reaches the editor as the note the host passes, and replaces the edit,
+          // once fetched, as a host reloads it: what is typed meanwhile is held (#119).
+          { label: words.discard, run: () => later(() => setEdited((all) => ({ ...all, [key]: theirs }))) },
           { label: words.saveAnyway, run: () => later(write) },
         ],
       };

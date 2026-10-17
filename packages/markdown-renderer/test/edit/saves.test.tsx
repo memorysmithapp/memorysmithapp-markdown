@@ -6,7 +6,7 @@
  */
 
 import { EditorView } from '@codemirror/view';
-import { act } from 'react';
+import { act, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NoteEditor } from '../../src/edit/index.js';
 import { NoteBody } from '../../src/index.js';
@@ -338,10 +338,10 @@ describe('what the host says of a save (#86)', () => {
     expect([...dialog()!.querySelectorAll('.edit-notice-action')].map((each) => each.textContent)).toEqual(['Keep the links broken', 'Keep X as an alias']);
     expect(document.activeElement).toBe(action('Keep the links broken'));
 
-    // An action's promise is followed like a save: Saving, then where it ends.
+    // An action's promise is followed like a save, Updating while it runs (#119), then where it ends.
     await act(async () => action('Keep X as an alias').click());
     expect(dialog()).toBeNull();
-    expect(said()).toBe('Saving…');
+    expect(said()).toBe('Updating…');
     await act(async () => alias.resolve());
     expect(status().dataset['save']).toBe('saved');
     expect(said()).toBe('Saved');
@@ -440,5 +440,90 @@ describe('what the host says of a save (#86)', () => {
     await settle();
     expect(status().dataset['save']).toBe('saved');
     expect(noticeButton()).toBeNull();
+  });
+});
+
+describe('a choice that runs a while (#119)', () => {
+  const RELOADED = '---\nname: A note\n---\n# Title\n\nWhat somebody else wrote.\n';
+
+  it('holds the note until the action settles and the host gave its text back, then writes what is typed', async () => {
+    const reload = deferred();
+    const handed: string[] = [];
+    let applyReload: (() => void) | null = null;
+    function Host() {
+      const [markdown, setMarkdown] = useState(NOTE);
+      const [refused, setRefused] = useState(true);
+      applyReload = () => setMarkdown(RELOADED);
+      return (
+        <NoteEditor
+          markdown={markdown}
+          onChange={(text) => {
+            handed.push(text);
+            if (!refused) return Promise.resolve();
+            return Promise.reject({
+              title: 'Somebody else wrote this note',
+              message: 'Choose.',
+              actions: [
+                {
+                  label: 'Discard my edit and reload',
+                  // The host fetches the note, gives its text back, and settles.
+                  run: () =>
+                    reload.promise.then(() => {
+                      setRefused(false);
+                      applyReload!();
+                    }),
+                },
+              ],
+            });
+          }}
+        />
+      );
+    }
+    mounted = await mount(<Host />);
+    const view = await editor();
+    await type(view, 'x');
+    await settle();
+    expect(status().dataset['save']).toBe('failed');
+
+    await act(async () => [...$<HTMLDialogElement>('dialog.edit-notice')!.querySelectorAll<HTMLButtonElement>('.edit-notice-action')][0]!.click());
+    await settle();
+    // While it runs, nothing typed reaches the note, and nothing asks again.
+    expect(view.state.readOnly).toBe(true);
+    const key = new KeyboardEvent('keydown', { key: 'q', bubbles: true, cancelable: true });
+    await act(async () => void view.contentDOM.dispatchEvent(key));
+    expect(key.defaultPrevented).toBe(true);
+    expect($('dialog.edit-notice')).toBeNull();
+    expect(view.state.doc.toString()).toBe(`${NOTE}x`);
+    expect(said()).toBe('Updating…');
+    expect(status().getAttribute('aria-busy')).toBe('true');
+
+    await act(async () => reload.resolve());
+    await settle();
+    expect(view.state.doc.toString()).toBe(RELOADED);
+    expect(view.state.readOnly).toBe(false);
+    expect(status().hasAttribute('aria-busy')).toBe(false);
+
+    await type(view, 'y');
+    await settle();
+    expect(handed.at(-1)).toBe(`${RELOADED}y`);
+    expect(view.state.doc.toString()).toBe(`${RELOADED}y`);
+  });
+
+  it('holds the note again with the notice when the action fails with one', async () => {
+    const refusal = { title: 'Still refused', message: 'Again.', actions: [{ label: 'Try again', run: () => undefined }] };
+    mounted = await mount(
+      <NoteEditor
+        markdown={NOTE}
+        onChange={() => Promise.reject({ title: 'Somebody else wrote this note', message: 'Choose.', actions: [{ label: 'Save anyway', run: () => Promise.reject(refusal) }] })}
+      />,
+    );
+    const view = await editor();
+    await type(view, 'x');
+    await settle();
+    await act(async () => [...$<HTMLDialogElement>('dialog.edit-notice')!.querySelectorAll<HTMLButtonElement>('.edit-notice-action')][0]!.click());
+    await settle();
+    expect(status().dataset['save']).toBe('failed');
+    expect(view.state.readOnly).toBe(true);
+    expect($<HTMLButtonElement>('button.edit-save-notice')!.title).toContain('Still refused');
   });
 });
