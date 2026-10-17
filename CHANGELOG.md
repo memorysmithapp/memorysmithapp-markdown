@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [0.8.2] - 2026-10-17
 
+### Changed
+
+- The playground's demonstration notes write one paragraph per line rather than wrapping it at 78 characters, as MemorySmith's notes do, so in edit mode a paragraph fills the column as its callouts do, where each source line had ended short of it (#118). Every soft break inside a paragraph, a list item or a quotation became a space; hard breaks, a callout's title line, code, formulas, tables, the frontmatter and comments are as they were. Every note draws the same in reading mode, and the comparison with MemorySmith finds the same 88 identical pairs and 44 deliberate.
+
 ### Fixed
 
 - Resizing an image from its handle near the end of a note moves only the text below it: the top of the picture stays where it is on the screen and the handle under the pointer, whether the editor scrolls itself, in a pane of the host or in the window (#116). Shrinking it made the page shorter than where it was scrolled to, so everything above came down, as much as 169 pixels in Chromium, and growing it after that, the browser's scroll anchoring made it grow upward. While the handle is dragged the note has room after its last line for as much as the picture may shrink, the anchoring is off, and any move of the picture's top is scrolled back; the room stays after the release, so the page does not jump, and is given back as the author scrolls up.

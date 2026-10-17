@@ -22,5 +22,4 @@ What was exercised, against which runbook, and with whom.
 
 # What went wrong
 
-The finding, and the change it produced. A review with no finding is a review
-that measured nothing.
+The finding, and the change it produced. A review with no finding is a review that measured nothing.

@@ -13,12 +13,10 @@ updated: 2026-03-30
 validado_em: 2026-03-30
 ---
 
-Medida da carga fenólica do mosto, lida por absorbância. É o número que diz se
-a casca está pronta, e não apenas se o açúcar chegou.
+Medida da carga fenólica do mosto, lida por absorbância. É o número que diz se a casca está pronta, e não apenas se o açúcar chegou.
 
 > [!info] Uma medida, dois usos
-> Na maturação decide a data da colheita; na vinificação decide o tempo de
-> maceração de [[Vinificação em tinto#Maceração]].
+> Na maturação decide a data da colheita; na vinificação decide o tempo de maceração de [[Vinificação em tinto#Maceração]].
 
 # Como se calcula
 
@@ -26,8 +24,7 @@ A absorbância a 280 nm, diluída 1:100, multiplicada por 100[^ribereau]:
 
 $$IPT = A_{280} \times 100$$
 
-Uma leitura inline fica assim: $IPT = 62$ é um tinto de guarda; abaixo de $40$,
-não é. ^faixa-de-guarda
+Uma leitura inline fica assim: $IPT = 62$ é um tinto de guarda; abaixo de $40$, não é. ^faixa-de-guarda
 
 ```mermaid
 flowchart LR
@@ -42,10 +39,6 @@ flowchart LR
 
 # Ainda em aberto
 
-A correlação com a safra fria nunca foi escrita: [[Correlação IPT e safra fria]]
-é uma página que ninguém redigiu, e o link diz isso em vez de fingir o
-contrário.
+A correlação com a safra fria nunca foi escrita: [[Correlação IPT e safra fria]] é uma página que ninguém redigiu, e o link diz isso em vez de fingir o contrário.
 
-[^ribereau]: Ribéreau-Gayon, *Tratado de Enologia*, vol. 2. Uma nota de rodapé
-    é onde mora a fonte: aparece no fim da nota e nunca vira aresta, então citar
-    um livro aqui não liga esta nota a nada.
+[^ribereau]: Ribéreau-Gayon, *Tratado de Enologia*, vol. 2. Uma nota de rodapé é onde mora a fonte: aparece no fim da nota e nunca vira aresta, então citar um livro aqui não liga esta nota a nada.

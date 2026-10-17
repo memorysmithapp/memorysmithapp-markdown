@@ -13,13 +13,10 @@ updated: 2026-03-06
 rehearsed_at: 2026-03-04
 ---
 
-The procedure for promoting the standby region when the primary is lost. It is
-written to be followed by somebody who has not read it before, at three in the
-morning.
+The procedure for promoting the standby region when the primary is lost. It is written to be followed by somebody who has not read it before, at three in the morning.
 
 > [!caution] Do not start this without declaring the incident first
-> A failover that nobody announced is indistinguishable from an outage, and
-> the second one is what people escalate.
+> A failover that nobody announced is indistinguishable from an outage, and the second one is what people escalate.
 
 # Before you start
 
@@ -31,22 +28,17 @@ morning.
 # The steps
 
 1. Freeze writes at the edge.
-2. Promote the standby. See [[Exercise 2026-03 · Region loss#What went wrong]]
-   for the two minutes this took last time.
+2. Promote the standby. See [[Exercise 2026-03 · Region loss#What went wrong]] for the two minutes this took last time.
 3. Repoint the application, then verify a real payment end to end.
 4. Announce the new primary, in writing, before you rest.
 
-Step 2 is the one that decides whether the ==objective is met==, because
-everything before it is detection and everything after it is confirmation.
+Step 2 is the one that decides whether the ==objective is met==, because everything before it is detection and everything after it is confirmation.
 
 ![[Blast radius]]
 
 # The commands
 
-Read the lag before anything else, as the drill learned;[^drill] it is the
-number the review will ask for first.[^14] Above thirty seconds, promoting loses more than the
-[[Recovery Point Objective]] allows, and the decision is no longer this
-runbook's.[^2]
+Read the lag before anything else, as the drill learned;[^drill] it is the number the review will ask for first.[^14] Above thirty seconds, promoting loses more than the [[Recovery Point Objective]] allows, and the decision is no longer this runbook's.[^2]
 
 ```sql
 SELECT client_addr,
@@ -68,8 +60,7 @@ pg_ctl promote -D /var/lib/postgresql/16/main
 until psql -tAc 'SELECT NOT pg_is_in_recovery()' | grep -q t; do sleep 2; done
 ```
 
-Step 3 is one line of configuration, and it is the line this change touched
-in the March exercise:
+Step 3 is one line of configuration, and it is the line this change touched in the March exercise:
 
 ```diff
  payments:
@@ -79,8 +70,7 @@ in the March exercise:
      pool_size: 40
 ```
 
-The alert that pages for this runbook, so whoever is on call knows what woke
-them:[^drill]
+The alert that pages for this runbook, so whoever is on call knows what woke them:[^drill]
 
 ```yaml
 alert: PaymentsPrimaryUnreachable
@@ -91,8 +81,7 @@ labels:
   runbook: failing-over-the-payments-database
 ```
 
-The same condition as the dashboard writes it, in a language the page draws as
-typed:
+The same condition as the dashboard writes it, in a language the page draws as typed:
 
 ```promql
 max by (region) (pg_replication_lag_seconds{cluster="payments"}) > 30
@@ -110,14 +99,8 @@ Writes resumed at <time>. Lag at promotion: <seconds>.
 %% Steps 1 and 2 were one step until the March exercise showed the freeze
 needs its own confirmation. Do not merge them again. %%
 
-The dashboard query is written as
-[the replication dashboard](https://example.org/dashboards/replication) and the
-subject of this page is #failover, which files it nowhere: this page is filed
-by its `tags:` and by the folder it is in.
+The dashboard query is written as [the replication dashboard](https://example.org/dashboards/replication) and the subject of this page is #failover, which files it nowhere: this page is filed by its `tags:` and by the folder it is in.
 
-[^drill]: Drill 2026-03, the run this page was rehearsed against: steps 1 and 2
-    took eleven minutes together, nine of them waiting on the freeze.
-[^14]: The lag is read before promoting because promotion ends replication:
-    afterwards nothing reports how far behind the standby was.
-[^2]: Thirty seconds is the payments RPO; an incident above it is decided by
-    whoever owns the service, not by whoever restores it.
+[^drill]: Drill 2026-03, the run this page was rehearsed against: steps 1 and 2 took eleven minutes together, nine of them waiting on the freeze.
+[^14]: The lag is read before promoting because promotion ends replication: afterwards nothing reports how far behind the standby was.
+[^2]: Thirty seconds is the payments RPO; an incident above it is decided by whoever owns the service, not by whoever restores it.
