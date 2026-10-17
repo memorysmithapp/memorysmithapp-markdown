@@ -5,7 +5,8 @@
  * the click that shows the image's source (#107); and the picture, sized in place as a table is
  * edited in place, showing its source from a button and never from a click (#112); a share of the
  * page drawn as a share of the column, as it is read (#113); and the picture keeping its place on
- * the screen while its handle is dragged (#116).
+ * the screen while its handle is dragged (#116); and a kept file that is not a picture taking the
+ * column, as it is read (#122).
  */
 
 import { readFileSync } from 'node:fs';
@@ -32,6 +33,8 @@ if (typeof globalThis.PointerEvent === 'undefined') {
 const FILES: Record<string, KeptFile> = {
   'logo.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/logo', description: 'The logo, on white' },
   'minutes.pdf': { mimeType: 'application/pdf', bytes: 2048, url: 'https://files.test/minutes', description: 'The signed minutes' },
+  'tone.ogg': { mimeType: 'audio/ogg', bytes: 4096, url: 'https://files.test/tone', description: 'A tone' },
+  'clip.mov': { mimeType: 'video/quicktime', bytes: 8192, url: 'https://files.test/clip', description: 'A clip' },
 };
 const HOST: NoteHost = { keeps: (name) => name in FILES, fileOf: (name) => FILES[name] ?? null };
 
@@ -422,6 +425,22 @@ describe('the picture keeps its place while its handle is dragged (#116)', () =>
     expect(pane.style.overflowAnchor).toBe('');
     // The room stays until the author scrolls up into it, so the release does not jump.
     expect(content.style.paddingBottom).toBe(room);
+  });
+});
+
+describe('a kept file that is not a picture takes the column in edit mode (#122)', () => {
+  it('draws the frame of a card, an audio player and a video player as a block, and a picture\'s inline', async () => {
+    await open('Files:\n\n![[minutes.pdf]]\n\n![[tone.ogg]]\n\n![[clip.mov]]\n\nThe end.\n');
+    await until(() => mounted!.container.querySelectorAll('.edit-image[data-ms-file]').length === 3);
+    const frames = [...mounted!.container.querySelectorAll<HTMLElement>('.edit-image')];
+    expect(frames.map((frame) => frame.querySelector('.attachment-card, audio, video')?.tagName)).toEqual(['SPAN', 'AUDIO', 'VIDEO']);
+    expect(frames.map((frame) => frame.hasAttribute('data-ms-file'))).toEqual([true, true, true]);
+    mounted!.unmount();
+    await open('Files:\n\n![[logo.png|200]]\n\nThe end.\n');
+    expect($('.edit-image img')).not.toBeNull();
+    expect($('.edit-image')!.hasAttribute('data-ms-file')).toBe(false);
+    const rule = /\.markdown \.edit-image\[data-ms-file\] \{([^}]*)\}/.exec(readFileSync(resolve(__dirname, '..', '..', 'structure.css'), 'utf8'))?.[1] ?? '';
+    expect(rule).toContain('display: block');
   });
 });
 

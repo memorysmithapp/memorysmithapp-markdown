@@ -328,6 +328,8 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   const frame = useRef<HTMLSpanElement>(null);
   const size = readImageSize(source);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  // A kept file that is not a picture — its card, its player — takes the column, as it is read (#122).
+  const [file, setFile] = useState(false);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [locked, setLocked] = useState(() => size?.height == null);
   const [unit, setUnit] = useState<'px' | '%'>(() => (size?.percent == null ? 'px' : '%'));
@@ -342,7 +344,10 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   useEffect(() => {
     const element = frame.current;
     if (!element) return;
-    const look = () => setImage(element.querySelector<HTMLImageElement>('img'));
+    const look = () => {
+      setImage(element.querySelector<HTMLImageElement>('img'));
+      setFile(element.querySelector('.attachment-card, .attachment-player') !== null);
+    };
     look();
     if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(look);
@@ -617,6 +622,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
       className="edit-image"
       data-resizing={dragged === null ? undefined : ''}
       data-ms-in-place={offered ? '' : undefined}
+      data-ms-file={file ? '' : undefined}
       onFocus={() => frame.current && (frame.current.dataset['msBusy'] = '')}
       onBlur={hold}
       onMouseDown={(event) => {
