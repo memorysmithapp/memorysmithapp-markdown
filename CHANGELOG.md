@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A click or a touch on an image in edit mode no longer shows its source: the picture is sized in place, as a table is edited in place, and like a table it shows its Markdown from a *Source* button among its controls, or when the caret reaches it from the keyboard (#112). An embed with no picture, a kept file's card, still shows its source at a click, having no controls. A link around an image is followed with Ctrl or Cmd held, which in edit mode did nothing, since the editor received no press from inside a drawn image.
+
 ## [0.8.0] - 2026-10-16
 
 ### Added

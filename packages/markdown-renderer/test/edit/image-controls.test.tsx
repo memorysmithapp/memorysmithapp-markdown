@@ -2,7 +2,8 @@
  * The controls of an image in edit mode: a width field that replaces what it holds and refuses a
  * size nobody sees (#105); a width and a height with a lock between them, the unit, the
  * description and a handle that says what it does (#106); and nothing started on them taken for
- * the click that shows the image's source (#107).
+ * the click that shows the image's source (#107); and the picture, sized in place as a table is
+ * edited in place, showing its source from a button and never from a click (#112).
  */
 
 import { readFileSync } from 'node:fs';
@@ -28,6 +29,7 @@ if (typeof globalThis.PointerEvent === 'undefined') {
 
 const FILES: Record<string, KeptFile> = {
   'logo.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/logo', description: 'The logo, on white' },
+  'minutes.pdf': { mimeType: 'application/pdf', bytes: 2048, url: 'https://files.test/minutes', description: 'The signed minutes' },
 };
 const HOST: NoteHost = { keeps: (name) => name in FILES, fileOf: (name) => FILES[name] ?? null };
 
@@ -280,13 +282,6 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     expect(press(button('Its own size'))).toBe(false);
   });
 
-  it('still shows the source for a click on the picture itself', async () => {
-    const { view } = await open(NOTE);
-    const head = view.state.selection.main.head;
-    await pressOn($('img[src]')!);
-    expect(view.state.selection.main.head).not.toBe(head);
-  });
-
   it('drags the handle with the pointer captured, and writes the width it was let go at', async () => {
     const { view, changes } = await open(NOTE);
     const handle = $<HTMLElement>('.edit-image-handle')!;
@@ -303,5 +298,84 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     await settle();
     expect(changes.at(-1)).toBe(NOTE.replace('|200', '|150'));
     expect(view.state.selection.main.head).toBe(head);
+  });
+});
+
+describe('an image sized in place shows its source as a table does (#112)', () => {
+  /** A press on a target with a mouse, or a touch and the mouse events it leaves behind. */
+  async function pressOn(target: Element, touch = false): Promise<void> {
+    await act(async () => {
+      if (touch) target.dispatchEvent(new Event('touchstart', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    await settle();
+  }
+
+  it.each([
+    ['an embed of a kept image', 'A logo:\n\n![[logo.png|200]]\n'],
+    ['a Markdown image', 'A view:\n\n![A view|300](https://example.org/v.png)\n'],
+    ['a Markdown image inside a line', 'A view ![A view|300](https://example.org/v.png) here.\n'],
+  ])('%s stays drawn, with its controls, at a click or a touch on the picture', async (_kind, note) => {
+    const { view, changes } = await open(note);
+    const head = view.state.selection.main.head;
+    for (const touch of [false, true]) {
+      const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+      await act(async () => $('img[src]')!.dispatchEvent(event));
+      // Its default would put the caret beside it, which shows its source.
+      expect(event.defaultPrevented).toBe(true);
+      await pressOn($('img[src]')!, touch);
+      expect($('.edit-image-controls')).not.toBeNull();
+      expect(view.state.selection.main.head).toBe(head);
+    }
+    expect(changes).toEqual([]);
+  });
+
+  it('shows its source from the button among its controls, as a table\'s does', async () => {
+    const note = 'A logo:\n\n![[logo.png|200]]\n';
+    const { view, changes } = await open(note);
+    await act(async () => button('Source').click());
+    await settle();
+    expect(view.state.selection.main.head).toBe(note.indexOf('![['));
+    expect($('.edit-image-controls')).toBeNull();
+    expect(changes).toEqual([]);
+  });
+
+  it('shows its source when the caret reaches it', async () => {
+    const note = 'A view ![A view|300](https://example.org/v.png) here.\n';
+    const { view } = await open(note);
+    await act(async () => {
+      view.focus();
+      view.dispatch({ selection: { anchor: note.indexOf('![') } });
+    });
+    await settle();
+    expect($('.edit-image-controls')).toBeNull();
+  });
+
+  it('still follows a link around it with a modifier only', async () => {
+    const opened: unknown[] = [];
+    const original = window.open;
+    window.open = ((...args: unknown[]) => void opened.push(args)) as unknown as typeof window.open;
+    try {
+      const { view } = await open('See [![A view|300](https://example.org/v.png)](https://example.org/page) here.\n');
+      const head = view.state.selection.main.head;
+      await pressOn($('img[src]')!);
+      expect(opened).toEqual([]);
+      expect(view.state.selection.main.head).toBe(head);
+      await act(async () => $('img[src]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, ctrlKey: true })));
+      expect(opened).toEqual([['https://example.org/page', '_blank', 'noreferrer']]);
+    } finally {
+      window.open = original;
+    }
+  });
+
+  it('leaves a click on an embed with no picture, a file\'s card, showing its source', async () => {
+    const note = 'Minutes:\n\n![[minutes.pdf]]\n';
+    const { view } = await open(note);
+    expect($('.edit-image-controls')).toBeNull();
+    await pressOn($('.attachment-card')!);
+    expect(view.state.selection.main.head).not.toBe(note.length);
+    expect(view.state.selection.main.head).toBeGreaterThanOrEqual(note.indexOf('![['));
   });
 });

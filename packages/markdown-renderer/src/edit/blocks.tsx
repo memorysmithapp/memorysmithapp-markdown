@@ -239,6 +239,9 @@ function wholeNumber(text: string): number | null {
  * controls, gaps included, and the frame is marked busy while one of them has the focus, while the
  * handle is dragged and for a moment after a pointer or a touch on them.
  *
+ * Sized in place, as a table is edited in place, the image shows its source only from a button among
+ * its controls or when the caret reaches it from the keyboard; a click on the picture shows nothing (#112).
+ *
  * The controls appear once an image is drawn inside it, so an embed of a file that is not an image,
  * or a host's own drawing without one, offers none.
  */
@@ -480,6 +483,12 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     else resize({ width: end.width, height: null, percent: null });
   };
 
+  /** Shows the image's notation, as a table's button does: the caret goes before it (#112). */
+  const showSource = () => {
+    const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
+    if (widget) reveal(view, view.posAtDOM(widget));
+  };
+
   const offered = size !== null && image !== null;
   const unitWord = unit === '%' ? '%' : 'px';
   const invalid = (name: 'width' | 'height') => (refused?.field === name ? { 'aria-invalid': true, title: words.imageOutOfRange(refused.range.min, refused.range.max, name === 'width' ? unitWord : 'px') } : {});
@@ -488,6 +497,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
       ref={frame}
       className="edit-image"
       data-resizing={dragged === null ? undefined : ''}
+      data-ms-in-place={offered ? '' : undefined}
       onFocus={() => frame.current && (frame.current.dataset['msBusy'] = '')}
       onBlur={hold}
       onMouseDown={(event) => {
@@ -574,6 +584,9 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
               </span>
               <Control label={words.imageOwnSize} onClick={() => resize(null)} pressed={size.width === null && size.percent === null} focusable>
                 {ICON_OWN_SIZE}
+              </Control>
+              <Control label={words.source} onClick={showSource}>
+                {ICONS.source}
               </Control>
             </span>
             {refused && (
