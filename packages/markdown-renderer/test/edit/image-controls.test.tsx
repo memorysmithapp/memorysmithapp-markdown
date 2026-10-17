@@ -4,7 +4,8 @@
  * description and a handle that says what it does (#106); and nothing started on them taken for
  * the click that shows the image's source (#107); and the picture, sized in place as a table is
  * edited in place, showing its source from a button and never from a click (#112); a share of the
- * page drawn as a share of the column, as it is read (#113).
+ * page drawn as a share of the column, as it is read (#113); and the picture keeping its place on
+ * the screen while its handle is dragged (#116).
  */
 
 import { readFileSync } from 'node:fs';
@@ -352,6 +353,42 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     await settle();
     expect(changes.at(-1)).toBe(NOTE.replace('|200', '|150'));
     expect(view.state.selection.main.head).toBe(head);
+  });
+});
+
+describe('the picture keeps its place while its handle is dragged (#116)', () => {
+  it('scrolls back any move of its top, with room after the note and no anchoring, in the pane that scrolls', async () => {
+    await open('A logo:\n\n![[logo.png|200]]\n\nA line after it.\n');
+    // The editor scrolls in a pane of the host, scrolled to its end.
+    const pane = mounted!.container;
+    pane.style.overflowY = 'auto';
+    Object.defineProperty(pane, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(pane, 'clientHeight', { configurable: true, value: 800 });
+    const scrolled: number[] = [];
+    pane.scrollBy = ((_x: number, y: number) => void scrolled.push(y)) as typeof pane.scrollBy;
+    const image = $<HTMLImageElement>('img[src]')!;
+    let top = 333;
+    image.getBoundingClientRect = () => ({ width: 200, height: 100, top, left: 0, right: 200, bottom: top + 100, x: 0, y: top, toJSON: () => null }) as DOMRect;
+    const handle = $<HTMLElement>('.edit-image-handle')!;
+    const content = $<HTMLElement>('.cm-content')!;
+    const room = `${(parseFloat(getComputedStyle(content).paddingBottom) || 0) + 100}px`;
+
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 3, clientX: 200, clientY: 100 })));
+    expect(pane.style.overflowAnchor).toBe('none');
+    // Room for as much as it may shrink, so the pane is never shorter than where it is scrolled to.
+    expect(content.style.paddingBottom).toBe(room);
+
+    // Shrinking it, the browser brought it down by 169 pixels: they are scrolled back.
+    top = 502;
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 3, clientX: 120, clientY: 60 })));
+    expect(scrolled).toEqual([169]);
+
+    top = 333;
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 3, clientX: 120, clientY: 60 })));
+    await act(async () => new Promise((done) => setTimeout(done, 700)));
+    expect(pane.style.overflowAnchor).toBe('');
+    // The room stays until the author scrolls up into it, so the release does not jump.
+    expect(content.style.paddingBottom).toBe(room);
   });
 });
 

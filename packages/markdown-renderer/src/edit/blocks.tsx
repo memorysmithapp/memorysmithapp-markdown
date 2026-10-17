@@ -201,8 +201,7 @@ const SCROLL_JUMP = 120;
  */
 function holdInPlace(view: EditorView, block: HTMLElement, run: () => void): void {
   const top = block.getBoundingClientRect().top;
-  let scroller: HTMLElement | null = view.scrollDOM;
-  while (scroller && !(scroller.scrollHeight > scroller.clientHeight && /(auto|scroll)/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement;
+  const scroller = scrollerOf(view);
   const scrolled = () => (scroller ? scroller.scrollTop : window.scrollY);
   const before = scrolled();
   const back = () => {
@@ -215,6 +214,78 @@ function holdInPlace(view: EditorView, block: HTMLElement, run: () => void): voi
   run();
   window.addEventListener('scroll', back, true);
   setTimeout(() => window.removeEventListener('scroll', back, true), SCROLL_HOLD_MS);
+}
+
+/** What the editor scrolls in: its own scroller, a pane of the host that scrolls, or `null` for the window. */
+function scrollerOf(view: EditorView): HTMLElement | null {
+  let scroller: HTMLElement | null = view.scrollDOM;
+  while (scroller && !(scroller.scrollHeight > scroller.clientHeight && /(auto|scroll)/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement;
+  return scroller;
+}
+
+/**
+ * Room left after the last line of a note while an image is resized near its end (#116): the
+ * pixels of padding added under the text, and its padding before. Kept once the drag ends, so the
+ * page does not jump back when the image is written smaller, and given back as the author scrolls
+ * up, a pixel of it for a pixel of scroll, where it is out of sight.
+ */
+const roomBelow = new WeakMap<EditorView, { added: number; base: number; dragging: boolean; trim: (() => void) | null }>();
+
+function setRoom(view: EditorView, added: number): void {
+  const room = roomBelow.get(view) ?? { added: 0, base: parseFloat(getComputedStyle(view.contentDOM).paddingBottom || '0') || 0, dragging: false, trim: null };
+  room.added = Math.max(0, Math.round(added));
+  view.contentDOM.style.paddingBottom = room.added > 0 ? `${room.base + room.added}px` : '';
+  roomBelow.set(view, room);
+  const scroller = scrollerOf(view);
+  const target: HTMLElement | Window = scroller ?? window;
+  if (room.added > 0 && !room.trim) {
+    room.trim = () => {
+      if (room.dragging) return;
+      const max = scroller ? scroller.scrollHeight - scroller.clientHeight : document.documentElement.scrollHeight - window.innerHeight;
+      const slack = max - (scroller ? scroller.scrollTop : window.scrollY);
+      if (slack > 0) setRoom(view, room.added - slack);
+    };
+    target.addEventListener('scroll', room.trim, { passive: true });
+  } else if (room.added === 0 && room.trim) {
+    target.removeEventListener('scroll', room.trim);
+    room.trim = null;
+  }
+}
+
+/**
+ * Holds the top of a picture where it is on the screen while its handle is dragged and once it is
+ * written (#116): only the text below it moves. The page could not stay put by itself: shrinking
+ * a picture near the end of a note made the page shorter than where it was scrolled to, and the
+ * browser brought everything above down; growing it after that, the browser's scroll anchoring
+ * kept the text below in place and the picture grew upward, away from the pointer. So the note is
+ * given room after its last line for as much as the picture may shrink, the anchoring is turned off
+ * on what scrolls for the drag, and any move of the picture's top left is scrolled back.
+ */
+function pinTop(view: EditorView, picture: () => HTMLElement | null): { hold: () => void; release: () => void } {
+  const scroller = scrollerOf(view);
+  const anchored = scroller ?? document.documentElement;
+  const anchoring = anchored.style.overflowAnchor;
+  anchored.style.overflowAnchor = 'none';
+  const top = picture()?.getBoundingClientRect().top ?? null;
+  const height = picture()?.getBoundingClientRect().height ?? 0;
+  const room = roomBelow.get(view);
+  setRoom(view, Math.max(room?.added ?? 0, height));
+  roomBelow.get(view)!.dragging = true;
+  const hold = () => {
+    const now = picture()?.getBoundingClientRect().top;
+    if (top === null || now === undefined) return;
+    const moved = now - top;
+    if (Math.abs(moved) < 1) return;
+    if (scroller) scroller.scrollBy(0, moved);
+    else window.scrollBy(0, moved);
+  };
+  const release = () => {
+    hold();
+    anchored.style.overflowAnchor = anchoring;
+    const left = roomBelow.get(view);
+    if (left) left.dragging = false;
+  };
+  return { hold, release };
 }
 
 /** The range a field accepts, in its unit. */
@@ -264,7 +335,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   const [refused, setRefused] = useState<{ field: 'width' | 'height'; range: Range } | null>(null);
   const [dragged, setDragged] = useState<{ width: number; height: number } | null>(null);
   const [shift, setShift] = useState(false);
-  const drag = useRef<{ x: number; y: number; width: number; height: number; pointer: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; width: number; height: number; pointer: number; pin: ReturnType<typeof pinTop> } | null>(null);
   const guard = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // An embed's image arrives when the host answers; the controls wait for it.
@@ -516,13 +587,19 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
       image.style.maxWidth = percent === null ? '' : shareWidth(percent);
     }
     hold();
-    if (cancelled || !end) return;
-    if (Math.abs(end.width - start.width) < 1 && Math.abs(end.height - start.height) < 1) return;
+    // The picture keeps its place while it is written and drawn again at its new size (#116).
+    const settle = () => {
+      start.pin.hold();
+      requestAnimationFrame(start.pin.hold);
+      setTimeout(start.pin.release, SCROLL_HOLD_MS);
+    };
+    if (cancelled || !end || (Math.abs(end.width - start.width) < 1 && Math.abs(end.height - start.height) < 1)) return settle();
     if (unit === '%') {
       const percent = percentOf(end.width);
       if (percent !== null) resize({ width: null, height: null, percent });
     } else if (free || event.shiftKey) resize({ width: end.width, height: end.height, percent: null });
     else resize({ width: end.width, height: null, percent: null });
+    settle();
   };
 
   /** Shows the image's notation, as a table's button does: the caret goes before it (#112). */
@@ -649,7 +726,10 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
               const now = drawn();
               if (!now) return;
               event.currentTarget.setPointerCapture?.(event.pointerId);
-              drag.current = { x: event.clientX, y: event.clientY, ...now, pointer: event.pointerId };
+              const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block') ?? null;
+              // The picture the widget draws, the one drawn anew once it is written included.
+              const pin = pinTop(view, () => widget?.querySelector<HTMLElement>('.edit-image img') ?? null);
+              drag.current = { x: event.clientX, y: event.clientY, ...now, pointer: event.pointerId, pin };
               if (frame.current) frame.current.dataset['msBusy'] = '';
               setShift(event.shiftKey);
               setDragged(now);
@@ -664,6 +744,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
               if ((!locked && unit === 'px') || event.shiftKey) {
                 image.style.height = `${Math.max(MIN_IMAGE_SIZE, Math.round(start.height + event.clientY - start.y))}px`;
               } else image.style.height = 'auto';
+              start.pin.hold();
               // What the page lets it be: never wider than the column.
               setDragged(drawn());
             }}
