@@ -16,18 +16,12 @@ exercised_at: 2026-03-07
 
 # What the incident measured
 
-This page has **no name**, and it says so where somebody would otherwise
-waste an afternoon.
+This page has **no name**, and it says so where somebody would otherwise waste an afternoon.
 
-Its `name:` is `Incident #4711`, and a name carrying `#`, `[`, `]` or `|` —
-the four characters that delimit the form a link is written in — is no name.
-The note exists, it renders, it is searchable, it links outward, and no
-`[[…]]` can reach it. The heading above does not step in either: a heading is
-only content, and it never names the note it is in.
+Its `name:` is `Incident #4711`, and a name carrying `#`, `[`, `]` or `|` — the four characters that delimit the form a link is written in — is no name. The note exists, it renders, it is searchable, it links outward, and no `[[…]]` can reach it. The heading above does not step in either: a heading is only content, and it never names the note it is in.
 
 > [!warning] Write the number without the hash
-> `Incident 4711` would be an ordinary name. So would `Reunião 03/09/2026`:
-> a slash is not one of the four, because folders play no part in identity.
+> `Incident 4711` would be an ordinary name. So would `Reunião 03/09/2026`: a slash is not one of the four, because folders play no part in identity.
 
 ## Timeline
 
@@ -39,9 +33,6 @@ only content, and it never names the note it is in.
 
 ## What went wrong
 
-The runbook assumed the replica was current, and it was 90 seconds behind —
-inside the [[Recovery Point Objective]] and outside what the runbook said. The
-step now reads the lag before it promotes, instead of after.
+The runbook assumed the replica was current, and it was 90 seconds behind — inside the [[Recovery Point Objective]] and outside what the runbook said. The step now reads the lag before it promotes, instead of after.
 
-The evidence is the file the exercise produced:
-`payments-failover-4711.csv`, an attachment addressed by its name.
+The evidence is the file the exercise produced: `payments-failover-4711.csv`, an attachment addressed by its name.

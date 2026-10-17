@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-17
+
+### Changed
+
+- The playground's demonstration notes write one paragraph per line rather than wrapping it at 78 characters, as MemorySmith's notes do, so in edit mode a paragraph fills the column as its callouts do, where each source line had ended short of it (#118). Every soft break inside a paragraph, a list item or a quotation became a space; hard breaks, a callout's title line, code, formulas, tables, the frontmatter and comments are as they were. Every note draws the same in reading mode, and the comparison with MemorySmith finds the same 88 identical pairs and 44 deliberate.
+
+### Fixed
+
+- A choice made from a save's notice holds the note until it settles (#119). Edit mode became writable as soon as the choice started, so what the author typed while the host ran it, MemorySmith's *Discard my edit and reload* fetching the note, showed on the screen and was replaced by the text the host gave back, with the status saying *Saved*. The note now stays held, a key writing nothing, until the action settles and a turn after, so the host's text is in first; the status says *Updating…* and is marked busy meanwhile, where it said *Saving…*.
+- Ctrl+Shift+Z redoes in edit mode on every platform, as Ctrl+Y does and as Cmd+Shift+Z does on macOS (#120). CodeMirror binds it to redo on Linux only, and elsewhere it undid one more step; the *Redo* button's title names both keys.
+- Resizing an image from its handle near the end of a note moves only the text below it: the top of the picture stays where it is on the screen and the handle under the pointer, whether the editor scrolls itself, in a pane of the host or in the window (#116). Shrinking it made the page shorter than where it was scrolled to, so everything above came down, as much as 169 pixels in Chromium, and growing it after that, the browser's scroll anchoring made it grow upward. While the handle is dragged the note has room after its last line for as much as the picture may shrink, the anchoring is off, and any move of the picture's top is scrolled back; the room stays after the release, so the page does not jump, and is given back as the author scrolls up.
+
 ## [0.8.1] - 2026-10-16
 
 ### Fixed
@@ -208,7 +220,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...v0.7.1

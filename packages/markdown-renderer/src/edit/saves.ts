@@ -51,6 +51,11 @@ export interface EditSaves {
   readonly retry: () => void;
   /** Runs one of the notice's actions and follows it like a save. */
   readonly run: (action: SaveAction) => void;
+  /**
+   * Whether an action the author chose is still running (#119): the note stays held until it
+   * settles, and a moment after, so the text the host gives back is in before the author writes.
+   */
+  readonly running: boolean;
 }
 
 /** Whether a value is a notice a host gave: a title, a message and its actions. */
@@ -67,6 +72,7 @@ export function isSaveNotice(value: unknown): value is SaveNotice {
 
 export function useEditSaves(onChange: ((markdown: string) => unknown) | undefined): EditSaves {
   const [status, setStatus] = useState<{ state: EditSave; notice: SaveNotice | null }>({ state: 'idle', notice: null });
+  const [running, setRunning] = useState(false);
   const latest = useRef({ onChange, count: 0, text: null as string | null, alive: true });
   latest.current.onChange = onChange;
 
@@ -78,12 +84,16 @@ export function useEditSaves(onChange: ((markdown: string) => unknown) | undefin
     };
   }, []);
 
-  /** Follows what the host answered, a change's save or an action; `done` is the state of an answer that is not a promise. */
-  const follow = useCallback((answer: () => unknown, done: EditSave) => {
+  /**
+   * Follows what the host answered, a change's save or an action; `done` is the state of an answer
+   * that is not a promise, and `settled` is told once it is over.
+   */
+  const follow = useCallback((answer: () => unknown, done: EditSave, settled?: () => void) => {
     const self = latest.current;
     const count = ++self.count;
     const settle = (state: EditSave, notice: SaveNotice | null = null) => {
       if (self.alive && count === self.count) setStatus({ state, notice });
+      if (state !== 'saving') settled?.();
     };
     let result: unknown;
     try {
@@ -117,7 +127,16 @@ export function useEditSaves(onChange: ((markdown: string) => unknown) | undefin
   }, [hand]);
 
   // An action that answers nothing has done what it does: the author decided, and nothing is left to say.
-  const run = useCallback((action: SaveAction) => follow(() => action.run(), 'saved'), [follow]);
+  // The note is held from the choice until the action settles, and for a turn of the event loop after
+  // it, so a text the host gives back as it settles is drawn before a key reaches it (#119).
+  const run = useCallback(
+    (action: SaveAction) => {
+      const self = latest.current;
+      setRunning(true);
+      follow(() => action.run(), 'saved', () => setTimeout(() => self.alive && setRunning(false)));
+    },
+    [follow],
+  );
 
-  return { state: status.state, notice: status.notice, hand, retry, run };
+  return { state: status.state, notice: status.notice, hand, retry, run, running };
 }

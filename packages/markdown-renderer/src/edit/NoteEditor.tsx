@@ -12,7 +12,7 @@ import { autocompletion, type CompletionContext, type CompletionResult } from '@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands';
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { EditorView, keymap, type KeyBinding } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
@@ -249,7 +249,7 @@ function Toolbar({
             {ICONS.revert}
           </button>
           {button('undo', undo, 'Mod-Z')}
-          {button('redo', redo, 'Mod-Shift-Z')}
+          {button('redo', redo, 'Mod-Shift-Z, Mod-Y')}
         </span>
         <span className="edit-toolbar-group">
           <select
@@ -363,14 +363,14 @@ function SaveStatus({
   const { state, notice } = saves;
   const words = host.strings.editor;
   const button = useRef<HTMLButtonElement>(null);
-  const base = state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
+  const base = saves.running ? host.strings.updating : state === 'saving' ? words.saving : state === 'saved' ? host.strings.saved : state === 'failed' ? host.strings.notSaved : '';
   const shown = notice ? (deciding ? `${notice.title}. ${words.chooseToEdit}` : notice.title) : base;
   const said = state === 'failed' && blocked ? (notice ? `${words.stayInEdit}. ${shown}` : words.stayInEdit) : shown;
   const icon =
     state === 'saving' ? ICONS.saving : state === 'saved' ? ICONS.saved : state === 'alert' ? ICONS.alert : state === 'failed' ? ICONS.notSaved : null;
   const retryLabel = `${said}. ${words.retry}`;
   return (
-    <div className="edit-save" data-save={state} title={state === 'failed' || notice ? undefined : said || undefined}>
+    <div className="edit-save" data-save={state} aria-busy={saves.running ? true : undefined} title={state === 'failed' || notice ? undefined : said || undefined}>
       {notice ? (
         <button
           ref={button}
@@ -412,6 +412,13 @@ function SaveStatus({
  * Edits a note on the page that draws it. Exported at `@memorysmithapp/markdown-renderer/edit`
  * for a host that edits without the switch of `NoteBody`; `NoteBody` loads it on demand.
  */
+/**
+ * Redo on Ctrl+Shift+Z, Cmd+Shift+Z on macOS, on every platform, as well as on Ctrl+Y (#120):
+ * CodeMirror binds Ctrl+Shift+Z to redo on Linux only, and elsewhere drops the Shift of the key
+ * and undoes, so the key most people redo with lost them one more step.
+ */
+const redoKeys: readonly KeyBinding[] = [{ key: 'Mod-Shift-z', run: redo, preventDefault: true }];
+
 export function NoteEditor({ markdown: given, onChange, editable = true, corner, buttons = 'icon', autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
   const resolved = useMemo(
     () => resolveHost(host),
@@ -428,14 +435,14 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
    * A refusal that gives the author choices — another person wrote the note, say — is decided
    * before the note is written in again: every save after it would be refused too (#101).
    */
-  const deciding = saves.state === 'failed' && (saves.notice?.actions.length ?? 0) > 0;
+  const deciding = (saves.state === 'failed' && (saves.notice?.actions.length ?? 0) > 0) || saves.running;
   const [noticeOpen, setNoticeOpen] = useState(false);
   // A notice with choices opens by itself as it arrives; one the save no longer carries closes.
   useEffect(() => {
     setNoticeOpen(!!saves.notice && saves.notice.actions.length > 0);
   }, [saves.notice]);
-  const latest = useRef({ hand: saves.hand, host: resolved, onLeave, deciding, ask: () => setNoticeOpen(true) });
-  latest.current = { hand: saves.hand, host: resolved, onLeave, deciding, ask: () => setNoticeOpen(true) };
+  const latest = useRef({ hand: saves.hand, host: resolved, onLeave, deciding, running: saves.running, ask: () => setNoticeOpen(true) });
+  latest.current = { hand: saves.hand, host: resolved, onLeave, deciding, running: saves.running, ask: () => setNoticeOpen(true) };
   /**
    * The texts handed to the host that it has not given back yet. A host that saves before it
    * passes the note again gives back a text the editor has since moved past; that echo is not a
@@ -615,7 +622,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           livePage(measureMetrics(parent.current)),
           autocompletion({ override: [wikilinkCompletion(() => latest.current.host)], icons: false }),
           shortcuts(() => created),
-          keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
+          keymap.of([...markdownKeymap, ...redoKeys, ...historyKeymap, indentWithTab, ...defaultKeymap]),
           // A file pasted or dropped is attached, where the host keeps files (#75).
           menuKeys((target) => {
             if (target.state.readOnly) return false;
@@ -630,7 +637,8 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
               if (!latest.current.deciding || event.ctrlKey || event.metaKey || event.altKey) return false;
               if (event.key.length !== 1 && !WRITING_KEYS.has(event.key)) return false;
               event.preventDefault();
-              latest.current.ask();
+              // While the choice runs there is nothing to choose again: the key writes nothing (#119).
+              if (!latest.current.running) latest.current.ask();
               return true;
             },
             // The editing menu where the pointer is; Shift keeps the browser's, and so do the

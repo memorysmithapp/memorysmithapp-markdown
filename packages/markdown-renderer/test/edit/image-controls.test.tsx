@@ -4,7 +4,8 @@
  * description and a handle that says what it does (#106); and nothing started on them taken for
  * the click that shows the image's source (#107); and the picture, sized in place as a table is
  * edited in place, showing its source from a button and never from a click (#112); a share of the
- * page drawn as a share of the column, as it is read (#113).
+ * page drawn as a share of the column, as it is read (#113); and the picture keeping its place on
+ * the screen while its handle is dragged (#116).
  */
 
 import { readFileSync } from 'node:fs';
@@ -54,6 +55,11 @@ afterEach(() => {
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await act(async () => new Promise((done) => setTimeout(done, 0)));
+}
+
+/** Waits, a second at most, for what the editor draws a moment after an event. */
+async function until(done: () => boolean): Promise<void> {
+  for (let waited = 0; waited < 1000 && !done(); waited += 20) await act(async () => new Promise((next) => setTimeout(next, 20)));
 }
 
 const $ = <T extends Element>(selector: string) => mounted!.container.querySelector<T>(selector);
@@ -355,6 +361,42 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
   });
 });
 
+describe('the picture keeps its place while its handle is dragged (#116)', () => {
+  it('scrolls back any move of its top, with room after the note and no anchoring, in the pane that scrolls', async () => {
+    await open('A logo:\n\n![[logo.png|200]]\n\nA line after it.\n');
+    // The editor scrolls in a pane of the host, scrolled to its end.
+    const pane = mounted!.container;
+    pane.style.overflowY = 'auto';
+    Object.defineProperty(pane, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(pane, 'clientHeight', { configurable: true, value: 800 });
+    const scrolled: number[] = [];
+    pane.scrollBy = ((_x: number, y: number) => void scrolled.push(y)) as typeof pane.scrollBy;
+    const image = $<HTMLImageElement>('img[src]')!;
+    let top = 333;
+    image.getBoundingClientRect = () => ({ width: 200, height: 100, top, left: 0, right: 200, bottom: top + 100, x: 0, y: top, toJSON: () => null }) as DOMRect;
+    const handle = $<HTMLElement>('.edit-image-handle')!;
+    const content = $<HTMLElement>('.cm-content')!;
+    const room = `${(parseFloat(getComputedStyle(content).paddingBottom) || 0) + 100}px`;
+
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 3, clientX: 200, clientY: 100 })));
+    expect(pane.style.overflowAnchor).toBe('none');
+    // Room for as much as it may shrink, so the pane is never shorter than where it is scrolled to.
+    expect(content.style.paddingBottom).toBe(room);
+
+    // Shrinking it, the browser brought it down by 169 pixels: they are scrolled back.
+    top = 502;
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 3, clientX: 120, clientY: 60 })));
+    expect(scrolled).toEqual([169]);
+
+    top = 333;
+    await act(async () => handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 3, clientX: 120, clientY: 60 })));
+    await act(async () => new Promise((done) => setTimeout(done, 700)));
+    expect(pane.style.overflowAnchor).toBe('');
+    // The room stays until the author scrolls up into it, so the release does not jump.
+    expect(content.style.paddingBottom).toBe(room);
+  });
+});
+
 describe('an image sized in place shows its source as a table does (#112)', () => {
   /** A press on a target with a mouse, or a touch and the mouse events it leaves behind. */
   async function pressOn(target: Element, touch = false): Promise<void> {
@@ -392,6 +434,8 @@ describe('an image sized in place shows its source as a table does (#112)', () =
     await act(async () => button('Source').click());
     await settle();
     expect(view.state.selection.main.head).toBe(note.indexOf('![['));
+    // The notation shows once the editor knows it has the focus, which it learns a moment later.
+    await until(() => $('.edit-image-controls') === null);
     expect($('.edit-image-controls')).toBeNull();
     expect(changes).toEqual([]);
   });
@@ -403,7 +447,7 @@ describe('an image sized in place shows its source as a table does (#112)', () =
       view.focus();
       view.dispatch({ selection: { anchor: note.indexOf('![') } });
     });
-    await settle();
+    await until(() => $('.edit-image-controls') === null);
     expect($('.edit-image-controls')).toBeNull();
   });
 
