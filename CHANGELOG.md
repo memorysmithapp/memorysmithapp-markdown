@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-17
+
 ### Fixed
 
 - In edit mode, an embedded kept file that is not a picture takes the width of the column, as in reading mode (#122). Its frame, the one a kept image is sized in, shrank to what it held: a file's card was as wide as its text, a video player 300px wide, and an audio player, having no width of its own, was drawn 0px wide and did not show at all.
@@ -225,7 +227,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...v0.8.0
