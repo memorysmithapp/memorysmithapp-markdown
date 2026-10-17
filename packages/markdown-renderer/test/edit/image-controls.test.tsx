@@ -2,14 +2,16 @@
  * The controls of an image in edit mode: a width field that replaces what it holds and refuses a
  * size nobody sees (#105); a width and a height with a lock between them, the unit, the
  * description and a handle that says what it does (#106); and nothing started on them taken for
- * the click that shows the image's source (#107).
+ * the click that shows the image's source (#107); and the picture, sized in place as a table is
+ * edited in place, showing its source from a button and never from a click (#112); a share of the
+ * page drawn as a share of the column, as it is read (#113).
  */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { EditorView } from '@codemirror/view';
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { NoteEditor } from '../../src/edit/index.js';
 import type { KeptFile, NoteHost } from '../../src/index.js';
 import { mount, type Mounted } from '../render.js';
@@ -28,8 +30,21 @@ if (typeof globalThis.PointerEvent === 'undefined') {
 
 const FILES: Record<string, KeptFile> = {
   'logo.png': { mimeType: 'image/png', bytes: 10, url: 'https://files.test/logo', description: 'The logo, on white' },
+  'minutes.pdf': { mimeType: 'application/pdf', bytes: 2048, url: 'https://files.test/minutes', description: 'The signed minutes' },
 };
 const HOST: NoteHost = { keeps: (name) => name in FILES, fileOf: (name) => FILES[name] ?? null };
+
+// Every picture is laid out 200 by 100, the ones the editor draws anew for a new source included;
+// a test sets another size on one element of its own.
+const layout = HTMLImageElement.prototype.getBoundingClientRect;
+beforeAll(() => {
+  HTMLImageElement.prototype.getBoundingClientRect = function (this: HTMLImageElement) {
+    return this.hasAttribute('src') ? ({ width: 200, height: 100, top: 0, left: 0, right: 200, bottom: 100, x: 0, y: 0, toJSON: () => null } as DOMRect) : layout.call(this);
+  };
+});
+afterAll(() => {
+  HTMLImageElement.prototype.getBoundingClientRect = layout;
+});
 
 let mounted: Mounted | null = null;
 afterEach(() => {
@@ -43,16 +58,18 @@ async function settle(): Promise<void> {
 
 const $ = <T extends Element>(selector: string) => mounted!.container.querySelector<T>(selector);
 
-/** Opens a note in the editor, its column 700px wide and its images 200 by 100 as drawn. */
+/** Opens a note in the editor, its column 700px wide. */
 async function open(markdown: string): Promise<{ view: EditorView; changes: string[] }> {
   const changes: string[] = [];
   mounted = await mount(<NoteEditor markdown={markdown} onChange={(next) => void changes.push(next)} {...HOST} />);
   await settle();
+  // An image is drawn once more when its height is first learned: its fields are the ones of the drawing that stays.
+  for (let frame = $('.edit-image'), still = 0; still < 3; still++) {
+    await act(async () => new Promise((done) => setTimeout(done, 5)));
+    if ($('.edit-image') !== frame) [frame, still] = [$('.edit-image'), -1];
+  }
   const content = $<HTMLElement>('.cm-content')!;
   Object.defineProperty(content, 'clientWidth', { configurable: true, value: 700 });
-  for (const image of mounted.container.querySelectorAll('img[src]')) {
-    image.getBoundingClientRect = () => ({ width: 200, height: 100, top: 0, left: 0, right: 200, bottom: 100, x: 0, y: 0, toJSON: () => null }) as DOMRect;
-  }
   return { view: EditorView.findFromDOM($<HTMLElement>('.cm-editor')!)!, changes };
 }
 
@@ -180,6 +197,45 @@ describe('the width and the height, with the lock between them (#106)', () => {
   });
 });
 
+describe('a share of the page in edit mode (#113)', () => {
+  const choose = async (next: 'px' | '%') => {
+    const unit = $<HTMLSelectElement>('.edit-image-unit')!;
+    await act(async () => {
+      unit.value = next;
+      unit.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await settle();
+  };
+
+  it('is drawn at that share of the column, as it is read, not of the frame around the picture', async () => {
+    const { changes } = await open('![[logo.png|150]]\n');
+    await choose('%');
+    // 200 drawn in a 700px column is 29% of it, at most 203px of it.
+    expect(changes.at(-1)).toBe('![[logo.png|29%]]\n');
+    expect($<HTMLImageElement>('img[src]')!.style.maxWidth).toBe('203px');
+  });
+
+  it.each(['![[logo.png|150]]\n', '![A view|320x200](https://example.org/v.png)\n'])('writes back %s when the unit goes to % and back with nothing changed', async (note) => {
+    const { changes } = await open(note);
+    await choose('%');
+    await choose('px');
+    expect(changes.at(-1)).toBe(note);
+  });
+
+  it('writes the width it is drawn at when the share was changed in between', async () => {
+    const { changes } = await open('![[logo.png|150]]\n');
+    await choose('%');
+    await type(width(), '50');
+    await press(width(), 'Enter');
+    expect(changes.at(-1)).toBe('![[logo.png|50%]]\n');
+    for (const image of mounted!.container.querySelectorAll('img[src]')) {
+      image.getBoundingClientRect = () => ({ width: 350, height: 175, top: 0, left: 0, right: 350, bottom: 175, x: 0, y: 0, toJSON: () => null }) as DOMRect;
+    }
+    await choose('px');
+    expect(changes.at(-1)).toBe('![[logo.png|350]]\n');
+  });
+});
+
 describe('the description, the button back to its own size and the handle (#106)', () => {
   it('edits the description of a Markdown image before its pipe, which it keeps', async () => {
     const { changes } = await open('![A view|300](https://example.org/v.png)\n');
@@ -280,13 +336,6 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     expect(press(button('Its own size'))).toBe(false);
   });
 
-  it('still shows the source for a click on the picture itself', async () => {
-    const { view } = await open(NOTE);
-    const head = view.state.selection.main.head;
-    await pressOn($('img[src]')!);
-    expect(view.state.selection.main.head).not.toBe(head);
-  });
-
   it('drags the handle with the pointer captured, and writes the width it was let go at', async () => {
     const { view, changes } = await open(NOTE);
     const handle = $<HTMLElement>('.edit-image-handle')!;
@@ -303,5 +352,84 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     await settle();
     expect(changes.at(-1)).toBe(NOTE.replace('|200', '|150'));
     expect(view.state.selection.main.head).toBe(head);
+  });
+});
+
+describe('an image sized in place shows its source as a table does (#112)', () => {
+  /** A press on a target with a mouse, or a touch and the mouse events it leaves behind. */
+  async function pressOn(target: Element, touch = false): Promise<void> {
+    await act(async () => {
+      if (touch) target.dispatchEvent(new Event('touchstart', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    await settle();
+  }
+
+  it.each([
+    ['an embed of a kept image', 'A logo:\n\n![[logo.png|200]]\n'],
+    ['a Markdown image', 'A view:\n\n![A view|300](https://example.org/v.png)\n'],
+    ['a Markdown image inside a line', 'A view ![A view|300](https://example.org/v.png) here.\n'],
+  ])('%s stays drawn, with its controls, at a click or a touch on the picture', async (_kind, note) => {
+    const { view, changes } = await open(note);
+    const head = view.state.selection.main.head;
+    for (const touch of [false, true]) {
+      const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+      await act(async () => $('img[src]')!.dispatchEvent(event));
+      // Its default would put the caret beside it, which shows its source.
+      expect(event.defaultPrevented).toBe(true);
+      await pressOn($('img[src]')!, touch);
+      expect($('.edit-image-controls')).not.toBeNull();
+      expect(view.state.selection.main.head).toBe(head);
+    }
+    expect(changes).toEqual([]);
+  });
+
+  it('shows its source from the button among its controls, as a table\'s does', async () => {
+    const note = 'A logo:\n\n![[logo.png|200]]\n';
+    const { view, changes } = await open(note);
+    await act(async () => button('Source').click());
+    await settle();
+    expect(view.state.selection.main.head).toBe(note.indexOf('![['));
+    expect($('.edit-image-controls')).toBeNull();
+    expect(changes).toEqual([]);
+  });
+
+  it('shows its source when the caret reaches it', async () => {
+    const note = 'A view ![A view|300](https://example.org/v.png) here.\n';
+    const { view } = await open(note);
+    await act(async () => {
+      view.focus();
+      view.dispatch({ selection: { anchor: note.indexOf('![') } });
+    });
+    await settle();
+    expect($('.edit-image-controls')).toBeNull();
+  });
+
+  it('still follows a link around it with a modifier only', async () => {
+    const opened: unknown[] = [];
+    const original = window.open;
+    window.open = ((...args: unknown[]) => void opened.push(args)) as unknown as typeof window.open;
+    try {
+      const { view } = await open('See [![A view|300](https://example.org/v.png)](https://example.org/page) here.\n');
+      const head = view.state.selection.main.head;
+      await pressOn($('img[src]')!);
+      expect(opened).toEqual([]);
+      expect(view.state.selection.main.head).toBe(head);
+      await act(async () => $('img[src]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, ctrlKey: true })));
+      expect(opened).toEqual([['https://example.org/page', '_blank', 'noreferrer']]);
+    } finally {
+      window.open = original;
+    }
+  });
+
+  it('leaves a click on an embed with no picture, a file\'s card, showing its source', async () => {
+    const note = 'Minutes:\n\n![[minutes.pdf]]\n';
+    const { view } = await open(note);
+    expect($('.edit-image-controls')).toBeNull();
+    await pressOn($('.attachment-card')!);
+    expect(view.state.selection.main.head).not.toBe(note.length);
+    expect(view.state.selection.main.head).toBeGreaterThanOrEqual(note.indexOf('![['));
   });
 });

@@ -176,6 +176,13 @@ export function CalloutBlock({ view, text, marker }: { view: EditorView; text: s
 /** The narrowest an image is sized to, by a field or the handle: something a reader still sees (#105). */
 export const MIN_IMAGE_SIZE = 16;
 
+/**
+ * The size in pixels an image had when its unit was switched to a share of the page, where its
+ * source starts: switched back with nothing changed between, it is written again, not the width the
+ * share rounds to (#113). Kept by the editor, since the image is drawn anew for its new source.
+ */
+const switchedUnits = new WeakMap<EditorView, { at: number; percent: number; width: number; height: number | null }>();
+
 /** How long after a pointer or a touch on its controls a click on the image is not taken as one to edit its source (#107). */
 const CONTROLS_GUARD_MS = 800;
 
@@ -238,6 +245,9 @@ function wholeNumber(text: string): number | null {
  * moment after reaches the click that shows the image's source (#107): they are all marked as
  * controls, gaps included, and the frame is marked busy while one of them has the focus, while the
  * handle is dragged and for a moment after a pointer or a touch on them.
+ *
+ * Sized in place, as a table is edited in place, the image shows its source only from a button among
+ * its controls or when the caret reaches it from the keyboard; a click on the picture shows nothing (#112).
  *
  * The controls appear once an image is drawn inside it, so an embed of a file that is not an image,
  * or a host's own drawing without one, offers none.
@@ -318,6 +328,28 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     const width = content ? content.clientWidth - parseFloat(getComputedStyle(content).paddingLeft || '0') - parseFloat(getComputedStyle(content).paddingRight || '0') : 0;
     return width > 0 ? Math.round(width) : null;
   };
+  /** The widest a share of the page draws the picture: that share of the column, in pixels. */
+  const shareWidth = (share: number): string => {
+    const wide = column();
+    return wide === null ? `${share}%` : `${Math.round((wide * share) / 100)}px`;
+  };
+  // A share of the page is a share of the column the note is read at (§3.14), as reading mode draws
+  // it. Written as a percentage it would resolve against the frame, which shrinks to the picture, and
+  // the picture would be drawn at that share of itself (#113): it is given in pixels of the column.
+  const percent = size?.percent ?? null;
+  useEffect(() => {
+    const content = frame.current?.closest<HTMLElement>('.cm-content') ?? null;
+    if (!image || percent === null || !content) return;
+    const place = () => {
+      if (!drag.current) image.style.maxWidth = shareWidth(percent);
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(place);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [image, percent]);
+
   /** The image as it is drawn now, or `null` before it is laid out. */
   const drawn = (): { width: number; height: number } | null => {
     const box = image?.getBoundingClientRect();
@@ -339,6 +371,11 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     return { min: MIN_IMAGE_SIZE, max: tallest > 0 && widest > 0 ? tallest : MAX_IMAGE_WIDTH };
   };
 
+  /** Where the image's source starts in the note, or `null` when it is not in the page. */
+  const place = (): number | null => {
+    const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
+    return widget ? view.posAtDOM(widget) : null;
+  };
   const apply = (changes: readonly TextChange[]) => {
     const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
     if (!widget || changes.length === 0) return;
@@ -444,10 +481,18 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     const wide = column();
     // The size it is drawn at, said in the other unit, when it has one.
     if (next === '%' && size?.percent == null && size?.width != null && now && wide) {
-      resize({ width: null, height: null, percent: Math.min(100, Math.max(1, Math.round((now.width / wide) * 100))) });
-    } else if (next === 'px' && size?.percent != null && now) {
-      resize({ width: now.width, height: null, percent: null });
+      const share = Math.min(100, Math.max(1, Math.round((now.width / wide) * 100)));
+      const at = place();
+      if (at !== null) switchedUnits.set(view, { at, percent: share, width: size.width, height: size.height });
+      resize({ width: null, height: null, percent: share });
+    } else if (next === 'px' && size?.percent != null) {
+      const left = switchedUnits.get(view);
+      if (left && left.at === place() && left.percent === size.percent) {
+        resize({ width: left.width, height: left.height, percent: null });
+        setLocked(left.height === null);
+      } else if (now) resize({ width: now.width, height: null, percent: null });
     }
+    if (next === 'px') switchedUnits.delete(view);
     if (next === '%') setLocked(true);
   };
 
@@ -468,7 +513,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     if (image) {
       image.style.width = '';
       image.style.height = '';
-      image.style.maxWidth = '';
+      image.style.maxWidth = percent === null ? '' : shareWidth(percent);
     }
     hold();
     if (cancelled || !end) return;
@@ -480,6 +525,12 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     else resize({ width: end.width, height: null, percent: null });
   };
 
+  /** Shows the image's notation, as a table's button does: the caret goes before it (#112). */
+  const showSource = () => {
+    const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
+    if (widget) reveal(view, view.posAtDOM(widget));
+  };
+
   const offered = size !== null && image !== null;
   const unitWord = unit === '%' ? '%' : 'px';
   const invalid = (name: 'width' | 'height') => (refused?.field === name ? { 'aria-invalid': true, title: words.imageOutOfRange(refused.range.min, refused.range.max, name === 'width' ? unitWord : 'px') } : {});
@@ -488,6 +539,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
       ref={frame}
       className="edit-image"
       data-resizing={dragged === null ? undefined : ''}
+      data-ms-in-place={offered ? '' : undefined}
       onFocus={() => frame.current && (frame.current.dataset['msBusy'] = '')}
       onBlur={hold}
       onMouseDown={(event) => {
@@ -574,6 +626,9 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
               </span>
               <Control label={words.imageOwnSize} onClick={() => resize(null)} pressed={size.width === null && size.percent === null} focusable>
                 {ICON_OWN_SIZE}
+              </Control>
+              <Control label={words.source} onClick={showSource}>
+                {ICONS.source}
               </Control>
             </span>
             {refused && (

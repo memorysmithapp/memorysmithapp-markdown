@@ -288,7 +288,17 @@ class BlockWidget extends WidgetType {
       // A control's, or a press in a frame its controls hold busy — a field focused, a handle
       // dragged, the click a touch on them leaves behind — never shows the source (#107).
       if (target.closest('[data-ms-control], [data-ms-busy]')) return;
-      if (event.metaKey || event.ctrlKey) return;
+      // CodeMirror hands the editor no event from inside a drawn block: a link around it is followed here (#112).
+      if (event.metaKey || event.ctrlKey) {
+        followLinkAround(event, view, element);
+        return;
+      }
+      // A picture sized in place, as a table is edited in place, shows its source from its button or
+      // the keyboard, never from a click (#112); kept from placing the caret beside it, which would.
+      if (target.closest('[data-ms-in-place]')) {
+        event.preventDefault();
+        return;
+      }
       const widget = drawing.get(element) ?? this;
       if (!widget.revealsOnClick) return;
       event.preventDefault();
@@ -881,25 +891,88 @@ const blockKeys = Prec.high(
   ]),
 );
 
+/** Where the first press of a gesture fell in the note, read before the press moved the caret. */
+const firstPress = new WeakMap<EditorView, { at: number; time: number }>();
+/** The longest a browser counts two presses as one gesture: Windows' default double-click time. */
+const MULTI_CLICK_MS = 500;
+
+/**
+ * Selects the word, or the line, a double or a triple click starts on (#114). The first press puts
+ * the caret where it fell, which reveals the markers beside it, or hides the ones it left, and moves
+ * the rest of the line under the pointer by their width: the second press, read where it lands,
+ * would select the marker or the next word. It is read where the first one fell instead.
+ */
+const multiClick = EditorView.domEventHandlers({
+  mousedown(event, view) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+    if (event.detail <= 1) {
+      const at = view.posAtCoords({ x: event.clientX, y: event.clientY });
+      if (at === null) firstPress.delete(view);
+      else firstPress.set(view, { at, time: event.timeStamp });
+      return false;
+    }
+    const first = firstPress.get(view);
+    if (!first || event.timeStamp - first.time > MULTI_CLICK_MS * (event.detail - 1)) return false;
+    const { state } = view;
+    const line = state.doc.lineAt(first.at);
+    const range = event.detail === 2 ? (state.wordAt(first.at) ?? EditorSelection.cursor(first.at)) : EditorSelection.range(line.from, line.to);
+    event.preventDefault();
+    view.dispatch({ selection: EditorSelection.single(range.from, range.to), userEvent: 'select.pointer' });
+    return true;
+  },
+});
+
 /** Follows a link with a modifier held: a wikilink through the host, an address the page follows in a new tab. */
 const follow = EditorView.domEventHandlers({
   mousedown(event, view) {
     if (!(event.metaKey || event.ctrlKey)) return false;
-    const target = (event.target as HTMLElement).closest<HTMLElement>('[data-target], [data-href]');
-    if (!target) return false;
-    event.preventDefault();
-    const { host } = view.state.facet(editorEnvironment);
-    const name = target.dataset['target'];
-    if (name !== undefined) {
-      const address = host.resolve(name);
-      if (address !== null) host.navigate(address);
-      return true;
-    }
-    const address = followable(target.dataset['href'] ?? '');
-    if (address) window.open(address, '_blank', 'noreferrer');
-    return true;
+    return followLink(event, view);
   },
 });
+
+/** Follows the link a press with a modifier fell in, if any: `true` when it did. */
+function followLink(event: MouseEvent, view: EditorView): boolean {
+  const target = (event.target as HTMLElement).closest<HTMLElement>('[data-target], [data-href]');
+  if (!target) return false;
+  event.preventDefault();
+  followAddress(view, target.dataset['target'], target.dataset['href']);
+  return true;
+}
+
+/**
+ * Follows the link a drawn block stands in, pressed with a modifier: CodeMirror draws no mark around
+ * a widget, so the link around an image is found among the marks over its source (#112).
+ */
+function followLinkAround(event: MouseEvent, view: EditorView, element: HTMLElement): boolean {
+  if (followLink(event, view)) return true;
+  const widget = drawing.get(element);
+  if (!widget) return false;
+  const from = view.posAtDOM(element);
+  const to = from + widget.source.length;
+  const links: { target?: string; href?: string }[] = [];
+  view.state.field(decorationsField).between(from, to, (start, end, decoration) => {
+    const attributes = decoration.spec.attributes as Record<string, string> | undefined;
+    if (!attributes || start > from || end < to) return;
+    if (attributes['data-target'] !== undefined || attributes['data-href'] !== undefined) links.push({ target: attributes['data-target'], href: attributes['data-href'] });
+  });
+  const link = links[0];
+  if (!link) return false;
+  event.preventDefault();
+  followAddress(view, link.target, link.href);
+  return true;
+}
+
+/** Goes to a wikilink's note through the host, or opens an address the page follows in a new tab. */
+function followAddress(view: EditorView, name: string | undefined, href: string | undefined): void {
+  const { host } = view.state.facet(editorEnvironment);
+  if (name !== undefined) {
+    const address = host.resolve(name);
+    if (address !== null) host.navigate(address);
+    return;
+  }
+  const address = followable(href ?? '');
+  if (address) window.open(address, '_blank', 'noreferrer');
+}
 
 /** How long an embed measured ahead of being drawn may take to load before it is let go (#94). */
 const PREMEASURE_TIMEOUT = 8000;
@@ -1032,5 +1105,6 @@ export function livePage(metrics?: BlockMetrics): Extension {
     embedPremeasure,
     blockKeys,
     follow,
+    multiClick,
   ];
 }

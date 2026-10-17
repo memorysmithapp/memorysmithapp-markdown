@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-16
+
+### Fixed
+
+- A click or a touch on an image in edit mode no longer shows its source: the picture is sized in place, as a table is edited in place, and like a table it shows its Markdown from a *Source* button among its controls, or when the caret reaches it from the keyboard (#112). An embed with no picture, a kept file's card, still shows its source at a click, having no controls. A link around an image is followed with Ctrl or Cmd held, which in edit mode did nothing, since the editor received no press from inside a drawn image.
+- An image whose width is a share of the page, `|50%`, is drawn in edit mode at that share of the column the note is read at, as reading mode draws it, rather than at that share of the frame around the picture, which shrank it: a 192px picture at `|21%` in a 700px column was drawn 40px wide, and switching its unit back to pixels wrote `|40` (#113). Switching to `%` and back with nothing changed between writes the size it had, its height included, rather than the width the share rounds to.
+- A double click in edit mode selects the word it starts on, and a triple click its line, beside a formatted run too (#114). The first press moved the caret, which showed the markers beside it or hid the ones it left and moved the rest of the line under the pointer by their width, so the second press selected the marker or the next word: bolding a word and then double-clicking the next one to italicize it italicized `**`. The second and third presses are now read where the first one fell.
+
 ## [0.8.0] - 2026-10-16
 
 ### Added
@@ -200,7 +208,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...v0.7.0
