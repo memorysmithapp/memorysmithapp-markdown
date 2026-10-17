@@ -94,7 +94,7 @@ export interface NoteHost {
   readonly fileOf?: (name: string) => KeptFile | null | PromiseLike<KeptFile | null>;
   /**
    * Draws a file the notebook keeps where a note embeds it: an image, audio, video, or a card. The
-   * dimensions are the ones the embed declared, in CSS pixels, or `null`.
+   * dimensions are the ones the embed declared, in CSS pixels or as a share of the page, or `null`.
    *
    * In edit mode the node may be drawn outside the host's React tree, in the root of a block the
    * editor draws, so it must not depend on the host's context; a node that throws there leaves the
@@ -218,8 +218,22 @@ export interface AttachAttributes {
 
 export interface AttachmentRequest {
   readonly name: string;
+  /** The width and height the embed declared, in CSS pixels, or `null`. */
   readonly width: number | null;
   readonly height: number | null;
+  /**
+   * The width it declared as a share of the width the note is read at, from 1 to 100, which it is
+   * drawn at most, or `null` (#108). `width` and `height` are then `null`.
+   */
+  readonly percent: number | null;
+  /**
+   * What a Markdown image that names the file wrote before its pipe, `![description](name)`
+   * (`SPEC.md` §5.8, #104): an image's `alt`, a card's text. Absent for an embed, and empty when
+   * the image wrote none, when the file's own description is the one to draw.
+   */
+  readonly description?: string;
+  /** The title that image wrote after its destination, `![…](name "title")`, when it wrote one. */
+  readonly title?: string;
 }
 
 /** A link to draw through the host's router. */

@@ -49,14 +49,16 @@ describe('the editing menu (#81)', () => {
     const menu = $<HTMLElement>('.edit-menu')!;
     expect(menu.getAttribute('role')).toBe('menu');
     expect(menu.style.left).toBe('40px');
-    expect(groups()).toEqual(['Insert', 'Edit']);
-    expect(document.activeElement).toBe(item('Link'));
-    await act(async () => item('Link').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(groups()).toEqual(['Edit', 'Insert']);
+    // With nothing to cut or copy, the first entry that runs is Paste (#110).
+    expect(document.activeElement).toBe(item('Paste'));
+    await act(async () => item('Paste').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 
     await act(async () => view.dispatch({ selection: { anchor: 0, head: 4 } }));
     await rightClick(view.contentDOM);
-    expect(groups()).toEqual(['Format', 'Insert', 'Edit']);
+    expect(groups()).toEqual(['Edit', 'Format', 'Insert']);
     expect(item('Cut').getAttribute('aria-disabled')).toBeNull();
+    expect(document.activeElement).toBe(item('Cut'));
   });
 
   it('runs the entry chosen, as the toolbar does, and closes', async () => {
@@ -80,9 +82,9 @@ describe('the editing menu (#81)', () => {
     expect($('.edit-menu')).not.toBeNull();
     const first = document.activeElement;
     await act(async () => first!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })));
-    expect(document.activeElement).toBe(item('Link to a note'));
+    expect(document.activeElement).toBe(item('Link'));
     await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })));
-    expect(document.activeElement).toBe(item('Paste'));
+    expect(document.activeElement).toBe(item('Attach a file'));
     await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     expect($('.edit-menu')).toBeNull();
     expect(document.activeElement).toBe(view.contentDOM);

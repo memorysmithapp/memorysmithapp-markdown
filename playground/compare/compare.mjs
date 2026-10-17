@@ -48,9 +48,9 @@ export const DELIBERATE = {
   'enologia/01 Castas/Índice de Polifenóis Totais.md':
     'Its footnote is referenced above an embed and defined below it: MemorySmith draws the reference as text and no notes, the renderer draws the footnote (RN-RENDER-013).',
   'continuity-engineering/01 Objectives/Failure domain.md':
-    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
+    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42). Its picture is written `![…](../assets/…)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins (#104).',
   'continuity-engineering/02 Runbooks/Failing over the payments database.md':
-    'It embeds Failure domain, whose callout title holds inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
+    'It embeds Failure domain, whose callout title holds inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42), and whose picture is written `![…](../assets/…)`, which the renderer draws as the kept file it names (#104).',
   'continuity-engineering/03 Reviews/Exercise 2026-03 · Region loss.md':
     'A callout title holding bold text: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
   'enologia/02 Protocolos/Vinificação em tinto.md':
@@ -64,7 +64,9 @@ export const DELIBERATE = {
   'code-samples/02 Loaded on demand/Rust.md':
     'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
   'enologia/01 Castas/Índice.md':
-    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42).',
+    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42). Its picture is written `![…](../assets/…)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins (#104).',
+  'enologia/03 Safras/Índice.md':
+    'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104).',
 };
 
 const REFERENCE_PORT = 5301;

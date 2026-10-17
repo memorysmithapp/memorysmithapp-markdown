@@ -459,8 +459,10 @@
   max-width: 100%;
   vertical-align: middle;
 }
-/* An image in edit mode carries its size's controls over its top right and a
-   handle at its bottom right corner that drags it (#98). */
+/* An image in edit mode carries its controls under it, never over the picture,
+   whose top left is often its subject, and a handle at its bottom right corner
+   that drags it (#98, #106). The controls hang from the image's bottom edge with
+   no gap, so the pointer travels from the picture to them without leaving it. */
 .markdown .edit-image {
   position: relative;
   display: inline-block;
@@ -468,19 +470,55 @@
   vertical-align: middle;
 }
 .markdown .edit-image-controls {
+  position: absolute;
+  top: var(--edit-image-bottom, 100%);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.25rem;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(26rem, calc(100vw - 2rem));
+  box-sizing: border-box;
+}
+.markdown .edit-image-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
   white-space: nowrap;
 }
-.markdown .edit-image-width {
-  width: 5em;
+.markdown .edit-image-width,
+.markdown .edit-image-height {
+  width: 4.2em;
 }
+.markdown .edit-image-description {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+.markdown .edit-image-refused {
+  flex-basis: 100%;
+}
+/* The handle is a touch target of at least 24px at the picture's corner, whose arrows say it resizes. */
 .markdown .edit-image-handle {
   position: absolute;
-  right: 0;
-  bottom: 0;
+  top: calc(var(--edit-image-bottom, 100%) - 24px);
+  left: calc(var(--edit-image-right, 100%) - 24px);
   z-index: 1;
-  width: 0.9rem;
-  height: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   cursor: nwse-resize;
   touch-action: none;
+}
+/* Where nothing hovers, the controls stand in the flow under the image, so
+   they never lie over the text that follows it. */
+@media (hover: none) {
+  .markdown .edit-image-controls {
+    position: static;
+    min-width: 0;
+  }
 }

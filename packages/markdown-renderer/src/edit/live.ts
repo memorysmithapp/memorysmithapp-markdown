@@ -15,7 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
 import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
-import { readImageAlt, type ImageAlt } from '../image-dimensions.js';
+import { MarkdownImage } from '../Markdown.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
@@ -285,7 +285,9 @@ class BlockWidget extends WidgetType {
     mount(view, element, this.draw(view), this.source, this.identity, measured, held);
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
-      if (target.closest('[data-ms-control]')) return;
+      // A control's, or a press in a frame its controls hold busy — a field focused, a handle
+      // dragged, the click a touch on them leaves behind — never shows the source (#107).
+      if (target.closest('[data-ms-control], [data-ms-busy]')) return;
       if (event.metaKey || event.ctrlKey) return;
       const widget = drawing.get(element) ?? this;
       if (!widget.revealsOnClick) return;
@@ -451,16 +453,23 @@ class MathWidget extends WidgetType {
   }
 }
 
-/** A Markdown image's description and address, when its address is one the page follows. */
-function readImage(source: string): { alt: ImageAlt; address: string } | null {
-  const match = /^!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)$/.exec(source);
-  const address = match ? followable(match[2] ?? '') : '';
-  return match && address ? { alt: readImageAlt(match[1] ?? ''), address } : null;
+/**
+ * A Markdown image's alt text, address and title, when its address is one the page follows: a
+ * bare destination, or one in `<>` that may hold spaces, `<assets/diagram final.png>`.
+ */
+function readImage(source: string): { alt: string; address: string; title: string | undefined } | null {
+  const match = /^!\[((?:\\.|[^\]\\])*)\]\(\s*(?:<([^>\n]*)>|([^\s)]+))(?:\s+(?:"([^"]*)"|'([^']*)'))?\s*\)$/.exec(source);
+  const address = match ? followable(match[2] ?? match[3] ?? '') : '';
+  return match && address ? { alt: match[1] ?? '', address, title: match[4] ?? match[5] } : null;
 }
 
-/** An image drawn with its description and the dimensions it declares, as the page draws it (`SPEC.md` §3.14). */
-function drawImage({ alt, address }: { alt: ImageAlt; address: string }): ReactNode {
-  return createElement('img', { className: 'cm-ms-image', src: address, alt: alt.description, width: alt.width ?? undefined, height: alt.height ?? undefined });
+/**
+ * An image drawn as the page draws it, by the page's own component: with its description and the
+ * dimensions it declares (`SPEC.md` §3.14), and as the kept file it names when its address names
+ * no host (§5.8, #104), so edit mode asks nothing of a path under the page either.
+ */
+function drawImage({ alt, address, title }: { alt: string; address: string; title: string | undefined }): ReactNode {
+  return createElement(MarkdownImage, { className: 'cm-ms-image', src: address, alt, ...(title === undefined ? {} : { title }) });
 }
 
 // ── Decorations ──────────────────────────────────────────────────────────────

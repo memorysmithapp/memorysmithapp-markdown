@@ -1,6 +1,6 @@
 /**
  * The editor's own menu on a right-click in edit mode (#81): what the toolbar formats and inserts,
- * where the author is, with the clipboard's three verbs. It is a `role="menu"` reached by keyboard,
+ * where the author is, after the clipboard's three verbs. It is a `role="menu"` reached by keyboard,
  * kept inside the window, and closed by Escape, a click outside it, a scroll, or an entry run.
  */
 

@@ -12,7 +12,7 @@ import type { KeptFile, NoteHost } from '../../src/index.js';
 import { mount, type Mounted } from '../render.js';
 
 /** The source with the change applied, for a source that starts at 0. */
-const resized = (source: string, width: number | null) =>
+const resized = (source: string, width: Parameters<typeof resizeImage>[2]) =>
   resizeImage(source, 0, width).reduceRight((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), source);
 
 describe('the dimensions of an image', () => {
@@ -36,17 +36,32 @@ describe('the dimensions of an image', () => {
     expect(resized('![[photo.jpg\\|200]]', 90)).toBe('![[photo.jpg\\|90]]');
   });
 
+  it('read a share of the page as the dimensions they are, and replace it whole (#108)', () => {
+    expect(readImageSize('![Curva|50%](curva.png)')).toMatchObject({ width: null, percent: 50, at: { from: 7, to: 11 } });
+    expect(readImageSize('![[curva.png|50%]]')).toMatchObject({ width: null, percent: 50 });
+    expect(resized('![Curva|50%](curva.png)', 300)).toBe('![Curva|300](curva.png)');
+    expect(resized('![[curva.png|50%]]', null)).toBe('![[curva.png]]');
+  });
+
   it('never overwrite what an embed says after its pipe when it is not a dimension', () => {
     expect(readImageSize('![[photo.jpg|My photo]]')).toBeNull();
     expect(resizeImage('![[photo.jpg|My photo]]', 0, 100)).toEqual([]);
   });
 
-  it('change nothing when the size asked is the one written, and stay within five digits', () => {
+  it('change nothing when the size asked is the one written, and refuse one the notation does not write (#105)', () => {
     expect(resizeImage('![A|300](v.png)', 0, 300)).toEqual([]);
     expect(resizeImage('![A](v.png)', 0, null)).toEqual([]);
     expect(resized('![A|300x200](v.png)', 300)).toBe('![A|300](v.png)');
-    expect(resized('![A](v.png)', 1e9)).toBe('![A|99999](v.png)');
+    // Never brought into the range and written: 99999 or 1 is not what anybody asked for.
+    expect(resizeImage('![A](v.png)', 0, 1e9)).toEqual([]);
+    expect(resizeImage('![A](v.png)', 0, 0)).toEqual([]);
+    expect(resizeImage('![A](v.png)', 0, { width: null, height: null, percent: 150 })).toEqual([]);
     expect(resizeImage('Some text', 0, 10)).toEqual([]);
+  });
+
+  it('write a width and a height, or a share of the page, whole (#106, #108)', () => {
+    expect(resized('![A|300](v.png)', { width: 300, height: 180, percent: null } as never)).toBe('![A|300x180](v.png)');
+    expect(resized('![[photo.jpg]]', { width: null, height: null, percent: 50 } as never)).toBe('![[photo.jpg|50%]]');
   });
 });
 
@@ -84,11 +99,12 @@ async function typeWidth(value: string, key = 'Enter'): Promise<void> {
 describe('an image in edit mode', () => {
   const NOTE = 'Before.\n\n![A view|320x180](https://example.org/view.png)\n\nAfter.\n';
 
-  it('says the width it is drawn at, and writes the one typed, its height following', async () => {
+  it('says the width it is drawn at, and writes the one typed beside the height it wrote', async () => {
     const changes = await open(NOTE);
     expect($<HTMLInputElement>('.edit-image-width')!.value).toBe('320');
+    // A width and a height written apart keep the lock open, so both are written (#106).
     await typeWidth('160');
-    expect(changes.at(-1)).toBe(NOTE.replace('|320x180', '|160'));
+    expect(changes.at(-1)).toBe(NOTE.replace('|320x180', '|160x180'));
   });
 
   it('goes back to its own size from its button, and from an empty field', async () => {

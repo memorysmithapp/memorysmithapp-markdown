@@ -17,9 +17,10 @@ import rehypeKatex from 'rehype-katex';
 import { followable } from './address.js';
 import { CopyButton } from './CopyButton.js';
 import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
+import { keptImageName } from './kept-image.js';
 import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from './highlight.js';
 import { useHost, type KeptFile } from './host.js';
-import { readDimensions, readImageAlt } from './image-dimensions.js';
+import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './markdown.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
@@ -71,20 +72,20 @@ type WithNode<T> = T & { node?: unknown };
 /**
  * An image, with the dimensions the specification puts in its alt text
  * (§3.14). What precedes the pipe is the description and is never dropped;
- * what follows it is width, or width and height, in CSS pixels, and never
- * appears as text. A value that is neither stays part of the description,
+ * what follows it is width, or width and height, in CSS pixels, or a width as
+ * a share of the page at most (#108), and never appears as text. A value that is neither stays part of the description,
  * because deleting an accessibility label is the worse failure.
+ *
+ * A destination that names no host is a file the notebook keeps, by the last segment of its path
+ * (§5.8, #104): it is drawn as the embed of that file is, and never asked of a path under the page.
  */
-function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAttributes<HTMLImageElement>>) {
+export function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAttributes<HTMLImageElement>>) {
   const read = readImageAlt(alt ?? '');
-  return (
-    <img
-      {...rest}
-      alt={read.description}
-      {...(read.width === null ? {} : { width: read.width })}
-      {...(read.height === null ? {} : { height: read.height })}
-    />
-  );
+  const name = typeof rest.src === 'string' ? keptImageName(rest.src) : null;
+  if (name !== null) return <Attachment name={name} size={read} description={read.description} title={rest.title} />;
+  // The description is the hover hint too, so a person who sees the picture can read it (#109); a title written wins.
+  const title = rest.title || read.description || undefined;
+  return <img {...rest} alt={read.description} title={title} {...sizedAttributes(read)} />;
 }
 
 /**
@@ -127,20 +128,31 @@ function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnch
  * what its `fileOf` says (#77). A name the notebook keeps nothing under is
  * reported the way a pending link is: a notebook is read most while it is
  * being written (§5.8).
+ *
+ * A Markdown image that names a kept file (#104) arrives with what it wrote: its description,
+ * which an image takes as its `alt` and a card as its text, and its title. A name nothing is kept
+ * under shows that description, marked pending, so what the author wrote stays on the page.
  */
-function Attachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
-  const host = useHost();
-  if (!host.keeps(name)) return <AttachmentMissing name={name} />;
-  if (host.renderAttachment) return <>{host.renderAttachment({ name, width, height })}</>;
-  if (!host.fileOf) return <span className="attachment-loading">{name}</span>;
-  return <KeptAttachment name={name} width={width} height={height} />;
+interface Written {
+  /** The description an image wrote before its pipe; empty takes the file's own (§5.8). */
+  readonly description?: string;
+  /** The title an image wrote after its destination. */
+  readonly title?: string;
 }
 
-function AttachmentMissing({ name }: { name: string }) {
+function Attachment({ name, size, ...written }: { name: string; size: Dimensions } & Written) {
+  const host = useHost();
+  if (!host.keeps(name)) return <AttachmentMissing name={name} label={written.description} />;
+  if (host.renderAttachment) return <>{host.renderAttachment({ name, ...size, ...written })}</>;
+  if (!host.fileOf) return <span className="attachment-loading">{written.description || name}</span>;
+  return <KeptAttachment name={name} size={size} {...written} />;
+}
+
+function AttachmentMissing({ name, label }: { name: string; label?: string | undefined }) {
   const host = useHost();
   return (
-    <span className="attachment-missing" title={host.strings.attachmentMissing}>
-      {name}
+    <span className="attachment-missing" title={host.strings.attachmentMissing} data-name={label ? name : undefined}>
+      {label || name}
     </span>
   );
 }
@@ -198,26 +210,33 @@ function openInTab(event: MouseEvent<HTMLAnchorElement>, url: string): void {
  * included — a card with what it is, its size, and the ways out of the page: Open only for what a
  * browser shows, Download always. A theme may draw it through the `attachment` slot.
  */
-function KeptAttachment({ name, width, height }: { name: string; width: number | null; height: number | null }) {
+function KeptAttachment({ name, size: declared, ...written }: { name: string; size: Dimensions } & Written) {
   const host = useHost();
   const slot = useSlot('attachment');
   const described = useKeptFile(name);
-  if (described === undefined) return <span className="attachment-loading">{name}</span>;
+  if (described === undefined) return <span className="attachment-loading">{written.description || name}</span>;
   const url = described ? fileAddress(described.url) : '';
-  if (!described || url === '') return <AttachmentMissing name={name} />;
-  const file: KeptFile = { ...described, url, downloadUrl: fileAddress(described.downloadUrl ?? described.url) || url };
+  if (!described || url === '') return <AttachmentMissing name={name} label={written.description} />;
+  // What the note wrote of the file is what the reader gets of it; the file's own when it wrote nothing.
+  const description = written.description || described.description;
+  const file: KeptFile = {
+    ...described,
+    url,
+    downloadUrl: fileAddress(described.downloadUrl ?? described.url) || url,
+    ...(description ? { description } : {}),
+  };
   const shape = rendersAs(file.mimeType);
   const kind = fileKind(file.mimeType, host.strings.fileKinds);
   const size = formatBytes(file.bytes, host.strings.locale);
   const opens = opensInBrowser(file.mimeType);
-  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, width, height })}</>;
-  // The attributes reserve the box before the bytes arrive; a height is a style too, since the
-  // surface gives an image `height: auto`, which two numbers overrule (§3.14).
-  const sized = {
-    ...(width === null ? {} : { width }),
-    ...(height === null ? {} : { height, style: { height: `${height}px` } }),
-  };
-  if (shape === 'image') return <img className="attachment-image" src={file.url} alt={file.description || name} {...sized} />;
+  if (slot) return <>{drawSlot(slot, { name, file, shape, kind, size, opens, ...declared, title: written.title ?? null })}</>;
+  const sized = sizedAttributes(declared);
+  if (shape === 'image') {
+    // Described, its description is also the hover hint, a title written winning (#109); a picture
+    // with none takes its name as its `alt` and no hint, which would only say the name again.
+    const title = written.title || file.description;
+    return <img className="attachment-image" src={file.url} alt={file.description || name} {...(title ? { title } : {})} {...sized} />;
+  }
   if (shape === 'audio') return <audio className="attachment-player" controls src={file.url} />;
   if (shape === 'video') return <video className="attachment-player" controls src={file.url} {...sized} />;
   return (
@@ -262,7 +281,7 @@ export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNod
     const at = address.lastIndexOf('|');
     const measured = at === -1 ? null : readDimensions(address.slice(at + 1));
     const name = measured ? address.slice(0, at) : address;
-    return <Attachment name={name} width={measured?.width ?? null} height={measured?.height ?? null} />;
+    return <Attachment name={name} size={measured ?? { width: null, height: null, percent: null }} />;
   }
   if (href?.startsWith('pending:')) {
     const pending = (label: ReactNode) => (

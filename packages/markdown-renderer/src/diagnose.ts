@@ -12,6 +12,7 @@
  * reads a diagram as the page would draw it, loaded only when a note carries one.
  */
 
+import { keptImageName } from './kept-image.js';
 import katex from 'katex';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
@@ -86,7 +87,7 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'raw-html': { severity: 'notice', section: '7.9', message: 'Raw HTML is drawn as text, tags and all.' },
   'strikethrough-single-tilde': { severity: 'notice', section: '4.3', message: 'One tilde strikes nothing: the tildes stay on the page. Strikethrough is ~~two~~.' },
   'link-pending': { severity: 'hint', section: '7.4', message: 'No note answers this link yet, so it is drawn as pending.' },
-  'embed-pending': { severity: 'hint', section: '7.3', message: 'No note and no kept file answers this embed, so it is drawn as a pending link.' },
+  'embed-pending': { severity: 'hint', section: '7.3', message: 'No note and no kept file answers this embed, or no kept file this image, so it is drawn as pending.' },
 };
 
 interface Point {
@@ -101,6 +102,7 @@ interface Node {
   depth?: number;
   lang?: string | null;
   identifier?: string;
+  url?: string;
   children?: Node[];
   position?: { start: Point; end: Point };
 }
@@ -174,6 +176,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const diagrams: { source: string; at: [number, number] }[] = [];
   const referenced = new Set<string>();
   const definitions: Node[] = [];
+  const images: { name: string; at: [number, number] }[] = [];
   walk(tree, (node) => {
     const at = span(node);
     if (!at) return;
@@ -192,6 +195,9 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
       referenced.add(String(node.identifier ?? '').toUpperCase());
     } else if (node.type === 'footnoteDefinition') {
       definitions.push(node);
+    } else if (node.type === 'image') {
+      const name = keptImageName(node.url ?? '');
+      if (name !== null) images.push({ name, at });
     }
   });
   for (const definition of definitions) {
@@ -222,6 +228,11 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   });
 
   pending(hidden, split, options, report);
+  // An image whose destination names no host names a kept file, and only a kept file (§5.8, #104).
+  if (options.resolve || options.reaches) {
+    const keeps = options.keeps ?? (() => false);
+    for (const image of images) if (!keeps(image.name)) report('embed-pending', image.at[0], image.at[1], image.name);
+  }
 
   if (diagrams.length > 0 && options.diagrams !== false) {
     const mermaid = (await import('mermaid')).default;

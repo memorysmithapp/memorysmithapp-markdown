@@ -159,12 +159,27 @@ export interface EditorWords {
   readonly addItem: string;
   readonly removeItem: string;
   readonly calloutType: string;
-  /** The field of an image's width in edit mode, in pixels (#98). */
+  /** The field of an image's width in edit mode, in the unit beside it (#98, #106). */
   readonly imageWidth: string;
+  /** The field of an image's height in edit mode, in pixels (#106). */
+  readonly imageHeight: string;
+  /** The choice of the width's unit: pixels, or a share of the page (#108). */
+  readonly imageUnit: string;
+  /** The field of a Markdown image's description, the text before its pipe (#106). */
+  readonly imageDescription: string;
+  /** The lock between the width and the height, locked: the height follows the width (#106). */
+  readonly imageKeepRatio: string;
+  /** The same lock, open: the width and the height are written apart (#106). */
+  readonly imageFreeRatio: string;
   /** The button that draws an image at its own size again (#98). */
   readonly imageOwnSize: string;
   /** The handle at an image's corner that drags its size (#98). */
   readonly imageResize: string;
+  /** What the handle does while the proportion is kept, and while it is not (#106). */
+  readonly imageResizeKeep: string;
+  readonly imageResizeFree: string;
+  /** Why a size typed was not written: the range it has to be in, in the unit of its field (#105). */
+  readonly imageOutOfRange: (min: number, max: number, unit: string) => string;
   readonly fold: string;
   readonly foldNone: string;
   readonly foldOpen: string;
@@ -356,9 +371,17 @@ export const ENGLISH: NoteStrings = {
     addItem: 'Add',
     removeItem: 'Remove',
     calloutType: 'Type',
-    imageWidth: 'Width, in pixels',
+    imageWidth: 'Width',
+    imageHeight: 'Height',
+    imageUnit: 'Unit',
+    imageDescription: 'Description',
+    imageKeepRatio: 'Keep the proportion',
+    imageFreeRatio: 'Width and height apart',
     imageOwnSize: 'Its own size',
     imageResize: 'Drag to resize',
+    imageResizeKeep: 'Drag to resize (keeps the proportion)',
+    imageResizeFree: 'Drag to resize (free)',
+    imageOutOfRange: (min, max, unit) => `Between ${min} and ${max} ${unit}`,
     fold: 'Folding',
     foldNone: 'Not foldable',
     foldOpen: 'Folds, open',
