@@ -469,6 +469,11 @@
   max-width: 100%;
   vertical-align: middle;
 }
+/* A kept file that is not a picture, a card or a player, has no width of its own
+   to shrink the frame to: it takes the column, as in reading mode (#122). */
+.markdown .edit-image[data-ms-file] {
+  display: block;
+}
 .markdown .edit-image-controls {
   position: absolute;
   top: var(--edit-image-bottom, 100%);
@@ -492,6 +497,11 @@
 .markdown .edit-image-width,
 .markdown .edit-image-height {
   width: 4.2em;
+}
+/* Under a share of the page, the lock, the height and its unit mean nothing: they
+   are not shown, and keep their place so the controls after them stay put (#121). */
+.markdown .edit-image-size[data-unit='%'] > :is(.edit-control:disabled, .edit-image-height, .edit-image-unit-label) {
+  visibility: hidden;
 }
 .markdown .edit-image-description {
   flex: 1 1 10rem;

@@ -328,6 +328,8 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   const frame = useRef<HTMLSpanElement>(null);
   const size = readImageSize(source);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  // A kept file that is not a picture — its card, its player — takes the column, as it is read (#122).
+  const [file, setFile] = useState(false);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [locked, setLocked] = useState(() => size?.height == null);
   const [unit, setUnit] = useState<'px' | '%'>(() => (size?.percent == null ? 'px' : '%'));
@@ -342,7 +344,10 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   useEffect(() => {
     const element = frame.current;
     if (!element) return;
-    const look = () => setImage(element.querySelector<HTMLImageElement>('img'));
+    const look = () => {
+      setImage(element.querySelector<HTMLImageElement>('img'));
+      setFile(element.querySelector('.attachment-card, .attachment-player') !== null);
+    };
     look();
     if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver(look);
@@ -617,6 +622,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
       className="edit-image"
       data-resizing={dragged === null ? undefined : ''}
       data-ms-in-place={offered ? '' : undefined}
+      data-ms-file={file ? '' : undefined}
       onFocus={() => frame.current && (frame.current.dataset['msBusy'] = '')}
       onBlur={hold}
       onMouseDown={(event) => {
@@ -639,8 +645,9 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
             onMouseDown={(event) => {
               // A press anywhere but on a field, a choice or a button — a gap between them, the
               // padding, a word beside a field — keeps the focus where it is. Its default would put
-              // the editor's caret where the press fell, and the image would show its source (#107).
-              if (!(event.target as Element).closest('input, select, textarea, button')) event.preventDefault();
+              // the editor's caret where the press fell, and the image would show its source (#107). A
+              // disabled one is a gap too: it takes no focus, and the caret would go where it fell (#121).
+              if (!(event.target as Element).closest('input:enabled, select:enabled, textarea:enabled, button:enabled')) event.preventDefault();
             }}
           >
             {size.description ? (
@@ -665,7 +672,8 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
                 value=""
               />
             )}
-            <span className="edit-image-size">
+            {/* Under %, what only pixels mean is not shown but keeps its place, so nothing after it moves (#121). */}
+            <span className="edit-image-size" data-unit={unit}>
               <input
                 className="edit-field edit-image-width"
                 type="text"
