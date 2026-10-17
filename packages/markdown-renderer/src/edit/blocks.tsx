@@ -176,6 +176,13 @@ export function CalloutBlock({ view, text, marker }: { view: EditorView; text: s
 /** The narrowest an image is sized to, by a field or the handle: something a reader still sees (#105). */
 export const MIN_IMAGE_SIZE = 16;
 
+/**
+ * The size in pixels an image had when its unit was switched to a share of the page, where its
+ * source starts: switched back with nothing changed between, it is written again, not the width the
+ * share rounds to (#113). Kept by the editor, since the image is drawn anew for its new source.
+ */
+const switchedUnits = new WeakMap<EditorView, { at: number; percent: number; width: number; height: number | null }>();
+
 /** How long after a pointer or a touch on its controls a click on the image is not taken as one to edit its source (#107). */
 const CONTROLS_GUARD_MS = 800;
 
@@ -321,6 +328,28 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     const width = content ? content.clientWidth - parseFloat(getComputedStyle(content).paddingLeft || '0') - parseFloat(getComputedStyle(content).paddingRight || '0') : 0;
     return width > 0 ? Math.round(width) : null;
   };
+  /** The widest a share of the page draws the picture: that share of the column, in pixels. */
+  const shareWidth = (share: number): string => {
+    const wide = column();
+    return wide === null ? `${share}%` : `${Math.round((wide * share) / 100)}px`;
+  };
+  // A share of the page is a share of the column the note is read at (§3.14), as reading mode draws
+  // it. Written as a percentage it would resolve against the frame, which shrinks to the picture, and
+  // the picture would be drawn at that share of itself (#113): it is given in pixels of the column.
+  const percent = size?.percent ?? null;
+  useEffect(() => {
+    const content = frame.current?.closest<HTMLElement>('.cm-content') ?? null;
+    if (!image || percent === null || !content) return;
+    const place = () => {
+      if (!drag.current) image.style.maxWidth = shareWidth(percent);
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(place);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [image, percent]);
+
   /** The image as it is drawn now, or `null` before it is laid out. */
   const drawn = (): { width: number; height: number } | null => {
     const box = image?.getBoundingClientRect();
@@ -342,6 +371,11 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     return { min: MIN_IMAGE_SIZE, max: tallest > 0 && widest > 0 ? tallest : MAX_IMAGE_WIDTH };
   };
 
+  /** Where the image's source starts in the note, or `null` when it is not in the page. */
+  const place = (): number | null => {
+    const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
+    return widget ? view.posAtDOM(widget) : null;
+  };
   const apply = (changes: readonly TextChange[]) => {
     const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
     if (!widget || changes.length === 0) return;
@@ -447,10 +481,18 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     const wide = column();
     // The size it is drawn at, said in the other unit, when it has one.
     if (next === '%' && size?.percent == null && size?.width != null && now && wide) {
-      resize({ width: null, height: null, percent: Math.min(100, Math.max(1, Math.round((now.width / wide) * 100))) });
-    } else if (next === 'px' && size?.percent != null && now) {
-      resize({ width: now.width, height: null, percent: null });
+      const share = Math.min(100, Math.max(1, Math.round((now.width / wide) * 100)));
+      const at = place();
+      if (at !== null) switchedUnits.set(view, { at, percent: share, width: size.width, height: size.height });
+      resize({ width: null, height: null, percent: share });
+    } else if (next === 'px' && size?.percent != null) {
+      const left = switchedUnits.get(view);
+      if (left && left.at === place() && left.percent === size.percent) {
+        resize({ width: left.width, height: left.height, percent: null });
+        setLocked(left.height === null);
+      } else if (now) resize({ width: now.width, height: null, percent: null });
     }
+    if (next === 'px') switchedUnits.delete(view);
     if (next === '%') setLocked(true);
   };
 
@@ -471,7 +513,7 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
     if (image) {
       image.style.width = '';
       image.style.height = '';
-      image.style.maxWidth = '';
+      image.style.maxWidth = percent === null ? '' : shareWidth(percent);
     }
     hold();
     if (cancelled || !end) return;

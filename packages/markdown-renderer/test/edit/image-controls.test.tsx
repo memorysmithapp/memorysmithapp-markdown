@@ -3,14 +3,15 @@
  * size nobody sees (#105); a width and a height with a lock between them, the unit, the
  * description and a handle that says what it does (#106); and nothing started on them taken for
  * the click that shows the image's source (#107); and the picture, sized in place as a table is
- * edited in place, showing its source from a button and never from a click (#112).
+ * edited in place, showing its source from a button and never from a click (#112); a share of the
+ * page drawn as a share of the column, as it is read (#113).
  */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { EditorView } from '@codemirror/view';
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { NoteEditor } from '../../src/edit/index.js';
 import type { KeptFile, NoteHost } from '../../src/index.js';
 import { mount, type Mounted } from '../render.js';
@@ -33,6 +34,18 @@ const FILES: Record<string, KeptFile> = {
 };
 const HOST: NoteHost = { keeps: (name) => name in FILES, fileOf: (name) => FILES[name] ?? null };
 
+// Every picture is laid out 200 by 100, the ones the editor draws anew for a new source included;
+// a test sets another size on one element of its own.
+const layout = HTMLImageElement.prototype.getBoundingClientRect;
+beforeAll(() => {
+  HTMLImageElement.prototype.getBoundingClientRect = function (this: HTMLImageElement) {
+    return this.hasAttribute('src') ? ({ width: 200, height: 100, top: 0, left: 0, right: 200, bottom: 100, x: 0, y: 0, toJSON: () => null } as DOMRect) : layout.call(this);
+  };
+});
+afterAll(() => {
+  HTMLImageElement.prototype.getBoundingClientRect = layout;
+});
+
 let mounted: Mounted | null = null;
 afterEach(() => {
   mounted?.unmount();
@@ -45,16 +58,18 @@ async function settle(): Promise<void> {
 
 const $ = <T extends Element>(selector: string) => mounted!.container.querySelector<T>(selector);
 
-/** Opens a note in the editor, its column 700px wide and its images 200 by 100 as drawn. */
+/** Opens a note in the editor, its column 700px wide. */
 async function open(markdown: string): Promise<{ view: EditorView; changes: string[] }> {
   const changes: string[] = [];
   mounted = await mount(<NoteEditor markdown={markdown} onChange={(next) => void changes.push(next)} {...HOST} />);
   await settle();
+  // An image is drawn once more when its height is first learned: its fields are the ones of the drawing that stays.
+  for (let frame = $('.edit-image'), still = 0; still < 3; still++) {
+    await act(async () => new Promise((done) => setTimeout(done, 5)));
+    if ($('.edit-image') !== frame) [frame, still] = [$('.edit-image'), -1];
+  }
   const content = $<HTMLElement>('.cm-content')!;
   Object.defineProperty(content, 'clientWidth', { configurable: true, value: 700 });
-  for (const image of mounted.container.querySelectorAll('img[src]')) {
-    image.getBoundingClientRect = () => ({ width: 200, height: 100, top: 0, left: 0, right: 200, bottom: 100, x: 0, y: 0, toJSON: () => null }) as DOMRect;
-  }
   return { view: EditorView.findFromDOM($<HTMLElement>('.cm-editor')!)!, changes };
 }
 
@@ -179,6 +194,45 @@ describe('the width and the height, with the lock between them (#106)', () => {
     await type(width(), '50');
     await press(width(), 'Enter');
     expect(changes.at(-1)).toBe('![[logo.png|50%]]\n');
+  });
+});
+
+describe('a share of the page in edit mode (#113)', () => {
+  const choose = async (next: 'px' | '%') => {
+    const unit = $<HTMLSelectElement>('.edit-image-unit')!;
+    await act(async () => {
+      unit.value = next;
+      unit.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await settle();
+  };
+
+  it('is drawn at that share of the column, as it is read, not of the frame around the picture', async () => {
+    const { changes } = await open('![[logo.png|150]]\n');
+    await choose('%');
+    // 200 drawn in a 700px column is 29% of it, at most 203px of it.
+    expect(changes.at(-1)).toBe('![[logo.png|29%]]\n');
+    expect($<HTMLImageElement>('img[src]')!.style.maxWidth).toBe('203px');
+  });
+
+  it.each(['![[logo.png|150]]\n', '![A view|320x200](https://example.org/v.png)\n'])('writes back %s when the unit goes to % and back with nothing changed', async (note) => {
+    const { changes } = await open(note);
+    await choose('%');
+    await choose('px');
+    expect(changes.at(-1)).toBe(note);
+  });
+
+  it('writes the width it is drawn at when the share was changed in between', async () => {
+    const { changes } = await open('![[logo.png|150]]\n');
+    await choose('%');
+    await type(width(), '50');
+    await press(width(), 'Enter');
+    expect(changes.at(-1)).toBe('![[logo.png|50%]]\n');
+    for (const image of mounted!.container.querySelectorAll('img[src]')) {
+      image.getBoundingClientRect = () => ({ width: 350, height: 175, top: 0, left: 0, right: 350, bottom: 175, x: 0, y: 0, toJSON: () => null }) as DOMRect;
+    }
+    await choose('px');
+    expect(changes.at(-1)).toBe('![[logo.png|350]]\n');
   });
 });
 
