@@ -10,7 +10,7 @@
 
 import { ChangeSet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useHost } from '../host.js';
 import { Markdown } from '../Markdown.js';
 import { hideComments, resolveWikilinks } from '../markdown.js';
@@ -18,8 +18,9 @@ import { isTrue, readProperties } from '../properties.js';
 import { Transclusion } from '../Transclusion.js';
 import { splitEmbeds } from '../transclusion.js';
 import { wikilinkAddress } from '../wikilink-address.js';
-import { ICON_OWN_SIZE } from '../mode-icons.js';
-import { MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
+import type { Dimensions } from '../image-dimensions.js';
+import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
+import { describeImage, MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
 import {
   addEntry,
   readFrontmatter,
@@ -85,7 +86,26 @@ export function Snippet({ text }: { text: string }) {
 }
 
 /** A small button of the editor's own, outside the note's notation. */
-function Control({ label, onClick, children, pressed }: { label: string; onClick: () => void; children: ReactNode; pressed?: boolean }) {
+function Control({
+  label,
+  onClick,
+  children,
+  pressed,
+  disabled,
+  focusable = false,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+  pressed?: boolean;
+  disabled?: boolean;
+  /**
+   * Whether a press gives it the focus. A control of a block keeps the focus in the text, unless the
+   * caret there is far from it: an image's controls take the focus, or the editor, focused, would
+   * draw its caret again after the write and scroll the page to it, away from the image (#107).
+   */
+  focusable?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -93,8 +113,9 @@ function Control({ label, onClick, children, pressed }: { label: string; onClick
       title={label}
       aria-label={label}
       aria-pressed={pressed}
+      disabled={disabled}
       data-ms-control=""
-      onMouseDown={(event) => event.preventDefault()}
+      onMouseDown={focusable ? undefined : (event) => event.preventDefault()}
       onClick={onClick}
     >
       {children}
@@ -152,25 +173,89 @@ export function CalloutBlock({ view, text, marker }: { view: EditorView; text: s
 
 // ── Images ───────────────────────────────────────────────────────────────────
 
-/** The narrowest an image is dragged to, so its handle stays within reach. */
-const MIN_DRAGGED_WIDTH = 24;
+/** The narrowest an image is sized to, by a field or the handle: something a reader still sees (#105). */
+export const MIN_IMAGE_SIZE = 16;
+
+/** How long after a pointer or a touch on its controls a click on the image is not taken as one to edit its source (#107). */
+const CONTROLS_GUARD_MS = 800;
+
+/** How long after a control of an image writes the image is held where it was on the screen (#107). */
+const SCROLL_HOLD_MS = 600;
+/** A move of the image larger than this, in that moment, is the browser's and not the author's. */
+const SCROLL_JUMP = 120;
 
 /**
- * An image drawn in edit mode with the size it is drawn at set in place (#98): a width in pixels,
- * its height following, a handle at its corner that drags it, and a button back to its own size.
- * Each writes the dimensions of its notation — `![description|300](…)` or `![[photo.jpg|300]]` —
- * and no other byte. The controls appear once an image is drawn inside it, so an embed of a file
- * that is not an image, or a host's own drawing without one, offers none.
+ * Holds the image where it is on the screen while one of its controls writes (#107). The write draws
+ * the image again for its new source, which takes the control that had the focus out of the page,
+ * and Chrome on a touch screen then scrolls the page a screen or more away, with no script asking
+ * it to: the image and its controls were gone from sight (*observed* in the playground, Pixel 7,
+ * 2026-10-16). For a moment after the write, a move of the image larger than a jump is undone, by
+ * scrolling what the editor scrolls in — a pane of the host, or the window — by as much.
+ */
+function holdInPlace(view: EditorView, block: HTMLElement, run: () => void): void {
+  const top = block.getBoundingClientRect().top;
+  let scroller: HTMLElement | null = view.scrollDOM;
+  while (scroller && !(scroller.scrollHeight > scroller.clientHeight && /(auto|scroll)/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement;
+  const scrolled = () => (scroller ? scroller.scrollTop : window.scrollY);
+  const before = scrolled();
+  const back = () => {
+    // The editor lets go of a block it scrolled out of its viewport: the page goes back to where it was.
+    const moved = block.isConnected ? block.getBoundingClientRect().top - top : before - scrolled();
+    if (Math.abs(moved) <= SCROLL_JUMP) return;
+    if (scroller) scroller.scrollBy(0, moved);
+    else window.scrollBy(0, moved);
+  };
+  run();
+  window.addEventListener('scroll', back, true);
+  setTimeout(() => window.removeEventListener('scroll', back, true), SCROLL_HOLD_MS);
+}
+
+/** The range a field accepts, in its unit. */
+interface Range {
+  readonly min: number;
+  readonly max: number;
+}
+
+/** A number as a field holds it: digits and nothing else, or `null`. */
+function wholeNumber(text: string): number | null {
+  return /^\d{1,6}$/.test(text.trim()) ? Number(text.trim()) : null;
+}
+
+/**
+ * An image drawn in edit mode with what its notation writes set in place (#98, #106): its width and
+ * its height with a lock between them — locked, the height follows and only the width is written,
+ * `|300`; open, both are, `|300x180` — the width's unit, pixels or a share of the page (`|50%`,
+ * #108), its description for a Markdown image, a button back to its own size, and a handle at its
+ * corner that drags it, keeping the proportion or, with the lock open or Shift held, not. Each
+ * writes the dimensions or the description of its notation, and no other byte.
+ *
+ * A field selects what it holds when it takes the focus, so typing replaces it, and writes on Enter
+ * or when it is left; Escape leaves the note as it is. A value outside the range a reader can see
+ * — from 16 pixels to the column or the image's own width, the wider — is refused where it was
+ * typed, never brought into the range and written (#105).
+ *
+ * The controls stand under the picture, never over it, and nothing that starts on them or in the
+ * moment after reaches the click that shows the image's source (#107): they are all marked as
+ * controls, gaps included, and the frame is marked busy while one of them has the focus, while the
+ * handle is dragged and for a moment after a pointer or a touch on them.
+ *
+ * The controls appear once an image is drawn inside it, so an embed of a file that is not an image,
+ * or a host's own drawing without one, offers none.
  */
 export function ImageBlock({ view, source, children }: { view: EditorView; source: string; children?: ReactNode }) {
   const words = useHost().strings.editor;
   const frame = useRef<HTMLSpanElement>(null);
   const size = readImageSize(source);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const [natural, setNatural] = useState<number | null>(null);
-  const [typed, setTyped] = useState<string | null>(null);
-  const [dragged, setDragged] = useState<number | null>(null);
-  const drag = useRef<{ x: number; width: number; pointer: number } | null>(null);
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+  const [locked, setLocked] = useState(() => size?.height == null);
+  const [unit, setUnit] = useState<'px' | '%'>(() => (size?.percent == null ? 'px' : '%'));
+  const [typed, setTyped] = useState<{ width?: string; height?: string; description?: string }>({});
+  const [refused, setRefused] = useState<{ field: 'width' | 'height'; range: Range } | null>(null);
+  const [dragged, setDragged] = useState<{ width: number; height: number } | null>(null);
+  const [shift, setShift] = useState(false);
+  const drag = useRef<{ x: number; y: number; width: number; height: number; pointer: number } | null>(null);
+  const guard = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // An embed's image arrives when the host answers; the controls wait for it.
   useEffect(() => {
@@ -185,103 +270,353 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
   }, []);
   useEffect(() => {
     if (!image) return;
-    const read = () => setNatural(image.naturalWidth || null);
+    const read = () => setNatural(image.naturalWidth && image.naturalHeight ? { width: image.naturalWidth, height: image.naturalHeight } : null);
     read();
     image.addEventListener('load', read);
     return () => image.removeEventListener('load', read);
   }, [image]);
+  useEffect(() => () => {
+    if (guard.current) clearTimeout(guard.current);
+  }, []);
+  // The handle and the controls are placed by the picture itself, not by the frame, which also holds
+  // its margins and, in an embed, a paragraph's: its bottom right corner is where the handle goes.
+  useEffect(() => {
+    const element = frame.current;
+    if (!image || !element) return;
+    const place = () => {
+      const outer = element.getBoundingClientRect();
+      const inner = image.getBoundingClientRect();
+      element.style.setProperty('--edit-image-bottom', `${Math.round(inner.bottom - outer.top)}px`);
+      element.style.setProperty('--edit-image-right', `${Math.round(inner.right - outer.left)}px`);
+    };
+    place();
+    image.addEventListener('load', place);
+    if (typeof ResizeObserver === 'undefined') return () => image.removeEventListener('load', place);
+    const observer = new ResizeObserver(place);
+    observer.observe(image);
+    observer.observe(element);
+    return () => {
+      image.removeEventListener('load', place);
+      observer.disconnect();
+    };
+  }, [image]);
 
-  const resize = (width: number | null) => {
+  /** Marks the frame busy for a moment, so the click a touch or a pointer leaves behind reveals nothing (#107). */
+  const hold = () => {
+    const element = frame.current;
+    if (!element) return;
+    element.dataset['msBusy'] = '';
+    if (guard.current) clearTimeout(guard.current);
+    guard.current = setTimeout(() => {
+      if (!element.matches(':focus-within') && !drag.current) delete element.dataset['msBusy'];
+    }, CONTROLS_GUARD_MS);
+  };
+
+  /** The width the note is read at, where the image stands: what a share of the page is a share of. */
+  const column = (): number | null => {
+    const content = frame.current?.closest<HTMLElement>('.cm-content') ?? null;
+    const width = content ? content.clientWidth - parseFloat(getComputedStyle(content).paddingLeft || '0') - parseFloat(getComputedStyle(content).paddingRight || '0') : 0;
+    return width > 0 ? Math.round(width) : null;
+  };
+  /** The image as it is drawn now, or `null` before it is laid out. */
+  const drawn = (): { width: number; height: number } | null => {
+    const box = image?.getBoundingClientRect();
+    return box && box.width > 0 && box.height > 0 ? { width: Math.round(box.width), height: Math.round(box.height) } : null;
+  };
+  /** Its proportion, height over width: its own, else as it is drawn. */
+  const ratio = (): number | null => {
+    const shape = natural ?? drawn();
+    return shape ? shape.height / shape.width : null;
+  };
+  /** What a field accepts (#105): a share from 1% to 100%, or pixels a reader sees, up to the column or the image's own size. */
+  const rangeOf = (field: 'width' | 'height'): Range => {
+    if (field === 'width' && unit === '%') return { min: 1, max: 100 };
+    const widest = Math.max(column() ?? 0, natural?.width ?? 0);
+    const width = widest > 0 ? widest : MAX_IMAGE_WIDTH;
+    if (field === 'width') return { min: MIN_IMAGE_SIZE, max: width };
+    const proportion = ratio();
+    const tallest = Math.max(proportion === null ? 0 : Math.ceil(width * proportion), natural?.height ?? 0);
+    return { min: MIN_IMAGE_SIZE, max: tallest > 0 && widest > 0 ? tallest : MAX_IMAGE_WIDTH };
+  };
+
+  const apply = (changes: readonly TextChange[]) => {
     const widget = frame.current?.closest<HTMLElement>('.cm-ms-inline-block, .cm-ms-block');
-    if (!widget) return;
+    if (!widget || changes.length === 0) return;
     const from = view.posAtDOM(widget);
     // The widget stands where its source was: anything else means the note moved under it.
     if (view.state.sliceDoc(from, from + source.length) !== source) return;
-    write(view, resizeImage(source, from, width));
+    holdInPlace(view, widget, () => write(view, changes.map((change) => ({ ...change, from: change.from + from, to: change.to + from }))));
   };
-  const commitTyped = () => {
-    if (typed === null) return;
-    const width = Number(typed.trim());
-    setTyped(null);
-    if (typed.trim() === '') resize(null);
-    else if (Number.isFinite(width) && width >= 1) resize(width);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      commitTyped();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      setTyped(null);
+  const resize = (dimensions: Dimensions | null) => apply(resizeImage(source, 0, dimensions));
+
+  /** The width it is written or drawn at, in pixels, for a height written beside it. */
+  const widthNow = (): number | null => size?.width ?? drawn()?.width ?? natural?.width ?? null;
+
+  /** Writes what a field holds, or refuses it in place; `true` when the field may let go of what was typed. */
+  const commit = (field: 'width' | 'height'): boolean => {
+    const text = typed[field];
+    if (text === undefined) return true;
+    if (text.trim() === '') {
+      // Empty is "not set": no width is its own size, no height a width alone (#106).
+      setTyped((now) => ({ ...now, [field]: undefined }));
+      setRefused(null);
+      if (field === 'width') resize(null);
+      else if (size?.width != null) resize({ width: size.width, height: null, percent: null });
+      return true;
     }
+    const value = wholeNumber(text);
+    const range = rangeOf(field);
+    if (value === null || value < range.min || value > range.max) {
+      setRefused({ field, range });
+      return false;
+    }
+    setRefused(null);
+    setTyped((now) => ({ ...now, [field]: undefined }));
+    if (field === 'width') {
+      if (unit === '%') resize({ width: null, height: null, percent: value });
+      else if (locked) resize({ width: value, height: null, percent: null });
+      else resize({ width: value, height: size?.height ?? drawn()?.height ?? null, percent: null });
+    } else if (locked) {
+      // A height typed under the lock sets the width that draws it, and only the width is written.
+      const proportion = ratio();
+      if (proportion !== null) resize({ width: Math.max(1, Math.round(value / proportion)), height: null, percent: null });
+    } else {
+      const width = widthNow();
+      if (width !== null) resize({ width, height: value, percent: null });
+    }
+    return true;
+  };
+  const commitDescription = () => {
+    const text = typed.description;
+    if (text === undefined) return;
+    setTyped((now) => ({ ...now, description: undefined }));
+    apply(describeImage(source, 0, text));
   };
 
-  const shown = dragged ?? size?.width ?? null;
+  const field = (name: 'width' | 'height' | 'description') => ({
+    onChange: (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setTyped((now) => ({ ...now, [name]: value }));
+      if (refused?.field === name) setRefused(null);
+    },
+    // Whatever takes it there — a click, a double click, Tab — the value is selected, so what is typed replaces it (#105).
+    onFocus: (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select(),
+    onMouseUp: (event: MouseEvent<HTMLInputElement>) => {
+      const input = event.currentTarget;
+      if (document.activeElement === input && input.selectionStart === input.selectionEnd && typed[name] === undefined) {
+        event.preventDefault();
+        input.select();
+      }
+    },
+    onDoubleClick: (event: MouseEvent<HTMLInputElement>) => event.currentTarget.select(),
+    onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (name === 'description') commitDescription();
+        else if (commit(name)) event.currentTarget.select();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        setTyped((now) => ({ ...now, [name]: undefined }));
+        setRefused(null);
+      }
+    },
+    onBlur: () => {
+      if (name === 'description') commitDescription();
+      // A value refused is let go when the field is left, and the note keeps what it held.
+      else if (!commit(name)) {
+        setTyped((now) => ({ ...now, [name]: undefined }));
+        setRefused(null);
+      }
+    },
+  });
+
+  const toggleLock = () => {
+    const next = !locked;
+    setLocked(next);
+    // Locked, the height follows the width: one written beside it goes (#106).
+    if (next && size?.height != null && size.width !== null) resize({ width: size.width, height: null, percent: null });
+  };
+  const chooseUnit = (next: 'px' | '%') => {
+    setUnit(next);
+    setTyped((now) => ({ ...now, width: undefined }));
+    setRefused(null);
+    const now = drawn();
+    const wide = column();
+    // The size it is drawn at, said in the other unit, when it has one.
+    if (next === '%' && size?.percent == null && size?.width != null && now && wide) {
+      resize({ width: null, height: null, percent: Math.min(100, Math.max(1, Math.round((now.width / wide) * 100))) });
+    } else if (next === 'px' && size?.percent != null && now) {
+      resize({ width: now.width, height: null, percent: null });
+    }
+    if (next === '%') setLocked(true);
+  };
+
+  const free = (!locked && unit === 'px') || shift;
+  const shownWidth = dragged ? (unit === '%' ? percentOf(dragged.width) : dragged.width) : unit === '%' ? size?.percent ?? null : size?.width ?? null;
+  const shownHeight = dragged ? dragged.height : size?.height ?? (locked && size?.width != null && ratio() !== null ? Math.round(size.width * ratio()!) : null);
+  function percentOf(width: number): number | null {
+    const wide = column();
+    return wide ? Math.min(100, Math.max(1, Math.round((width / wide) * 100))) : null;
+  }
+
+  const endDrag = (event: PointerEvent<HTMLElement>, cancelled: boolean) => {
+    const start = drag.current;
+    if (!start || start.pointer !== event.pointerId) return;
+    drag.current = null;
+    const end = drawn();
+    setDragged(null);
+    if (image) {
+      image.style.width = '';
+      image.style.height = '';
+      image.style.maxWidth = '';
+    }
+    hold();
+    if (cancelled || !end) return;
+    if (Math.abs(end.width - start.width) < 1 && Math.abs(end.height - start.height) < 1) return;
+    if (unit === '%') {
+      const percent = percentOf(end.width);
+      if (percent !== null) resize({ width: null, height: null, percent });
+    } else if (free || event.shiftKey) resize({ width: end.width, height: end.height, percent: null });
+    else resize({ width: end.width, height: null, percent: null });
+  };
+
   const offered = size !== null && image !== null;
+  const unitWord = unit === '%' ? '%' : 'px';
+  const invalid = (name: 'width' | 'height') => (refused?.field === name ? { 'aria-invalid': true, title: words.imageOutOfRange(refused.range.min, refused.range.max, name === 'width' ? unitWord : 'px') } : {});
   return (
-    <span ref={frame} className="edit-image" data-resizing={dragged === null ? undefined : ''}>
+    <span
+      ref={frame}
+      className="edit-image"
+      data-resizing={dragged === null ? undefined : ''}
+      onFocus={() => frame.current && (frame.current.dataset['msBusy'] = '')}
+      onBlur={hold}
+      onMouseDown={(event) => {
+        // The frame's own area is the space between the picture and its controls: a press there is
+        // one meant for them, and shows nothing (#107).
+        if (event.target === event.currentTarget) {
+          event.preventDefault();
+          hold();
+        }
+      }}
+    >
       {children}
       {offered && (
         <>
-          <span className="edit-block-controls edit-image-controls" data-ms-control="">
-            <input
-              className="edit-field edit-image-width"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={MAX_IMAGE_WIDTH}
-              aria-label={words.imageWidth}
-              title={words.imageWidth}
-              placeholder={natural === null ? '' : String(natural)}
-              value={typed ?? (shown === null ? '' : String(shown))}
-              onChange={(event) => setTyped(event.target.value)}
-              onKeyDown={onKeyDown}
-              onBlur={commitTyped}
-            />
-            <span className="edit-image-unit" aria-hidden="true">
-              px
+          <span
+            className="edit-image-controls"
+            data-ms-control=""
+            onPointerDown={hold}
+            onTouchStart={hold}
+            onMouseDown={(event) => {
+              // A press anywhere but on a field, a choice or a button — a gap between them, the
+              // padding, a word beside a field — keeps the focus where it is. Its default would put
+              // the editor's caret where the press fell, and the image would show its source (#107).
+              if (!(event.target as Element).closest('input, select, textarea, button')) event.preventDefault();
+            }}
+          >
+            {size.description ? (
+              <input
+                className="edit-field edit-image-description"
+                type="text"
+                aria-label={words.imageDescription}
+                title={words.imageDescription}
+                placeholder={image.alt}
+                value={typed.description ?? size.description.text}
+                {...field('description')}
+              />
+            ) : (
+              // An embed writes no description (§5.8): the file's own is shown, and is not edited here.
+              <input
+                className="edit-field edit-image-description"
+                type="text"
+                readOnly
+                aria-label={words.imageDescription}
+                title={words.imageDescription}
+                placeholder={image.alt}
+                value=""
+              />
+            )}
+            <span className="edit-image-size">
+              <input
+                className="edit-field edit-image-width"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-label={words.imageWidth}
+                title={words.imageWidth}
+                placeholder={unit === '%' ? '' : natural === null ? '' : String(natural.width)}
+                value={typed.width ?? (shownWidth === null ? '' : String(shownWidth))}
+                {...field('width')}
+                {...invalid('width')}
+              />
+              <select className="edit-image-unit" aria-label={words.imageUnit} title={words.imageUnit} value={unit} onChange={(event) => chooseUnit(event.target.value as 'px' | '%')}>
+                <option value="px">px</option>
+                <option value="%">%</option>
+              </select>
+              <Control label={locked ? words.imageKeepRatio : words.imageFreeRatio} onClick={toggleLock} pressed={locked} disabled={unit === '%'} focusable>
+                {locked ? ICON_RATIO_LOCKED : ICON_RATIO_FREE}
+              </Control>
+              <input
+                className="edit-field edit-image-height"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-label={words.imageHeight}
+                title={words.imageHeight}
+                disabled={unit === '%'}
+                placeholder={natural === null || unit === '%' ? '' : String(natural.height)}
+                value={unit === '%' ? '' : (typed.height ?? (shownHeight === null ? '' : String(shownHeight)))}
+                {...field('height')}
+                {...invalid('height')}
+              />
+              <span className="edit-image-unit-label" aria-hidden="true">
+                px
+              </span>
+              <Control label={words.imageOwnSize} onClick={() => resize(null)} pressed={size.width === null && size.percent === null} focusable>
+                {ICON_OWN_SIZE}
+              </Control>
             </span>
-            <Control label={words.imageOwnSize} onClick={() => resize(null)} pressed={size.width === null}>
-              {ICON_OWN_SIZE}
-            </Control>
+            {refused && (
+              <span className="edit-image-refused" role="status">
+                {words.imageOutOfRange(refused.range.min, refused.range.max, refused.field === 'width' ? unitWord : 'px')}
+              </span>
+            )}
           </span>
           <span
             className="edit-image-handle"
             data-ms-control=""
-            title={words.imageResize}
+            data-free={free ? '' : undefined}
+            title={free ? words.imageResizeFree : words.imageResizeKeep}
             aria-hidden="true"
             onPointerDown={(event) => {
               event.preventDefault();
+              event.stopPropagation();
+              const now = drawn();
+              if (!now) return;
               event.currentTarget.setPointerCapture?.(event.pointerId);
-              drag.current = { x: event.clientX, width: image.getBoundingClientRect().width, pointer: event.pointerId };
-              setDragged(Math.round(drag.current.width));
+              drag.current = { x: event.clientX, y: event.clientY, ...now, pointer: event.pointerId };
+              if (frame.current) frame.current.dataset['msBusy'] = '';
+              setShift(event.shiftKey);
+              setDragged(now);
             }}
             onPointerMove={(event) => {
               const start = drag.current;
-              if (!start || start.pointer !== event.pointerId) return;
-              const width = Math.max(MIN_DRAGGED_WIDTH, Math.round(start.width + event.clientX - start.x));
+              if (!image || !start || start.pointer !== event.pointerId) return;
+              setShift(event.shiftKey);
+              const width = Math.max(MIN_IMAGE_SIZE, Math.round(start.width + event.clientX - start.x));
+              image.style.maxWidth = '100%';
               image.style.width = `${width}px`;
-              image.style.height = 'auto';
+              if ((!locked && unit === 'px') || event.shiftKey) {
+                image.style.height = `${Math.max(MIN_IMAGE_SIZE, Math.round(start.height + event.clientY - start.y))}px`;
+              } else image.style.height = 'auto';
               // What the page lets it be: never wider than the column.
-              setDragged(Math.round(image.getBoundingClientRect().width));
+              setDragged(drawn());
             }}
-            onPointerUp={(event) => {
-              const start = drag.current;
-              if (!start || start.pointer !== event.pointerId) return;
-              drag.current = null;
-              const width = Math.round(image.getBoundingClientRect().width);
-              setDragged(null);
-              image.style.width = '';
-              image.style.height = '';
-              if (Math.abs(width - start.width) >= 1) resize(width);
-            }}
-            onPointerCancel={() => {
-              drag.current = null;
-              setDragged(null);
-              image.style.width = '';
-              image.style.height = '';
-            }}
-          />
+            onPointerUp={(event) => endDrag(event, false)}
+            onPointerCancel={(event) => endDrag(event, true)}
+          >
+            {ICON_RESIZE}
+          </span>
         </>
       )}
     </span>

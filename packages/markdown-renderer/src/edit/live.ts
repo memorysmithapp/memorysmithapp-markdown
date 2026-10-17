@@ -285,7 +285,9 @@ class BlockWidget extends WidgetType {
     mount(view, element, this.draw(view), this.source, this.identity, measured, held);
     element.addEventListener('mousedown', (event) => {
       const target = event.target as HTMLElement;
-      if (target.closest('[data-ms-control]')) return;
+      // A control's, or a press in a frame its controls hold busy — a field focused, a handle
+      // dragged, the click a touch on them leaves behind — never shows the source (#107).
+      if (target.closest('[data-ms-control], [data-ms-busy]')) return;
       if (event.metaKey || event.ctrlKey) return;
       const widget = drawing.get(element) ?? this;
       if (!widget.revealsOnClick) return;
@@ -456,7 +458,7 @@ class MathWidget extends WidgetType {
  * bare destination, or one in `<>` that may hold spaces, `<assets/diagram final.png>`.
  */
 function readImage(source: string): { alt: string; address: string; title: string | undefined } | null {
-  const match = /^!\[([^\]]*)\]\(\s*(?:<([^>\n]*)>|([^\s)]+))(?:\s+(?:"([^"]*)"|'([^']*)'))?\s*\)$/.exec(source);
+  const match = /^!\[((?:\\.|[^\]\\])*)\]\(\s*(?:<([^>\n]*)>|([^\s)]+))(?:\s+(?:"([^"]*)"|'([^']*)'))?\s*\)$/.exec(source);
   const address = match ? followable(match[2] ?? match[3] ?? '') : '';
   return match && address ? { alt: match[1] ?? '', address, title: match[4] ?? match[5] } : null;
 }

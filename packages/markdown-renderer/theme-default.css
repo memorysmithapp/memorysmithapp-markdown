@@ -1950,38 +1950,79 @@
   opacity: 1;
 }
 .markdown .edit-image-controls {
+  opacity: 0;
+  padding: 0.2rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
   font-size: 0.8rem;
   line-height: 1.2;
+  transition: opacity 0.12s;
+  pointer-events: none;
 }
-.markdown .edit-image-width.edit-field {
+.markdown .edit-image:hover .edit-image-controls,
+.markdown .edit-image:focus-within .edit-image-controls,
+.markdown .edit-image[data-ms-busy] .edit-image-controls,
+.markdown .edit-image[data-resizing] .edit-image-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+.markdown .edit-image-controls .edit-field {
   height: 1.9rem;
   border-color: var(--ms-border);
   background: var(--ms-surface);
   color: var(--ms-text);
   font-size: 0.8rem;
 }
+.markdown .edit-image-controls .edit-image-width,
+.markdown .edit-image-controls .edit-image-height {
+  flex: none;
+  width: 4.2em;
+}
+.markdown .edit-image-controls .edit-field[aria-invalid='true'] {
+  border-color: rgb(var(--ms-callout-stop));
+  outline: 1px solid rgb(var(--ms-callout-stop));
+}
+.markdown .edit-image-controls .edit-field:disabled {
+  opacity: 0.5;
+}
 .markdown .edit-image-unit {
-  padding-inline-end: 0.2rem;
+  height: 1.9rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius);
+  background: var(--ms-surface);
   color: var(--ms-text-soft);
   font-size: 0.8rem;
 }
-/* The handle is a corner of the accent's colour, shown with the controls. */
+.markdown .edit-image-unit-label {
+  padding-inline: 0.1rem 0.2rem;
+  color: var(--ms-text-soft);
+  font-size: 0.8rem;
+}
+.markdown .edit-image-refused {
+  color: rgb(var(--ms-callout-stop));
+  font-size: 0.75rem;
+}
+/* The handle is the accent's diagonal arrows on the surface, shown with the controls. */
 .markdown .edit-image-handle {
   opacity: 0;
-  border-right: 3px solid var(--ms-accent);
-  border-bottom: 3px solid var(--ms-accent);
-  border-bottom-right-radius: 3px;
+  border-top-left-radius: var(--ms-radius);
+  background: var(--ms-surface);
+  color: var(--ms-accent);
+  font-size: 16px;
   transition: opacity 0.12s;
 }
 .markdown .edit-image:hover .edit-image-handle,
+.markdown .edit-image[data-ms-busy] .edit-image-handle,
 .markdown .edit-image[data-resizing] .edit-image-handle {
   opacity: 1;
 }
 /* Where nothing hovers, as on a phone, an image's size is always at hand. */
 @media (hover: none) {
-  .markdown .edit-image .edit-block-controls,
+  .markdown .edit-image .edit-image-controls,
   .markdown .edit-image .edit-image-handle {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 .markdown .edit-image[data-resizing] .cm-ms-image,
