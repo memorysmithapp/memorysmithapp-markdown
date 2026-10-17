@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-16
+
 ### Added
 
 - An image's width may be a share of the page, `|50%`, from `1%` to `100%`, in a Markdown image, `![Curva|50%](…)`, and in the embed of a kept file, `![[curva.png|50%]]` (`SPEC.md` §3.14 and §5.8). It is a share of the width the note is read at — the column, the cell or the callout it stands in — with the height following the image's ratio, and a maximum: an image narrower than it keeps its own width, so it is never enlarged and blurred. A height in percent, a mixed pair (`50%x180`), `0%`, `150%` and fractions are not dimensions and stay part of the description, and after a note's name the pipe is still the alias. The renderer draws it as a `max-width` in reading and in edit mode, `renderAttachment` and the `attachment` slot receive it as `percent`, and `readDimensions` and `readImageAlt` answer it; `writeDimensions` and the type `Dimensions` are exported. Two conformance cases hold it (#108).
@@ -198,7 +200,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.5.0...v0.6.0
