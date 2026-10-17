@@ -891,6 +891,37 @@ const blockKeys = Prec.high(
   ]),
 );
 
+/** Where the first press of a gesture fell in the note, read before the press moved the caret. */
+const firstPress = new WeakMap<EditorView, { at: number; time: number }>();
+/** The longest a browser counts two presses as one gesture: Windows' default double-click time. */
+const MULTI_CLICK_MS = 500;
+
+/**
+ * Selects the word, or the line, a double or a triple click starts on (#114). The first press puts
+ * the caret where it fell, which reveals the markers beside it, or hides the ones it left, and moves
+ * the rest of the line under the pointer by their width: the second press, read where it lands,
+ * would select the marker or the next word. It is read where the first one fell instead.
+ */
+const multiClick = EditorView.domEventHandlers({
+  mousedown(event, view) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+    if (event.detail <= 1) {
+      const at = view.posAtCoords({ x: event.clientX, y: event.clientY });
+      if (at === null) firstPress.delete(view);
+      else firstPress.set(view, { at, time: event.timeStamp });
+      return false;
+    }
+    const first = firstPress.get(view);
+    if (!first || event.timeStamp - first.time > MULTI_CLICK_MS * (event.detail - 1)) return false;
+    const { state } = view;
+    const line = state.doc.lineAt(first.at);
+    const range = event.detail === 2 ? (state.wordAt(first.at) ?? EditorSelection.cursor(first.at)) : EditorSelection.range(line.from, line.to);
+    event.preventDefault();
+    view.dispatch({ selection: EditorSelection.single(range.from, range.to), userEvent: 'select.pointer' });
+    return true;
+  },
+});
+
 /** Follows a link with a modifier held: a wikilink through the host, an address the page follows in a new tab. */
 const follow = EditorView.domEventHandlers({
   mousedown(event, view) {
@@ -1074,5 +1105,6 @@ export function livePage(metrics?: BlockMetrics): Extension {
     embedPremeasure,
     blockKeys,
     follow,
+    multiClick,
   ];
 }
