@@ -639,8 +639,9 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
             onMouseDown={(event) => {
               // A press anywhere but on a field, a choice or a button — a gap between them, the
               // padding, a word beside a field — keeps the focus where it is. Its default would put
-              // the editor's caret where the press fell, and the image would show its source (#107).
-              if (!(event.target as Element).closest('input, select, textarea, button')) event.preventDefault();
+              // the editor's caret where the press fell, and the image would show its source (#107). A
+              // disabled one is a gap too: it takes no focus, and the caret would go where it fell (#121).
+              if (!(event.target as Element).closest('input:enabled, select:enabled, textarea:enabled, button:enabled')) event.preventDefault();
             }}
           >
             {size.description ? (
@@ -665,7 +666,8 @@ export function ImageBlock({ view, source, children }: { view: EditorView; sourc
                 value=""
               />
             )}
-            <span className="edit-image-size">
+            {/* Under %, what only pixels mean is not shown but keeps its place, so nothing after it moves (#121). */}
+            <span className="edit-image-size" data-unit={unit}>
               <input
                 className="edit-field edit-image-width"
                 type="text"

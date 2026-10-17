@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- An image sized as a share of the page in edit mode no longer shows the ratio lock, the height field and its `px`, which mean nothing under `%`: they keep their place, so the width, the unit and the buttons after them do not move when the unit changes (#121). The height field was shown disabled, and a press on it, or on the lock, put the editor's caret where it fell and showed the image's source; a press there now shows nothing, as one on a gap between the controls does.
+
 ## [0.8.2] - 2026-10-17
 
 ### Changed

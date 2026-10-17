@@ -493,6 +493,11 @@
 .markdown .edit-image-height {
   width: 4.2em;
 }
+/* Under a share of the page, the lock, the height and its unit mean nothing: they
+   are not shown, and keep their place so the controls after them stay put (#121). */
+.markdown .edit-image-size[data-unit='%'] > :is(.edit-control:disabled, .edit-image-height, .edit-image-unit-label) {
+  visibility: hidden;
+}
 .markdown .edit-image-description {
   flex: 1 1 10rem;
   min-width: 0;

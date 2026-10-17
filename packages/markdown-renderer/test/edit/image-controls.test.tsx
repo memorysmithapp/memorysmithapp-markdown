@@ -194,6 +194,7 @@ describe('the width and the height, with the lock between them (#106)', () => {
     // 200 of a 700px column is 29% of it.
     expect(changes.at(-1)).toBe('![[logo.png|29%]]\n');
     expect(height().disabled).toBe(true);
+    expect(button('Keep the proportion').disabled).toBe(true);
     await type(width(), '150');
     await press(width(), 'Enter');
     expect($('.edit-image-refused')!.textContent).toBe('Between 1 and 100 %');
@@ -340,6 +341,33 @@ describe('a pointer or a touch on an image\'s controls (#107)', () => {
     expect(press(width())).toBe(false);
     expect(press($('.edit-image-unit')!)).toBe(false);
     expect(press(button('Its own size'))).toBe(false);
+  });
+
+  it('under %, keeps the lock, the height and its unit in their place, not shown, and a press there shows nothing (#121)', async () => {
+    const { view } = await open(NOTE);
+    const unit = $<HTMLSelectElement>('.edit-image-unit')!;
+    await act(async () => {
+      unit.value = '%';
+      unit.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await settle();
+    expect($('.edit-image-size')!.getAttribute('data-unit')).toBe('%');
+    const hidden = [height(), button('Keep the proportion'), $('.edit-image-unit-label')!];
+    // Still there, so what comes after them does not move.
+    for (const element of hidden) expect(element.isConnected).toBe(true);
+    const rule = /\.markdown \.edit-image-size\[data-unit='%'\] > :is\(([^)]*)\) \{([^}]*)\}/.exec(readFileSync(resolve(__dirname, '..', '..', 'structure.css'), 'utf8'));
+    expect(rule?.[2]).toContain('visibility: hidden');
+    for (const element of hidden) expect(element.matches(rule![1]!.split(',').map((one) => one.trim()).join(', '))).toBe(true);
+    // A press a browser still gives a disabled field or button is one on a gap: its default would put the caret there.
+    const head = view.state.selection.main.head;
+    for (const element of hidden.slice(0, 2)) {
+      const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+      await act(async () => void element.dispatchEvent(event));
+      expect(event.defaultPrevented).toBe(true);
+      expect($('.edit-image')).not.toBeNull();
+      expect(view.state.selection.main.head).toBe(head);
+    }
+    expect(width().matches(rule![1]!)).toBe(false);
   });
 
   it('drags the handle with the pointer captured, and writes the width it was let go at', async () => {
