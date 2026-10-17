@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-16
+
 ### Fixed
 
 - A click or a touch on an image in edit mode no longer shows its source: the picture is sized in place, as a table is edited in place, and like a table it shows its Markdown from a *Source* button among its controls, or when the caret reaches it from the keyboard (#112). An embed with no picture, a kept file's card, still shows its source at a click, having no controls. A link around an image is followed with Ctrl or Cmd held, which in edit mode did nothing, since the editor received no press from inside a drawn image.
@@ -206,7 +208,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.6.0...v0.7.0
