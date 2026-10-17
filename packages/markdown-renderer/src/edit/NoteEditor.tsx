@@ -12,7 +12,7 @@ import { autocompletion, type CompletionContext, type CompletionResult } from '@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands';
 import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { EditorView, keymap, type KeyBinding } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
@@ -249,7 +249,7 @@ function Toolbar({
             {ICONS.revert}
           </button>
           {button('undo', undo, 'Mod-Z')}
-          {button('redo', redo, 'Mod-Shift-Z')}
+          {button('redo', redo, 'Mod-Shift-Z, Mod-Y')}
         </span>
         <span className="edit-toolbar-group">
           <select
@@ -412,6 +412,13 @@ function SaveStatus({
  * Edits a note on the page that draws it. Exported at `@memorysmithapp/markdown-renderer/edit`
  * for a host that edits without the switch of `NoteBody`; `NoteBody` loads it on demand.
  */
+/**
+ * Redo on Ctrl+Shift+Z, Cmd+Shift+Z on macOS, on every platform, as well as on Ctrl+Y (#120):
+ * CodeMirror binds Ctrl+Shift+Z to redo on Linux only, and elsewhere drops the Shift of the key
+ * and undoes, so the key most people redo with lost them one more step.
+ */
+const redoKeys: readonly KeyBinding[] = [{ key: 'Mod-Shift-z', run: redo, preventDefault: true }];
+
 export function NoteEditor({ markdown: given, onChange, editable = true, corner, buttons = 'icon', autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
   const resolved = useMemo(
     () => resolveHost(host),
@@ -615,7 +622,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
           livePage(measureMetrics(parent.current)),
           autocompletion({ override: [wikilinkCompletion(() => latest.current.host)], icons: false }),
           shortcuts(() => created),
-          keymap.of([...markdownKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap]),
+          keymap.of([...markdownKeymap, ...redoKeys, ...historyKeymap, indentWithTab, ...defaultKeymap]),
           // A file pasted or dropped is attached, where the host keeps files (#75).
           menuKeys((target) => {
             if (target.state.readOnly) return false;

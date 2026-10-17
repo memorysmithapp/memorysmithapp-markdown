@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Ctrl+Shift+Z redoes in edit mode on every platform, as Ctrl+Y does and as Cmd+Shift+Z does on macOS (#120). CodeMirror binds it to redo on Linux only, and elsewhere it undid one more step; the *Redo* button's title names both keys.
 - Resizing an image from its handle near the end of a note moves only the text below it: the top of the picture stays where it is on the screen and the handle under the pointer, whether the editor scrolls itself, in a pane of the host or in the window (#116). Shrinking it made the page shorter than where it was scrolled to, so everything above came down, as much as 169 pixels in Chromium, and growing it after that, the browser's scroll anchoring made it grow upward. While the handle is dragged the note has room after its last line for as much as the picture may shrink, the anchoring is off, and any move of the picture's top is scrolled back; the room stays after the release, so the page does not jump, and is given back as the author scrolls up.
 
 ## [0.8.1] - 2026-10-16
