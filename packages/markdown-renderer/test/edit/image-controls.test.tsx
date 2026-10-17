@@ -57,6 +57,11 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) await act(async () => new Promise((done) => setTimeout(done, 0)));
 }
 
+/** Waits, a second at most, for what the editor draws a moment after an event. */
+async function until(done: () => boolean): Promise<void> {
+  for (let waited = 0; waited < 1000 && !done(); waited += 20) await act(async () => new Promise((next) => setTimeout(next, 20)));
+}
+
 const $ = <T extends Element>(selector: string) => mounted!.container.querySelector<T>(selector);
 
 /** Opens a note in the editor, its column 700px wide. */
@@ -429,6 +434,8 @@ describe('an image sized in place shows its source as a table does (#112)', () =
     await act(async () => button('Source').click());
     await settle();
     expect(view.state.selection.main.head).toBe(note.indexOf('![['));
+    // The notation shows once the editor knows it has the focus, which it learns a moment later.
+    await until(() => $('.edit-image-controls') === null);
     expect($('.edit-image-controls')).toBeNull();
     expect(changes).toEqual([]);
   });
@@ -440,7 +447,7 @@ describe('an image sized in place shows its source as a table does (#112)', () =
       view.focus();
       view.dispatch({ selection: { anchor: note.indexOf('![') } });
     });
-    await settle();
+    await until(() => $('.edit-image-controls') === null);
     expect($('.edit-image-controls')).toBeNull();
   });
 
