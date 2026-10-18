@@ -57,10 +57,10 @@ It is idempotent: run it again whenever the ruleset or the settings drift, and i
 
 | Document | Answers |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) (imported by [`CLAUDE.md`](CLAUDE.md)) | How an agent works here |
-| [`PRD.md`](PRD.md) | What the product solves and delivers, under which rule |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | How the repository is organised, and why |
-| [`SDLC.md`](SDLC.md) | How a change travels from an issue to a release |
+| [`AGENTS.md`](AGENTS.md) (imported by [`.claude/CLAUDE.md`](.claude/CLAUDE.md)) | How an agent works here |
+| [`docs/PRD.md`](docs/PRD.md) | What the product solves and delivers, under which rule |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the repository is organised, and why |
+| [`docs/SDLC.md`](docs/SDLC.md) | How a change travels from an issue to a release |
 | [`CHANGELOG.md`](CHANGELOG.md) | What changed in each version |
 
 The version lives in the `version` field of [`package.json`](package.json).

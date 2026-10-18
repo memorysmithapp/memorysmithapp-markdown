@@ -3,7 +3,7 @@ node_modules/
 dist/
 coverage/
 
-# The tarballs `pnpm pack` writes into a package (SDLC.md §10)
+# The tarballs `pnpm pack` writes into a package (docs/SDLC.md §10)
 *.tgz
 
 # Environment and secrets
@@ -26,3 +26,7 @@ Thumbs.db
 # The comparison with MemorySmith's reading page: its checkout and its images
 playground/compare/.memorysmith/
 playground/compare/out/
+
+# Claude Code: personal settings and the worktrees it creates
+.claude/settings.local.json
+.claude/worktrees/

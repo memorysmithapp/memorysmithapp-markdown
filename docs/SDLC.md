@@ -173,7 +173,7 @@ The format of the main repository, with its scope indicators and its examples of
 
 1. the root `package.json` has a SemVer `version`, and `CHANGELOG.md` has it as its latest released section, or the branch is `release/vX.Y.Z` bumping to it, or, before the first cut, it is `0.1.0`;
 2. `CHANGELOG.md` keeps the Keep a Changelog format: `[Unreleased]` on top, dated versions in descending order, its six categories only, a compare link at the foot for every section;
-3. `CLAUDE.md` is exactly `@AGENTS.md`;
+3. `.claude/CLAUDE.md` is exactly `@../AGENTS.md`, and no `CLAUDE.md` sits at the root;
 4. every relative link and anchor of every Markdown file resolves;
 5. no document carries a version footer ("Last revised", "Internal development document" and the like);
 6. every GitHub link at the foot of `CHANGELOG.md` names the repository the check runs in;
@@ -181,7 +181,7 @@ The format of the main repository, with its scope indicators and its examples of
 
 checks 4 and 5 read the Markdown files git tracks or would track, never one `.gitignore` keeps out, such as the MemorySmith checkout the comparison leaves in `playground/compare/.memorysmith/`;
 
-then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](AGENTS.md#6-verified-commands)).
+then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](../AGENTS.md#6-verified-commands)).
 
 **The owner reviews and merges** the pull request of a cycle; nobody merges their own cycle without that review.
 
