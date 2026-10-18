@@ -50,7 +50,7 @@ Intro with a [link](https://keepachangelog.com/en/1.1.0/).
 const FILES = {
   'package.json': JSON.stringify({ name: '@memorysmithapp/x', version: '0.2.0' }),
   'CHANGELOG.md': CHANGELOG,
-  'CLAUDE.md': '@AGENTS.md\n',
+  '.claude/CLAUDE.md': '@../AGENTS.md\n',
   'AGENTS.md': '# Agents\n\nSee [the invariant](ARCHITECTURE.md#inv-01-the-version-has-one-home) and [below](#2-reading-map).\n\n## 2. Reading map\n\nText.\n',
   'ARCHITECTURE.md': '# Architecture\n\n### INV-01 The version has one home\n\n```md\n[not a link](missing.md)\nLast revised: inside a code block is fine\n```\n',
   'docs/guide.md': 'Back to [the agents](../AGENTS.md).\n',
@@ -143,14 +143,26 @@ describe('2. CHANGELOG.md keeps its format', () => {
   });
 });
 
-describe('3. CLAUDE.md is exactly @AGENTS.md', () => {
-  test('fails when CLAUDE.md says anything else', () => {
-    const root = repository({ 'CLAUDE.md': '@AGENTS.md\n\nAlso read the docs.\n' });
+describe('3. .claude/CLAUDE.md is exactly @../AGENTS.md', () => {
+  test('fails when .claude/CLAUDE.md says anything else', () => {
+    const root = repository({ '.claude/CLAUDE.md': '@../AGENTS.md\n\nAlso read the docs.\n' });
     assert.equal(checkClaude(root).length, 1);
   });
 
-  test('fails when CLAUDE.md only mentions AGENTS.md in prose', () => {
-    assert.equal(checkClaude(repository({ 'CLAUDE.md': 'Read AGENTS.md.\n' })).length, 1);
+  test('fails when .claude/CLAUDE.md only mentions AGENTS.md in prose', () => {
+    assert.equal(checkClaude(repository({ '.claude/CLAUDE.md': 'Read AGENTS.md.\n' })).length, 1);
+  });
+
+  test('fails on @AGENTS.md, which inside .claude/ imports nothing', () => {
+    assert.match(checkClaude(repository({ '.claude/CLAUDE.md': '@AGENTS.md\n' }))[0], /exactly the line "@\.\.\/AGENTS\.md"/);
+  });
+
+  test('fails when .claude/CLAUDE.md is missing', () => {
+    assert.match(checkClaude(repository({ '.claude/CLAUDE.md': null }))[0], /missing/);
+  });
+
+  test('fails when a CLAUDE.md also exists at the root', () => {
+    assert.match(checkClaude(repository({ 'CLAUDE.md': '@AGENTS.md\n' }))[0], /must not exist at the root/);
   });
 });
 
@@ -167,6 +179,14 @@ describe('4. relative links and anchors resolve', () => {
 
   test('fails on a missing anchor in the same file', () => {
     assert.equal(checkLinks(repository({ 'AGENTS.md': '[here](#nowhere)\n' })).length, 1);
+  });
+
+  test('skips the worktrees under .claude/worktrees', () => {
+    assert.deepEqual(checkLinks(repository({ '.claude/worktrees/w/AGENTS.md': 'See [nothing](NOPE.md).\n' })), []);
+  });
+
+  test('still reads a worktrees directory anywhere else', () => {
+    assert.equal(checkLinks(repository({ 'docs/worktrees/guide.md': 'See [nothing](NOPE.md).\n' })).length, 1);
   });
 
   test('ignores links inside code', () => {

@@ -1,5 +1,5 @@
 # Tags and publishes a version once its bump is merged, so that nobody tags or publishes by hand
-# (scripts/release.mjs decides the tag, scripts/publish.mjs what reaches npm; SDLC.md §10
+# (scripts/release.mjs decides the tag, scripts/publish.mjs what reaches npm; docs/SDLC.md §10
 # describes the flow). Uses only the workflow's GITHUB_TOKEN and its OIDC identity, which npm
 # trusted publishing takes in place of a token, and no stored secret.
 name: Release

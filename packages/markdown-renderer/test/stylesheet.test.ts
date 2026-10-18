@@ -83,7 +83,7 @@ describe('the stylesheet', () => {
   });
 
   it('lists in ARCHITECTURE.md every custom property a host may set', () => {
-    const architecture = readFileSync(resolve(PACKAGE, '..', '..', 'ARCHITECTURE.md'), 'utf8');
+    const architecture = readFileSync(resolve(PACKAGE, '..', '..', 'docs', 'ARCHITECTURE.md'), 'utf8');
     const publicProperties = [...new Set(css.match(/--markdown-[\w-]+/g) ?? [])];
     expect(publicProperties.length).toBeGreaterThan(20);
     for (const property of publicProperties) expect(architecture, property).toContain(`\`${property}\``);

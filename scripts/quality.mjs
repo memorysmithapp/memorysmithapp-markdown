@@ -18,6 +18,9 @@ import {
 } from './lib/changelog.mjs';
 
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', 'dist', 'coverage']);
+// Paths from the root that are skipped whole: the worktrees Claude Code creates, each a full copy
+// of the repository.
+const IGNORED_PATHS = new Set(['.claude/worktrees']);
 
 // Lines that are a version note rather than content: "Last revised …", "Internal development
 // document", and the like, at the start of a line, after any list, quote or emphasis marker.
@@ -47,7 +50,8 @@ function walk(root, directory) {
   const files = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!IGNORED_DIRECTORIES.has(entry.name)) files.push(...walk(root, join(directory, entry.name)));
+      const path = relative(root, join(directory, entry.name)).split(sep).join('/');
+      if (!IGNORED_DIRECTORIES.has(entry.name) && !IGNORED_PATHS.has(path)) files.push(...walk(root, join(directory, entry.name)));
     } else {
       files.push(relative(root, join(directory, entry.name)).split(sep).join('/'));
     }
@@ -213,11 +217,15 @@ export function checkChangelog(root) {
   return problems;
 }
 
-// 3. CLAUDE.md is exactly the import of AGENTS.md.
+// 3. .claude/CLAUDE.md is exactly the import of AGENTS.md, and no CLAUDE.md sits at the root. An
+// import resolves from the file that holds it, so `@AGENTS.md` there would load nothing, silently.
 export function checkClaude(root) {
-  if (!existsSync(join(root, 'CLAUDE.md'))) return ['CLAUDE.md: missing at the root'];
-  const text = readText(root, 'CLAUDE.md');
-  return text === '@AGENTS.md\n' || text === '@AGENTS.md' ? [] : ['CLAUDE.md: must be exactly the line "@AGENTS.md"'];
+  const problems = [];
+  if (existsSync(join(root, 'CLAUDE.md'))) problems.push('CLAUDE.md: must not exist at the root; it lives in .claude/CLAUDE.md, and both would load');
+  if (!existsSync(join(root, '.claude/CLAUDE.md'))) return [...problems, '.claude/CLAUDE.md: missing'];
+  const text = readText(root, '.claude/CLAUDE.md');
+  if (text !== '@../AGENTS.md\n' && text !== '@../AGENTS.md') problems.push('.claude/CLAUDE.md: must be exactly the line "@../AGENTS.md"');
+  return problems;
 }
 
 // 4. Every relative link, and every anchor, of every Markdown file resolves.
@@ -333,7 +341,7 @@ export function runChecks(root, branch = currentBranch(root), repository = curre
   return [
     { name: 'The version has one home and agrees with CHANGELOG.md', problems: checkVersion(root, branch) },
     { name: 'CHANGELOG.md keeps the Keep a Changelog format', problems: checkChangelog(root) },
-    { name: 'CLAUDE.md is exactly @AGENTS.md', problems: checkClaude(root) },
+    { name: '.claude/CLAUDE.md is exactly @../AGENTS.md', problems: checkClaude(root) },
     { name: 'Relative links and anchors resolve', problems: checkLinks(root) },
     { name: 'No document carries a version footer', problems: checkFooters(root) },
     { name: 'CHANGELOG.md links to this repository', problems: checkChangelogRepository(root, repository) },
