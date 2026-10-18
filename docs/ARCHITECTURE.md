@@ -315,7 +315,7 @@ The comparison covers what the default theme draws above the body too: `referenc
 
 - *Rulesets and settings:* the ruleset `main` of [INV-03](#inv-03-main-changes-only-through-a-pull-request), and the description, topics, merge options, wiki and discussions, all through the REST API by `scripts/setup-repo.sh` with the `gh` of an administrator.
 - *Issues and milestones:* GitHub's blank issue and default labels; a milestone per version.
-- *Actions:* the workflows *Quality* and *Release* on `ubuntu-latest`, with Node 24 from `actions/setup-node` and the pnpm of `packageManager` through Corepack.
+- *Actions:* the workflows *Quality* and *Release* on `ubuntu-latest`, with Node 24 from `actions/setup-node` and the pnpm of `packageManager` through Corepack. Nothing they run installs a system package, so the label is left to follow GitHub's images: when it moved to Ubuntu 26.04 (actions/runner-images#14748), every step of *Quality*, and *Release*'s decision, annotated tag and pack, ran green on `ubuntu-26.04` (*observed* on 2026-10-17, #127); the tag's push, the GitHub Release and the publish to npm had not run there yet.
 
 **npm.** Any package a repository of the organisation publishes uses the scope `@memorysmithapp`. The npm organisation `memorysmithapp` exists since 2026-10-12, which reserves the scope, and is on the **free plan, which publishes public packages only**; a private package would need the paid Teams plan (*declared* by the owner in #1). No npm token exists (*declared*). Therefore, in the `package.json` of every repository of the organisation:
 
