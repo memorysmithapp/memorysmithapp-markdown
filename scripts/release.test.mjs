@@ -32,10 +32,17 @@ test('does nothing when the tag already names this commit', () => {
   assert.equal(plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD }).action, 'tagged');
 });
 
-test('fails when the tag names another commit', () => {
+test('fails when the tag names a commit outside this history', () => {
   const result = plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: 'b'.repeat(40), headCommit: HEAD });
   assert.equal(result.action, 'fail');
   assert.match(result.reason, /a version names one commit/);
+});
+
+test('does nothing, rather than fail, when the tag names an earlier commit of this history', () => {
+  const result = plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: 'b'.repeat(40), headCommit: HEAD, tagIsAncestor: true });
+  assert.equal(result.action, 'skip');
+  assert.equal(result.tag, 'v0.1.0');
+  assert.match(result.reason, /this push is not a release/);
 });
 
 test('does nothing when the version has no released section', () => {
