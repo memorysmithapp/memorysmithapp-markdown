@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- The workflow *Release* no longer fails on a push to `main` that carries no bump, once the version has been tagged: a tag on an earlier commit of the merged history means the version was released before, and the push releases nothing (#126). It failed on the merge of #125, saying that the version names one commit; it still fails when the tag names a commit outside that history.
+
 ### Changed
 
 - The root holds only what a tool or a convention looks for there, as in `memorysmithapp-template` v0.3.0: `PRD.md`, `ARCHITECTURE.md` and `SDLC.md` move to `docs/`, and `CLAUDE.md` to `.claude/CLAUDE.md` as the line `@../AGENTS.md`, since an import resolves from the file that holds it (#124). `Quality` check 3 requires that line and fails on a `CLAUDE.md` at the root, and the checks skip the worktrees under `.claude/worktrees/`; `.gitignore` keeps out `.claude/settings.local.json` and `.claude/worktrees/`. The renderer's README links to the architecture at its new place; a version already on npm keeps the old link until the next release. ADR-007 records the layout.

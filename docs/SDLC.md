@@ -209,7 +209,7 @@ The bump flow, in this order:
 4. The merge is a push to `main`, which runs the workflow **Release** on the merged commit:
    1. it reads the `version` of the root `package.json`;
    2. if the links at the foot of `CHANGELOG.md` do not name this repository, it does nothing: the changelog is still the copy of another repository's, as in a repository just created from `memorysmithapp-template`;
-   3. if the tag `vX.Y.Z` already exists **on this commit**, it does nothing; if it exists on **another** commit, it fails, because a version names one commit;
+   3. if the tag `vX.Y.Z` already exists **on this commit**, it does nothing; if it exists on an **earlier commit of this history**, it does nothing either, because the version was released before this push, as on every merge that carries no bump; if it exists on a commit **outside this history**, it fails, because a version names one commit;
    4. if `CHANGELOG.md` has no released section `[X.Y.Z]`, it does nothing: the push was not a release;
    5. otherwise it writes the **annotated** tag `vX.Y.Z` on the merged commit and creates the GitHub Release `vX.Y.Z` with the notes of that section.
 
