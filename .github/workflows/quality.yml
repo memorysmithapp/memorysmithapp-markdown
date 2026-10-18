@@ -14,11 +14,16 @@ permissions:
 jobs:
   quality:
     name: Quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Show the image
+        run: cat /etc/os-release; echo "ImageOS=$ImageOS ImageVersion=$ImageVersion"
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -38,3 +43,14 @@ jobs:
         run: pnpm -r typecheck
       - name: Test the checks and the packages
         run: pnpm test
+      - name: Decide as Release does
+        run: node scripts/release.mjs "$RUNNER_TEMP/notes.md"
+      - name: Write an annotated tag locally, as Release does, without pushing it
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'notes\n' > "$RUNNER_TEMP/n.md"
+          git tag --annotate --cleanup=verbatim v0.0.0-probe --message v0.0.0-probe --message "$(cat "$RUNNER_TEMP/n.md")" "$GITHUB_SHA"
+          git cat-file -t v0.0.0-probe
+      - name: Pack each package as Release publishes it
+        run: node scripts/publish.mjs skip v0.8.3 --dry-run
