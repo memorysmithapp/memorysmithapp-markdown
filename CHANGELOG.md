@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-10-18
+
 ### Fixed
 
 - The workflow *Release* no longer fails on a push to `main` that carries no bump, once the version has been tagged: a tag on an earlier commit of the merged history means the version was released before, and the push releases nothing (#126). It failed on the merge of #125, saying that the version names one commit; it still fails when the tag names a commit outside that history.
@@ -235,7 +237,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.0...v0.8.1
