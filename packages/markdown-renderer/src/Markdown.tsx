@@ -22,7 +22,7 @@ import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from '.
 import { useHost, type KeptFile } from './host.js';
 import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
-import { toUnixNewlines } from './markdown.js';
+import { toUnixNewlines } from './source.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { readingPlugins } from './reading.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';

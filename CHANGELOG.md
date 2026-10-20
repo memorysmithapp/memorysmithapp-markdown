@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- The renderer no longer publishes two modules whose names differ only in case (#131): `dist/Markdown.js` with `dist/markdown.js`, and `dist/Transclusion.js` with `dist/transclusion.js`. Vite's dev server resolved an import of `./Markdown.js` to `markdown.js` and failed to start, and either pair cannot both exist on a case-insensitive filesystem. The text helpers now build as `source.js` and the embed helpers as `embeds.js`. `pack-check` fails when two files of a package differ only in case.
+
 ## [0.8.4] - 2026-10-18
 
 ### Fixed

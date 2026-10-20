@@ -11,8 +11,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveWikilinks } from '../src/markdown.js';
-import { splitEmbeds } from '../src/transclusion.js';
+import { resolveWikilinks } from '../src/source.js';
+import { splitEmbeds } from '../src/embeds.js';
 
 describe('an attachment is a file the notebook keeps, and not a name that looks like one', () => {
   /**

@@ -8,7 +8,7 @@
  * before it is parsed is how a notation starts firing inside examples.
  *
  * Comments (§7.6) are the one exception, and they are taken out before the
- * parser by `hideComments` (`markdown.ts`), which finds code first: a comment
+ * parser by `hideComments` (`source.ts`), which finds code first: a comment
  * may hold markup and blank lines, and once parsed it is spread over nodes no
  * plugin on a run of text can see whole.
  *
