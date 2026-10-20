@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { demoteEmbeds, sectionOf, splitEmbeds, EMBED_LIMIT } from '../src/transclusion.js';
+import { demoteEmbeds, sectionOf, splitEmbeds, EMBED_LIMIT } from '../src/embeds.js';
 
 describe('splitting a body into text and embeds', () => {
   it('separates the embed from the prose around it', () => {

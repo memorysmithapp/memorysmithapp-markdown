@@ -61,10 +61,14 @@ test('asks npm about the version of the tag, and nothing else', () => {
 });
 
 test('a package ships its built modules and the files named for it, and nothing else', async () => {
-  const { builtModules, checkPack } = await import('./pack-check.mjs');
+  const { builtModules, checkPack, caseCollisions } = await import('./pack-check.mjs');
   assert.deepEqual(builtModules(['index.ts', 'Note.tsx', 'note.test.tsx', 'json.d.ts']), ['dist/index.d.ts', 'dist/index.js', 'dist/Note.d.ts', 'dist/Note.js']);
   const expected = ['README.md', 'dist/index.js', 'package.json'];
   assert.deepEqual(checkPack('p', [...expected], expected), []);
   assert.match(checkPack('p', [...expected, 'test/a.test.ts'], expected)[0], /test\/a\.test\.ts is packed and is not meant to ship/);
   assert.match(checkPack('p', ['dist/index.js', 'package.json'], expected)[0], /README\.md is meant to ship and is not packed/);
+  assert.deepEqual(caseCollisions('p', ['dist/Markdown.js', 'dist/source.js', 'dist/Markdown.d.ts']), []);
+  const collided = caseCollisions('p', ['dist/Markdown.js', 'dist/markdown.js', 'dist/Markdown.d.ts', 'dist/markdown.d.ts']);
+  assert.match(collided[0], /dist\/Markdown\.js and dist\/markdown\.js differ only in case/);
+  assert.match(collided[1], /dist\/Markdown\.d\.ts and dist\/markdown\.d\.ts differ only in case/);
 });

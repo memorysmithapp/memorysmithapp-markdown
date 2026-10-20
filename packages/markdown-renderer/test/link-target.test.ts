@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { cases as CONFORMANCE_CASES, type ConformanceCase } from '@memorysmithapp/markdown-spec';
-import { resolveWikilinks } from '../src/markdown.js';
+import { resolveWikilinks } from '../src/source.js';
 
 /** The wikilink cases: the Markdown form is the backend's to tolerate. */
 const wikilinkCases = CONFORMANCE_CASES.filter(

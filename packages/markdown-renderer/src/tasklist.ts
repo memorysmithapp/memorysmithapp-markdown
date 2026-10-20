@@ -12,7 +12,7 @@
  * document from it would hand the notebook a file nobody typed.
  */
 
-import { commentRegions, fenceRegions } from './markdown.js';
+import { commentRegions, fenceRegions } from './source.js';
 
 /**
  * A task item, as GFM defines it, at the start of a list item — after any

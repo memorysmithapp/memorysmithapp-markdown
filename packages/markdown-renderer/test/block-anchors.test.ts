@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { blockOf, isBlockAnchor, sectionOf } from '../src/transclusion.js';
+import { blockOf, isBlockAnchor, sectionOf } from '../src/embeds.js';
 
 describe('a block identifier names the block it ends (§7.7)', () => {
   const note = [

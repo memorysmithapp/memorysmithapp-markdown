@@ -6,7 +6,7 @@
 
 import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { EMBED_LIMIT } from '../src/transclusion.js';
+import { EMBED_LIMIT } from '../src/embeds.js';
 import { notebook } from './notebook.js';
 import { draw, html } from './render.js';
 

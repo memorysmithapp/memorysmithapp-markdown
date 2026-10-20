@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useHost, type EmbeddedNote } from './host.js';
 import { Markdown } from './Markdown.js';
 import { drawSlot, useSlot } from './slots.js';
-import { bodyStart, hideComments, resolveWikilinks } from './markdown.js';
-import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './transclusion.js';
+import { bodyStart, hideComments, resolveWikilinks } from './source.js';
+import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './embeds.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
 /** The shape of what is coming, in the position it will occupy, while the host answers. */

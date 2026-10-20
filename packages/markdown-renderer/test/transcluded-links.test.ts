@@ -13,8 +13,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { demoteEmbeds } from '../src/transclusion.js';
-import { resolveWikilinks } from '../src/markdown.js';
+import { demoteEmbeds } from '../src/embeds.js';
+import { resolveWikilinks } from '../src/source.js';
 
 const CABERNET = '/notebooks/01j8x2k9qz3m4n5p6r7s8t9v0a/notes/01j8x2k9qz3m4n5p6r7s8t9v0w';
 

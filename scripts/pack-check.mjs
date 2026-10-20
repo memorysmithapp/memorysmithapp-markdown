@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // What each published package ships, checked against what it is meant to ship: `npm pack
 // --dry-run` lists the files, and the list has to be exactly the built modules of `src/` and its folders (a `.js`
-// and a `.d.ts` each, no test, no source map) and the files named below. Run after the build.
+// and a `.d.ts` each, no test, no source map) and the files named below. No two of them differ only in case:
+// a case-insensitive filesystem keeps one, and a bundler can resolve the other to it. Run after the build.
 //   node scripts/pack-check.mjs
 
 import { execFileSync } from 'node:child_process';
@@ -36,6 +37,19 @@ export function checkPack(name, packed, expected) {
   ];
 }
 
+/** Files of one package whose paths differ only in case. Each later path is reported against the first that folds to the same key. */
+export function caseCollisions(name, files) {
+  const seen = new Map();
+  const problems = [];
+  for (const file of files) {
+    const key = file.toLowerCase();
+    const prior = seen.get(key);
+    if (prior !== undefined) problems.push(`${name}: ${prior} and ${file} differ only in case`);
+    else seen.set(key, file);
+  }
+  return problems;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve('.');
   const problems = [];
@@ -44,7 +58,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const listing = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
     const packed = listing[0].files.map((file) => file.path).sort();
     const expected = [...builtModules(readdirSync(join(dir, 'src'), { recursive: true }).map(String)), ...(SHIPPED[pkg.name] ?? [])].sort();
-    const found = checkPack(pkg.name, packed, expected);
+    const found = [...checkPack(pkg.name, packed, expected), ...caseCollisions(pkg.name, packed)];
     problems.push(...found);
     console.log(`${found.length === 0 ? 'ok  ' : 'FAIL'} ${pkg.name}: ${packed.length} files`);
   }

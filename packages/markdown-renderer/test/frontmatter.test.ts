@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { splitFrontmatter } from '../src/markdown.js';
+import { splitFrontmatter } from '../src/source.js';
 
 const doc = (frontmatter: string): string => `---\n${frontmatter}\n---\n\nBody.\n`;
 

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-10-19
+
+### Fixed
+
+- The renderer no longer publishes two modules whose names differ only in case (#131): `dist/Markdown.js` with `dist/markdown.js`, and `dist/Transclusion.js` with `dist/transclusion.js`. Vite's dev server resolved an import of `./Markdown.js` to `markdown.js` and failed to start, and either pair cannot both exist on a case-insensitive filesystem. The text helpers now build as `source.js` and the embed helpers as `embeds.js`. `pack-check` fails when two files of a package differ only in case.
+
 ## [0.8.4] - 2026-10-18
 
 ### Fixed
@@ -237,7 +243,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.1...v0.8.2

@@ -17,7 +17,7 @@ import katex from 'katex';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import type { NoteHost } from './host.js';
-import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type HiddenComments } from './markdown.js';
+import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type HiddenComments } from './source.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
 

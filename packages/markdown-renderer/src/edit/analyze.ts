@@ -16,7 +16,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkParse from 'remark-parse';
 import { unified, type Processor } from 'unified';
-import { codeRegions, commentRegions, insideCode } from '../markdown.js';
+import { codeRegions, commentRegions, insideCode } from '../source.js';
 import { CALLOUT_MARKER } from '../remark-callouts.js';
 import { breaksDollarRule } from '../remark-ring.js';
 

@@ -6,14 +6,14 @@ import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type Reso
 import { planFootnotes } from './footnotes.js';
 import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
-import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './markdown.js';
+import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './source.js';
 import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
 import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
-import { splitEmbeds } from './transclusion.js';
+import { splitEmbeds } from './embeds.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
 export interface NoteBodyProps extends NoteHost {

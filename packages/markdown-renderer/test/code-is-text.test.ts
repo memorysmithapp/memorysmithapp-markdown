@@ -16,8 +16,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveWikilinks } from '../src/markdown.js';
-import { demoteEmbeds, splitEmbeds } from '../src/transclusion.js';
+import { resolveWikilinks } from '../src/source.js';
+import { demoteEmbeds, splitEmbeds } from '../src/embeds.js';
 
 const resolve = (name: string): string | null => (name === 'Target' ? '/v/a/target' : null);
 

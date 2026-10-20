@@ -17,7 +17,7 @@
  * a link and is never dropped, which is what `demoteEmbeds` does.
  */
 
-import { codeRegions, fenceRegions, headingKey, insideCode, insideTable, outsideCode, tableRegions } from './markdown.js';
+import { codeRegions, fenceRegions, headingKey, insideCode, insideTable, outsideCode, tableRegions } from './source.js';
 
 /** Same shape the link extractor matches, plus the leading `!`. */
 const EMBED = /!\[\[([^\]|#]+?)(?:#([^\]|]+?))?(?:\|[^\]]*?)?\]\]/g;
