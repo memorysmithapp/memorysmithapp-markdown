@@ -205,6 +205,9 @@ importers:
       mermaid:
         specifier: 11.17.0
         version: 11.17.0
+      micromark-util-decode-string:
+        specifier: 2.0.1
+        version: 2.0.1
       react-markdown:
         specifier: 9.1.0
         version: 9.1.0(@types/react@19.2.18)(react@19.2.8)

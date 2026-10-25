@@ -1,6 +1,6 @@
 # @memorysmithapp/markdown-renderer
 
-A React component that draws the body of a MemorySmith note exactly as MemorySmith's reading page does: callouts, wikilinks, embedded notes, task boxes, code with highlighting and diagrams, mathematics, footnotes — the notation of the [MemorySmith Markdown Specification](https://www.npmjs.com/package/@memorysmithapp/markdown-spec).
+A React component that draws the body of a MemorySmith note exactly as MemorySmith's reading page does: callouts, wikilinks, embedded notes, task boxes, code with highlighting and diagrams, mathematics, footnotes, the parameters of a model — the notation of the [MemorySmith Markdown Specification](https://www.npmjs.com/package/@memorysmithapp/markdown-spec).
 
 The package knows no API, no router and no i18n library. Everything it needs from the notebook a note lives in reaches it as props, and it never rewrites the note: ticking a task box reports which box, and the host applies it.
 

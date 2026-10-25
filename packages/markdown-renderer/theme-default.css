@@ -33,6 +33,9 @@
   --ms-text-soft: var(--markdown-text-soft, #545d73);
   --ms-accent: var(--markdown-accent, #0f56d7);
   --ms-pending: var(--markdown-pending, #a6ab9f);
+  /* A parameter of a model, the violet of an aside: distinct from a link's
+     blue and a pending link's grey, and its text holds 5:1 on its own tint. */
+  --ms-parameter: var(--markdown-parameter, 109, 40, 217);
   --ms-code-bg: var(--markdown-code-bg, #f4f5f2);
   /* Muted, as the default theme sets inline code: the soft text of the
      surface. Inline code has no fill, so it sits on the paper or on the tint
@@ -165,6 +168,7 @@
   --ms-text-soft: var(--markdown-text-soft, #93a0ba);
   --ms-accent: var(--markdown-accent, #4c8dff);
   --ms-pending: var(--markdown-pending, #5d6880);
+  --ms-parameter: var(--markdown-parameter, 167, 139, 250);
   --ms-code-bg: var(--markdown-code-bg, #0e1728);
   --ms-token-keyword: var(--markdown-token-keyword, #4c8dff);
   --ms-token-string: var(--markdown-token-string, #f0a05a);
@@ -730,6 +734,28 @@
   color: var(--ms-pending);
   border-bottom: 1px dashed var(--ms-pending);
   cursor: pointer;
+}
+
+/* A parameter of a model, `{{name}}` (§7.14): drawn as what it is, a place a
+   value goes, and never as broken text. The braces stay, so what is copied is
+   what was typed. A wikilink to one leads nowhere yet, so it is not a link. */
+.markdown .parameter {
+  color: rgb(var(--ms-parameter));
+  background: rgba(var(--ms-parameter), 0.12);
+  border-radius: 4px;
+  padding: 0 0.2em;
+  font-weight: 500;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.markdown .wikilink-parameter {
+  font-weight: 600;
+  cursor: default;
+}
+/* Marked, it takes the mark's ink: the parameter's violet on the mark's yellow
+   holds no contrast in the dark. Its tint still says what it is. */
+.markdown mark .parameter {
+  color: inherit;
 }
 
 /* The choice a link to several notes opens. A dialog opened with showModal()
@@ -1817,6 +1843,16 @@
 .markdown .cm-ms-wikilink.cm-ms-pending {
   color: var(--ms-pending);
   border-bottom: 1px dashed var(--ms-pending);
+}
+.markdown .cm-ms-parameter,
+.markdown .cm-ms-wikilink.cm-ms-wikilink-parameter {
+  /* A link to a parameter leads nowhere yet: it takes the parameter's colour,
+     as on the page, and not a link's. */
+  color: rgb(var(--ms-parameter));
+}
+.markdown .cm-ms-parameter {
+  background: rgba(var(--ms-parameter), 0.12);
+  border-radius: 4px;
 }
 .markdown .cm-ms-bullet {
   display: inline-block;

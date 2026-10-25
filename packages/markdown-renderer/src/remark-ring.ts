@@ -41,21 +41,62 @@ function isText(node: MdastNode): boolean {
  *
  * It carries no meaning beyond emphasis: no edge, no attribute, no index
  * entry. The `==` never reaches the screen.
+ *
+ * A parameter (§7.14) is read as one character of the text around it, so
+ * `=={{client}}==` marks the parameter: `remarkParameters` ran first and cut
+ * the text node at it, and a run of text and parameters is marked as the one
+ * text it was written as.
  */
 const HIGHLIGHT = /==([^=]+)==/g;
+
+/** Where a parameter stands in the text of a run while it is marked. */
+const STAND_IN = '\uFFFC';
 
 export function remarkHighlight() {
   return (tree: MdastNode): void =>
     walk(tree, (parent) => {
-      parent.children = (parent.children ?? []).flatMap((child) => {
-        if (!isText(child) || !child.value?.includes('==')) return [child];
-        return split(child.value, HIGHLIGHT, (inner) => ({
-          type: 'emphasis',
-          data: { hName: 'mark' },
-          children: [{ type: 'text', value: inner }],
-        }));
+      const children: MdastNode[] = [];
+      let run: MdastNode[] = [];
+      const flush = (): void => {
+        children.push(...highlightRun(run));
+        run = [];
+      };
+      for (const child of parent.children ?? []) {
+        if (isText(child) || child.type === 'parameter') run.push(child);
+        else {
+          flush();
+          children.push(child);
+        }
+      }
+      flush();
+      parent.children = children;
+    });
+}
+
+/** A run of text and parameters, with its marked text made marks. */
+function highlightRun(run: MdastNode[]): MdastNode[] {
+  if (!run.some((node) => isText(node) && node.value?.includes('=='))) return run;
+  const parameters = run.filter((node) => node.type === 'parameter');
+  const text = run.map((node) => (node.type === 'parameter' ? STAND_IN : (node.value ?? ''))).join('');
+  // A stand-in the author typed would be taken for a parameter: such a run is marked node by node.
+  if ((text.match(new RegExp(STAND_IN, 'g')) ?? []).length !== parameters.length) {
+    return run.flatMap((node) => (isText(node) && node.value ? split(node.value, HIGHLIGHT, mark) : [node]));
+  }
+  let next = 0;
+  const restore = (nodes: MdastNode[]): MdastNode[] =>
+    nodes.flatMap((node) => {
+      if (node.children) return [{ ...node, children: restore(node.children) }];
+      if (!isText(node) || !node.value?.includes(STAND_IN)) return [node];
+      return node.value.split(STAND_IN).flatMap((part, index) => {
+        const parameter = index > 0 ? parameters[next++] : undefined;
+        return [...(parameter ? [parameter] : []), ...(part ? [{ type: 'text', value: part }] : [])];
       });
     });
+  return restore(split(text, HIGHLIGHT, mark));
+}
+
+function mark(inner: string): MdastNode {
+  return { type: 'emphasis', data: { hName: 'mark' }, children: [{ type: 'text', value: inner }] };
 }
 
 /**

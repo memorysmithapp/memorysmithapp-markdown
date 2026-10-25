@@ -41,6 +41,8 @@ export const PORTUGUESE: Partial<NoteStrings> = {
   footnoteBack: (number) => `Voltar à referência ${number}`,
   pendingLink: 'Link pendente: a nota alvo ainda não existe.',
   refusedLink: 'Este endereço não é dos que a superfície de leitura segue, então o texto fica e o link não.',
+  parameter: 'Parâmetro: preenchido quando um caderno é criado a partir deste modelo.',
+  parameterLink: 'Um link para um parâmetro: leva a uma nota quando um caderno é criado a partir deste modelo.',
   attachmentMissing: 'Este caderno não guarda nenhum arquivo com esse nome.',
   attachmentOpen: 'Abrir',
   attachmentDownload: 'Baixar',

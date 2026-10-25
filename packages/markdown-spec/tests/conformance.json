@@ -1611,6 +1611,157 @@
       "notices": [
         { "code": "embed-pending", "line": 12 }
       ]
+    },
+    {
+      "id": "parameter/a-reference-in-text",
+      "notation": "parameter-reference",
+      "markdown": "The board of {{condominium}} approved the budget of {{condominium}}.",
+      "parameters": ["condominium"],
+      "links": []
+    },
+    {
+      "id": "parameter/a-name-is-a-word-of-any-script",
+      "notation": "parameter-reference",
+      "markdown": "{{condomínio}} {{_draft}} {{block-2}} {{注意}}",
+      "parameters": ["condomínio", "_draft", "block-2", "注意"]
+    },
+    {
+      "id": "parameter/what-is-not-a-name-is-text",
+      "notation": "parameter-reference",
+      "markdown": "{{123}} {{-}} {{}} {{ some text }} {{a b}} {{name}",
+      "parameters": []
+    },
+    {
+      "id": "parameter/a-name-is-compared-after-nfc",
+      "notation": "parameter-reference",
+      "markdown": "{{condomínio}} and {{condomínio}}",
+      "parameters": ["condomínio"]
+    },
+    {
+      "id": "parameter/a-name-keeps-its-case",
+      "notation": "parameter-reference",
+      "markdown": "{{Client}} and {{client}}",
+      "parameters": ["Client", "client"]
+    },
+    {
+      "id": "parameter/the-shortest-match",
+      "notation": "parameter-reference",
+      "markdown": "{{{name}}} and {{a}}{{b}}",
+      "parameters": ["name", "a", "b"]
+    },
+    {
+      "id": "parameter/an-escaped-brace-is-text",
+      "notation": "parameter-reference",
+      "markdown": "\\{{name}} and {\\{other}} and {{open\\}}",
+      "parameters": []
+    },
+    {
+      "id": "parameter/an-escaped-backslash-escapes-nothing-after-it",
+      "notation": "parameter-reference",
+      "markdown": "\\\\{{name}}",
+      "parameters": ["name"]
+    },
+    {
+      "id": "parameter/not-in-code",
+      "notation": "parameter-reference",
+      "markdown": "`{{span}}`\n\n```\n{{fenced}}\n```\n\n    {{indented}}\n",
+      "parameters": []
+    },
+    {
+      "id": "parameter/not-in-a-diagram",
+      "notation": "parameter-reference",
+      "markdown": "```mermaid\ngraph TD\n  A{{hexagon}} --> B\n```\n",
+      "parameters": []
+    },
+    {
+      "id": "parameter/not-in-math",
+      "notation": "parameter-reference",
+      "markdown": "The area is $x{{p}}$ here.\n\n$$\n{{q}}\n$$\n",
+      "parameters": []
+    },
+    {
+      "id": "parameter/not-in-a-destination-or-an-autolink",
+      "notation": "parameter-reference",
+      "markdown": "[site]({{url}}) ![alt]({{image}}) <https://example.org/{{a}}> https://example.org/{{b}} [ref]\n\n[ref]: {{dest}}\n",
+      "parameters": []
+    },
+    {
+      "id": "parameter/not-in-raw-html",
+      "notation": "parameter-reference",
+      "markdown": "<div>\n{{block}}\n</div>\n",
+      "parameters": []
+    },
+    {
+      "id": "parameter/in-every-place-text-is",
+      "notation": "parameter-reference",
+      "markdown": "# Assembly of {{condominium}}\n\n> [!note] {{manager}}\n> Signed by {{secretary}}.\n\n| Block |\n|---|\n| {{block}} |\n\n- *{{a}}* **{{b}}** =={{c}}== [the text {{d}}](https://example.org)\n",
+      "parameters": ["condominium", "manager", "secretary", "block", "a", "b", "c", "d"],
+      "links": []
+    },
+    {
+      "id": "parameter/a-wikilink-to-a-parameter-is-no-edge",
+      "notation": "parameter-reference",
+      "markdown": "Chaired by [[{{manager}}]], and ![[{{minutes}}]] below.",
+      "parameters": ["manager", "minutes"],
+      "links": []
+    },
+    {
+      "id": "parameter/an-alias-or-an-anchor-keeps-the-edge",
+      "notation": "parameter-reference",
+      "markdown": "See [[Lei 14.133|the act of {{city}}]] and [[Lei 8.666#{{section}}]].",
+      "parameters": ["city", "section"],
+      "links": [
+        {
+          "name": "Lei 14.133",
+          "anchor": null
+        },
+        {
+          "name": "Lei 8.666",
+          "anchor": "{{section}}"
+        }
+      ]
+    },
+    {
+      "id": "parameter/a-wikilink-to-a-parameter-is-not-pending",
+      "notation": "parameter-reference",
+      "markdown": "Chaired by [[{{manager}}]] and seconded by [[Treasurer]].",
+      "parameters": ["manager"],
+      "links": [
+        {
+          "name": "Treasurer",
+          "anchor": null
+        }
+      ],
+      "notebook": {
+        "notes": ["---\nname: Secretary\n---\nThe secretary.\n"]
+      },
+      "resolution": [
+        {
+          "target": "Treasurer",
+          "kind": "pending",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "parameter/a-value-that-writes-one-is-not-indexed",
+      "notation": "parameter-reference",
+      "markdown": "---\nname: \"Assembly of {{condominium}}\"\nmanager: \"{{manager}}\"\ndue: \"{{date}}\"\nblocks: [\"{{block}}\", B]\nstatus: draft\n---\nBody.\n",
+      "name": "Assembly of {{condominium}}",
+      "parameters": ["condominium", "manager", "date", "block"],
+      "facets": {
+        "status": {
+          "kind": "enum",
+          "values": ["draft"]
+        }
+      }
+    },
+    {
+      "id": "parameter/an-unquoted-value-reads-as-the-quoted-one",
+      "notation": "parameter-reference",
+      "markdown": "---\nmanager: {{manager}}\n---\nBody.\n",
+      "parameters": ["manager"],
+      "facets": {}
     }
   ]
 }

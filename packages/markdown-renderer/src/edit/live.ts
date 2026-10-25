@@ -655,6 +655,19 @@ function build(state: EditorState): DecorationSet {
         break;
       }
       case 'wikilink': {
+        // A target that writes a parameter leads nowhere until a notebook is created from the model
+        // (§7.14): its label is drawn, and there is nothing to follow.
+        if (construct.parameter) {
+          out.push(mark('cm-ms-wikilink cm-ms-wikilink-parameter', { title: host.strings.parameterLink }).range(construct.label.from, construct.label.to));
+          if (touches(from, to)) {
+            out.push(syntax.range(from, construct.label.from));
+            out.push(syntax.range(construct.label.to, to));
+          } else {
+            out.push(hide.range(from, construct.label.from));
+            out.push(hide.range(construct.label.to, to));
+          }
+          break;
+        }
         const pending = host.reaches(construct.target) === 0 && !host.keeps(construct.target);
         if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
           const source = text.slice(from, to);
@@ -737,6 +750,10 @@ function build(state: EditorState): DecorationSet {
         break;
       case 'blockId':
         out.push(mark('cm-ms-block-id').range(from, to));
+        break;
+      case 'parameter':
+        // A decoration over the characters, which stay text the author edits (§7.14).
+        out.push(mark('cm-ms-parameter', { title: host.strings.parameter, 'data-parameter': construct.name }).range(from, to));
         break;
       case 'html':
       case 'definition':

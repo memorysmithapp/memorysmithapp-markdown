@@ -23,6 +23,10 @@ export interface NoteStrings {
   readonly pendingLink: string;
   /** The title of an address the surface does not follow. */
   readonly refusedLink: string;
+  /** The title of a parameter reference, `{{name}}`, which a notebook created from the model fills in (§7.14). */
+  readonly parameter: string;
+  /** The title of a wikilink whose target writes a parameter, which leads nowhere until then. */
+  readonly parameterLink: string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -249,6 +253,8 @@ export const ENGLISH: NoteStrings = {
   footnoteBack: (number) => `Back to reference ${number}`,
   pendingLink: 'Pending link: the target note does not exist yet.',
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
+  parameter: 'Parameter: filled in when a notebook is created from this model.',
+  parameterLink: 'A link to a parameter: it leads to a note once a notebook is created from this model.',
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',

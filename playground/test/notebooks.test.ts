@@ -75,13 +75,23 @@ const RECOGNISED_NOTATION = spec.notations;
 const DECLARED_SILENCE = [{ id: 'inline-tag' }, { id: 'sub-sup' }] as const;
 
 /**
+ * The notation only a model writes, which no notebook created from one holds: a parameter
+ * reference is replaced by its value when the notebook is created (§7.14), so these notebooks,
+ * which are notebooks and not models, would teach a wrong thing by showing one. The second
+ * direction still holds for it: neither notebook writes a reference.
+ */
+const ONLY_IN_A_MODEL: ReadonlySet<string> = new Set(['parameter-reference']);
+
+/**
  * What the notebooks owe: everything the specification adds to what a base parser
  * already does. The reason is in the preamble.
  *
  * The second assertion below is what keeps that list from quietly absorbing a
  * notation added in a later version.
  */
-const DEMANDED = RECOGNISED_NOTATION.filter((entry) => !DELEGATED_TO_THE_BASE_PARSER.has(entry.id));
+const DEMANDED = RECOGNISED_NOTATION.filter(
+  (entry) => !DELEGATED_TO_THE_BASE_PARSER.has(entry.id) && !ONLY_IN_A_MODEL.has(entry.id),
+);
 
 const NOTEBOOKS = resolve(fileURLToPath(import.meta.url), '..', '..', '..', 'notebooks');
 
@@ -320,6 +330,11 @@ describe.each(DEMONSTRATION)('%s demonstrates the whole declared notation', (slu
   it.each(Object.entries(UNDECLARED))('demonstrates no %s', (_name, pattern) => {
     const offending = notes.filter((note) => pattern.test(note.body));
     expect(offending.map((note) => note.path)).toEqual([]);
+  });
+
+  it('writes no parameter reference, which only a model holds', () => {
+    const reference = /(?<!\\)\{\{[\p{L}_][\p{L}\p{M}\p{N}_-]*\}\}/u;
+    expect(notes.filter((note) => reference.test(outsideCode(note.raw))).map((note) => note.path)).toEqual([]);
   });
 
   it('carries its own guidance and a template in every folder', () => {

@@ -51,7 +51,7 @@ Nothing here is invented. Every form this specification declares was taken from 
 |---|---|---|
 | [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) | Blocks and inlines | §3 |
 | [GFM 0.29-gfm](https://github.github.com/gfm/) | Tables, task list items, strikethrough, extended autolinks, disallowed raw HTML | §4 |
-| [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes | §5, §7 |
+| [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template | §5, §7 |
 
 Obsidian is a source and not an authority. It publishes documentation rather than a versioned specification, so it carries no version above, and where it and this document differ **this document governs** — the opposite of the precedence CommonMark and GFM hold in §2.1. This specification is not *Obsidian compatible* and does not undertake to follow it; Obsidian is where a form was established and where its established meaning can be checked.
 
@@ -99,7 +99,7 @@ A paragraph is also the unit a block identifier names: `^article-75` at the end 
 A backslash before any ASCII punctuation character makes that character literal.
 
 ```markdown
-To name the forms without invoking them: \[\[wikilink\]\], \=\=marked\=\=, \%\%comment\%\%, \$formula\$.
+To name the forms without invoking them: \[\[wikilink\]\], \=\=marked\=\=, \%\%comment\%\%, \$formula\$, \{{parameter}}.
 ```
 
 A backslash before anything else is a literal backslash. Escapes have no effect inside code spans, code blocks, autolinks or raw HTML — there is nothing to escape from.
@@ -112,7 +112,7 @@ A backslash also stops a line from becoming something it was not meant to be. Th
 1\. Not a list item, just a sentence that starts with a number.
 ```
 
-**A Writer escapes more here than in plain CommonMark**, because this specification gives meaning to characters CommonMark leaves alone: `[[`, `![[`, `==`, `%%`, `$` and a trailing `^`. The last of those is the only one whose meaning depends on **position** rather than on the characters themselves (§7.7). Whatever is meant literally SHOULD be escaped or put in a code span. A notation invoked by accident is the failure this specification exists to prevent, and it is as easy to commit while writing prose as while writing a link.
+**A Writer escapes more here than in plain CommonMark**, because this specification gives meaning to characters CommonMark leaves alone: `[[`, `![[`, `==`, `%%`, `$`, `{{` and a trailing `^`. The last of those is the only one whose meaning depends on **position** rather than on the characters themselves (§7.7). Whatever is meant literally SHOULD be escaped or put in a code span. A notation invoked by accident is the failure this specification exists to prevent, and it is as easy to commit while writing prose as while writing a link.
 
 ### 3.3 Headings
 
@@ -448,6 +448,8 @@ An Indexer MUST resolve every form above by the following rule, and by no other:
 9. A target that matches no name and no alias is a pending link (§5.5).
 10. The anchor MUST be preserved for display — percent-decoded in the Markdown form, literal in the wikilink — and MUST NOT take part in resolution. Two links to two sections of the same note are two links to the same note.
 
+**A target that writes a parameter reference is not resolved at all.** When what step 2 leaves as the target of a wikilink or an embed carries a reference (§7.14), it names a note only once the model it was written in is filled in: steps 3 to 10 do not apply, it MUST NOT become an edge and it MUST NOT be reported as pending. A reference in the anchor or the alias resolves as any other anchor or alias does, by not taking part.
+
 **The order of step 7 before step 8 is normative**, and it is the whole of what keeps the frontmatter out of the graph: a name always wins, an alias only fills the empty. §6.4 states the consequence an author sees.
 
 **The order of steps 2 to 5 is normative, not incidental.** Decoding earlier would undo the escaping it exists for: `C%23%20basics` would become `C# basics` and then split at a `#` the author encoded precisely so it would not be read as a delimiter, and `and%2For` would become `and/or` and lose its first half to the path rule. Delimiters first, decode after, compare last.
@@ -479,6 +481,8 @@ The rule is the same one step down: a target that no name matched and that two n
 ### 5.5 A target that does not exist
 
 A link whose target matches no name and no alias is **not an error and MUST NOT be discarded**. It is a *pending link*: it is kept, it is reported as pending, and it resolves on its own if a note carrying that name, or that alias, is later written. Discarding it would make the graph lie precisely while a notebook is being written, which is when it is consulted most.
+
+A wikilink whose target writes a parameter reference is not a pending link: it is not resolved, so it is not a miss (§5.2, §7.14).
 
 ### 5.6 Code
 
@@ -561,6 +565,7 @@ Scalars, inline lists and dash lists. One layer of matching quotes around a valu
 | A list whose every value is at most 40 characters | `list` | Yes, each value on its own |
 | A list written with one single item | `list` | Yes. The kind comes from the **form that was written**, never from how many items it happens to hold: an attribute MUST NOT change kind on the day a second value is added to it |
 | Anything longer than 40 characters | — | **No.** Above that a value is prose, not a category |
+| A value that writes a parameter reference, or a list one of whose values does (§7.14) | — | **No.** It is a value nobody has given yet |
 | An empty value | — | No |
 
 That is what lets the vocabulary belong to the notebook: a notebook that starts writing `norma: federal` gets `norma:federal` as a filter the same day, with no configuration anywhere.
@@ -690,11 +695,13 @@ A Reader SHOULD impose a ceiling on how many embeds one page expands, and MUST r
 
 A **table cell** is the third place expansion cannot happen: a cell holds inlines and never blocks (§4.1), so an embed of a note in a cell is drawn as a link too. The rule everywhere is the same — where an embed cannot expand it becomes a link, and it is never dropped.
 
+An embed whose target writes a parameter reference names nothing yet, and expands nothing: it is drawn as the parameter it holds (§7.14).
+
 An embed MUST NOT be expanded anywhere but on the reading surface. What an interface renders is display; what a tool returns is the note. A reader of the raw note gets the `![[...]]` that was written.
 
 ### 7.4 Wikilinks
 
-A Reader MUST render a wikilink as a navigation to the resolved note, using the alias as the visible text when one is present. A wikilink whose target does not exist yet MUST be visibly distinguished from a resolved one, and MUST NOT be rendered as a broken link or hidden.
+A Reader MUST render a wikilink as a navigation to the resolved note, using the alias as the visible text when one is present. A wikilink whose target does not exist yet MUST be visibly distinguished from a resolved one, and MUST NOT be rendered as a broken link or hidden. A wikilink whose target writes a parameter reference is neither: it MUST be drawn as the parameter it holds, and not as a navigation (§7.14).
 
 ### 7.5 Marked text
 
@@ -853,6 +860,38 @@ The two pending codes need the notebook: an implementation reports them only whe
 
 The table is data too: `spec.json` carries it as `notices`, and the conformance suite says which notices each of its inputs raises (§10).
 
+### 7.14 Parameter references
+
+```markdown
+---
+name: "Assembly of {{condominium}}"
+manager: "{{manager}}"
+---
+# Assembly of {{condominium}}
+
+Chaired by [[{{manager}}]]. The notation itself is written \{{condominium}}.
+```
+
+A **parameter reference** marks where a value goes in a note of a **model**: a notebook written to be copied, whose notes are filled in when a notebook is created from it. It is `{{`, a name and `}}`, and nothing else. No type, requirement, default, expression or condition is written inside it: what a parameter is — its type, whether it is required, its default, its description — is declared by the model, outside its notes, and filling a reference in is the work of the implementation that creates the notebook, which this document does not specify (§1.2). What it specifies is the notation, and what a Reader and an Indexer do with a reference nobody has filled in yet. The double braces are the variables of the templates Obsidian writes notes from (§2), with a name of the author's choosing instead of a fixed few.
+
+**The name** opens with a letter or `_` and goes on in letters, combining marks, digits, `_` and `-`, the same word a callout's type is (§7.1): `{{condomínio}}`, `{{_draft}}`, `{{block-2}}` and `{{注意}}` are references, and `{{123}}`, `{{-}}`, `{{}}` and `{{ some text }}` are not. Two spellings of a name are one parameter once both are normalised to NFC, as `Ação` is one note (§5.3); nothing else is folded, so `{{Client}}` and `{{client}}` are two parameters, and the model that declares one of them is what catches the other. The same parameter may be written any number of times, anywhere a reference is read.
+
+**A reference is exactly `{{`, a name and `}}`, the shortest match**, and anything that does not close as one is text, never an error: `{{{name}}}` is a `{`, a reference and a `}`; `{{a}}{{b}}` is two references; `{{name}` and `{{}}` are text. A reference needs two unescaped `{`, so `\{{name}}` and `{\{name}}` are the characters `{{name}}` (§3.2), and `{{name\}}` never closes, so the run is text. A Writer escapes as `\{{` every `{{` it means literally.
+
+**Where a reference is read.** In text — a paragraph, a heading, a list item, a table cell, a callout's title and body, the text of a link, marked text, a footnote —, in the target and the alias of a wikilink (§5), and in a value of the frontmatter (§6). **Not** inside a code span or a code block, a `mermaid` diagram included, where `A{{text}}` draws a hexagon; not inside mathematics; not in the destination of a link or an image, in an autolink, in a link reference definition or in raw HTML, whether a block or a tag. Each of those is resolved before the text around it (§3.10), and what is inside it is not parsed as text: a reference there is its characters. A parameter in an address would need a rule for encoding the value it is filled in with, and this document declares none.
+
+- **A heading** written with a reference, `## {{client}}`, is a heading like any other: its anchor is derived from its text as written, and an anchor that names it, `[[Note#{{client}}]]`, is display that never takes part in resolution (§5.2). Filled in, the heading and the anchor receive the same value and match.
+- **A wikilink whose target writes a reference names no note yet.** It is not resolved (§5.2): it produces **no edge and is not a pending link**, so a model does not report as missing every note it will only name once filled in. A Reader draws it as the parameter it holds, not as a navigation, and `![[{{target}}]]` transcludes nothing. A reference in the alias or the anchor changes nothing: `[[Note|{{c}}]]` and `[[Note#{{s}}]]` are the edge to `Note`, with a reference in what they display.
+- **A value of the frontmatter.** A Writer MUST quote a reference that is a whole value, `key: "{{name}}"`, so the frontmatter of a model stays YAML. The subset of §6.2 has no flow mappings, so an unquoted `key: {{name}}` cannot mean one, and a Reader and an Indexer read it as the quoted form. **An attribute any of whose values writes a reference is not indexed** (§6.3): `"{{date}}"` is not an invalid date and not a category of one, it is a value nobody has given yet. `name:` is the exception it always is (§6.5): a `name:` that writes a reference is still the name of the note, its characters as written.
+
+**A Reader MUST draw a reference nobody has filled in as a parameter**: visibly distinguished from the text around it, and never as broken or missing text. It SHOULD keep its characters as written, braces included, so what a reader copies is what the note holds. A Reader has no value to fill a reference in with, and fills none.
+
+**A reference is display, and the bytes are untouched.** It produces no edge, no attribute and no index entry. An editor that draws one draws it over characters the author edits, never as a block that is selected whole, and writing `{{name}}` writes a reference.
+
+A note that already writes `{{` for another purpose — a template of another editor, a sample of a template language — is drawn with a parameter in it. The answer is §3.2's: escape it, or put it in a code span, where documentation of code usually has it already.
+
+A notebook created from a model holds no reference: each one is replaced by its value, and its links, attributes and headings are then ordinary ones. How that is done, and how each type of value is written, belongs to the implementation that creates it.
+
 ## 8. Notation not described here
 
 §3 to §7 are the whole of the notation this specification accepts. **Anything not described
@@ -891,6 +930,8 @@ It exists so that a specification and an implementation cannot drift apart in pr
 ## 10. The conformance suite
 
 [`tests/conformance.json`](tests/conformance.json) is the executable half of this document: each case is a Markdown input and the links and attributes a conforming Indexer produces from it. A case that exercises a rule about the rest of the notebook — §5.4, §5.5 and §5.8, where what a target becomes depends on what else exists — carries the notes and attachments it needs alongside the input. A case whose expectation is *nothing* — a link inside a code fence, an external destination — is as normative as any other.
+
+A case MAY also carry the parameters its input references (§7.14): the names a Reader draws as parameters, and an implementation that creates a notebook from a model fills in, compared after NFC.
 
 A case MAY also carry the notices its input raises (§7.13), and an implementation that reports notices SHOULD produce exactly those. An implementation claiming the Indexer role SHOULD run the suite in its own continuous integration. See [`tests/README.md`](tests/README.md) for the format.
 
@@ -966,6 +1007,7 @@ Every form this document declares, in one table. The last column is the section 
 | Block identifier | `^article-75` | Names a block; not rendered | 7.7 |
 | Block embed | `![[note#^id]]` | The same edge as a plain wikilink | 7.7 |
 | Math | `$x$`, `$$x$$` | Drawn as mathematics, or shown as source | 7.8 |
+| Parameter reference | `{{name}}` | Drawn as a parameter until a notebook is created from the model; a wikilink to one is no edge and not pending; a value writing one is not indexed | 7.14, 5.2, 6.3 |
 | External link | `[text](https://…)` | Renders as a link; never an edge | 5.2 |
 | Prose in frontmatter | over 40 characters | Read and discarded | 6.3 |
 | `name:` | in the frontmatter | The name of the note, and the only thing that names it; never an attribute | 5.3, 6.5 |

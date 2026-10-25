@@ -17,6 +17,7 @@
  * a link and is never dropped, which is what `demoteEmbeds` does.
  */
 
+import { hasParameterReference } from './parameters.js';
 import { codeRegions, fenceRegions, headingKey, insideCode, insideTable, outsideCode, tableRegions } from './source.js';
 
 /** Same shape the link extractor matches, plus the leading `!`. */
@@ -57,6 +58,9 @@ export function splitEmbeds(
     const at = match.index ?? 0;
     const target = (match[1] ?? '').trim();
     if (!target) continue;
+    // A target that writes a parameter names nothing to transclude (§7.14): it stays in the run,
+    // demoted to the wikilink the parameter is drawn as.
+    if (hasParameterReference(target)) continue;
     // A file is not a note, so there is nothing to transclude: it is left in
     // the text run, where the wikilink pass turns it into the attachment the
     // page draws by its type.

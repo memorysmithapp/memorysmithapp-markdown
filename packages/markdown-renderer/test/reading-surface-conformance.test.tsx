@@ -190,6 +190,19 @@ const EXPECTED: Record<string, (html: string) => void> = {
     expect(html).toContain('katex');
     expect(html).not.toContain('$$');
   },
+  'parameter-reference': (html) => {
+    // Drawn as a parameter, braces and all, in the name, a value, a heading and a wikilink's
+    // target, which leads nowhere and is not pending; the escaped one is its characters.
+    expect([...html.matchAll(/class="parameter" data-parameter="([^"]+)"/g)].map((match) => match[1])).toEqual([
+      'condominium',
+      'manager',
+      'condominium',
+      'manager',
+    ]);
+    expect(html).toContain('<span class="wikilink-parameter"');
+    expect(html).not.toContain('wikilink-pending');
+    expect(html).toContain('written {{condominium}}.');
+  },
 };
 
 const surface = spec.notations.filter(
@@ -220,6 +233,23 @@ describe('the reading surface implements the specification', () => {
 
   it('runs against a surface that exists, so an empty import cannot pass', () => {
     expect(surface.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The parameter cases of the suite, drawn: the names the page draws as parameters, frontmatter
+ * included, are the names the case lists (§7.14), compared as a set after NFC.
+ */
+describe('every parameter case of the conformance suite draws the parameters it lists', () => {
+  const parameterCases = cases.filter((testCase) => testCase.parameters !== undefined);
+
+  it('has parameter cases to draw', () => {
+    expect(parameterCases.length).toBeGreaterThan(0);
+  });
+
+  it.each(parameterCases.map((testCase) => [testCase.id, testCase.markdown, testCase.parameters ?? []] as const))('%s', (_id, markdown, parameters) => {
+    const drawn = [...render(markdown).matchAll(/class="parameter" data-parameter="([^"]+)"/g)].map((match) => match[1]!.normalize('NFC'));
+    expect([...new Set(drawn)].sort()).toEqual([...parameters].map((name) => name.normalize('NFC')).sort());
   });
 });
 

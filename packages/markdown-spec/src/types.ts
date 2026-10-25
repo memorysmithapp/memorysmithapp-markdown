@@ -122,6 +122,11 @@ interface CaseBase {
    * nothing; `[]` asserts there are none.
    */
   readonly notices?: readonly ConformanceNotice[];
+  /**
+   * The parameters the input references (`SPEC.md` §7.14), frontmatter included: each name once,
+   * in NFC, in any order. Absent asserts nothing; `[]` asserts there are none.
+   */
+  readonly parameters?: readonly string[];
 }
 
 /**
