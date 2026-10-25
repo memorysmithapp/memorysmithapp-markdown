@@ -125,7 +125,7 @@ describe('a wikilink', () => {
 
   it('whose embed writes a parameter transcludes nothing, and is drawn as the parameter', () => {
     const asked: string[] = [];
-    const out = html('![[{{client}}]]', { resolve, loadNote: (name) => (asked.push(name), null) });
+    const out = html('![[{{client}}]]', { resolve, loadNote: async (name) => (asked.push(name), null) });
     expect(asked).toEqual([]);
     expect(out).toContain('<span class="wikilink-parameter"');
     expect(drawn(out)).toEqual(['client']);
