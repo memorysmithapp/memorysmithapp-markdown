@@ -1,6 +1,6 @@
 {
   "name": "@memorysmithapp/markdown-spec",
-  "version": "0.8.5",
+  "version": "0.9.0",
   "description": "The MemorySmith Markdown Specification: the notation MemorySmith notebooks are written in, as a document, as data and as a conformance suite.",
   "keywords": [
     "markdown",

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-25
+
 ### Added
 
 - The specification declares the parameter reference, `{{name}}`, which marks where a value goes in a note of a model and is filled in when a notebook is created from it (#134, `SPEC.md` §7.14). The name opens with a letter or `_` and goes on in letters, combining marks, digits, `_` and `-`, compared after NFC; a reference is the shortest match, needs two unescaped `{`, and a run that does not close as one is text. It is read in text, headings, callout titles, a wikilink's target and alias and the frontmatter's values, and never in code, a `mermaid` diagram, math, a destination, an autolink or raw HTML. A wikilink whose target writes one is no edge and not pending (§5.2), an embed of one transcludes nothing, and an attribute a value of which writes one is not indexed (§6.3); a Writer quotes a reference that is a whole value. `spec.json` carries it as `parameter-reference`, and nineteen conformance cases cover the names, the escapes, the contexts it is not read in, wikilinks and the frontmatter, under a new field, `parameters`, which the checker and the types know.
@@ -252,7 +254,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.2...v0.8.3
