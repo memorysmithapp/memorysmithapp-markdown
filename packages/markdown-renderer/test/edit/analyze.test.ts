@@ -93,3 +93,40 @@ describe('analyze', () => {
     expect(of(text, 'html').map((each) => slice(text, each))).toEqual(['<div>x</div>']);
   });
 });
+
+describe('a parameter reference (§7.14)', () => {
+  it('is found in text, as the range of its characters', () => {
+    const text = '# Ata {{condomínio}}\n\nO síndico {{síndico}} e [[Nota|{{c}}]] e =={{m}}==.\n';
+    expect(of(text, 'parameter').map((each) => [slice(text, each), each.kind === 'parameter' && each.name])).toEqual([
+      ['{{condomínio}}', 'condomínio'],
+      ['{{síndico}}', 'síndico'],
+      ['{{c}}', 'c'],
+      ['{{m}}', 'm'],
+    ]);
+  });
+
+  it('is not found escaped, in code, in math, in a destination, in an autolink, in a comment or in the frontmatter', () => {
+    const text = [
+      '---',
+      'key: "{{front}}"',
+      '---',
+      '\\{{a}} {\\{b}} `{{c}}` $x{{d}}$ [l]({{e}}) <https://x.org/{{f}}> %%{{g}}%%',
+      '',
+      '```mermaid',
+      'graph TD',
+      '  A{{h}}',
+      '```',
+    ].join('\n');
+    expect(of(text, 'parameter')).toEqual([]);
+  });
+
+  it('makes a wikilink whose target writes one a parameter link, and an embed of one no embed', () => {
+    const text = '[[{{client}}]]\n\n![[{{client}}]]\n\n[[Nota#{{s}}]]\n';
+    expect(of(text, 'wikilink').map((each) => each.kind === 'wikilink' && [each.target, each.parameter])).toEqual([
+      ['{{client}}', true],
+      ['{{client}}', true],
+      ['Nota', false],
+    ]);
+    expect(of(text, 'embed')).toEqual([]);
+  });
+});

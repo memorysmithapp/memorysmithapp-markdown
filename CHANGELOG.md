@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The specification declares the parameter reference, `{{name}}`, which marks where a value goes in a note of a model and is filled in when a notebook is created from it (#134, `SPEC.md` §7.14). The name opens with a letter or `_` and goes on in letters, combining marks, digits, `_` and `-`, compared after NFC; a reference is the shortest match, needs two unescaped `{`, and a run that does not close as one is text. It is read in text, headings, callout titles, a wikilink's target and alias and the frontmatter's values, and never in code, a `mermaid` diagram, math, a destination, an autolink or raw HTML. A wikilink whose target writes one is no edge and not pending (§5.2), an embed of one transcludes nothing, and an attribute a value of which writes one is not indexed (§6.3); a Writer quotes a reference that is a whole value. `spec.json` carries it as `parameter-reference`, and nineteen conformance cases cover the names, the escapes, the contexts it is not read in, wikilinks and the frontmatter, under a new field, `parameters`, which the checker and the types know.
+- The renderer draws a reference nobody filled in as a parameter, braces and all, in the reader's words (`strings.parameter`) and in a colour a theme sets with `--markdown-parameter` (#134): in the body, in a property's value and in the note's name. A wikilink to one is drawn as the parameter and leads nowhere (`strings.parameterLink`), an embed of one expands nothing, and `diagnose` reports neither as pending. In edit mode a reference is a decoration over characters the author edits. Code, diagrams and math are left as they were.
+
+### Changed
+
+- A note that already writes `{{name}}` for another purpose — a template written for another editor — now shows it drawn as a parameter, since the renderer cannot tell a model from a notebook (#134). Its bytes are unchanged; escaping the first brace, `\{{name}}`, or a code span keeps it text.
+
 ## [0.8.5] - 2026-10-19
 
 ### Fixed

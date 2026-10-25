@@ -19,6 +19,7 @@ import { unified, type Processor } from 'unified';
 import { codeRegions, commentRegions, insideCode } from '../source.js';
 import { CALLOUT_MARKER } from '../remark-callouts.js';
 import { breaksDollarRule } from '../remark-ring.js';
+import { hasParameterReference, parameterReferences } from '../parameters.js';
 
 /** A range of the text: `from` included, `to` excluded. */
 export interface Span {
@@ -56,7 +57,10 @@ export type Construct =
       /** What the page shows: the alias, or the target. */
       readonly label: Span;
       readonly embed: boolean;
+      /** Its target writes a parameter (§7.14): it leads nowhere until a notebook is created from the model. */
+      readonly parameter: boolean;
     }
+  | { readonly kind: 'parameter'; readonly from: number; readonly to: number; readonly name: string }
   | { readonly kind: 'image'; readonly from: number; readonly to: number }
   | { readonly kind: 'inlineMath'; readonly from: number; readonly to: number; readonly tex: string }
   | { readonly kind: 'mathBlock'; readonly from: number; readonly to: number; readonly tex: string }
@@ -182,7 +186,8 @@ export function analyze(text: string): Analysis {
         : { from: head, to: head + target.length };
     wikilinks.push({ from, to });
     // In a table cell the pipe before an alias is escaped, and the backslash is not part of the target.
-    found.push({ kind: 'wikilink', from, to, target: target.split('#')[0]!.replace(/\\$/, '').trim(), label, embed });
+    const name = target.split('#')[0]!.replace(/\\$/, '').trim();
+    found.push({ kind: 'wikilink', from, to, target: name, label, embed, parameter: hasParameterReference(name) });
   }
   const inWikilink = (span: Span): boolean => wikilinks.some((link) => span.from < link.to && span.to > link.from);
 
@@ -191,6 +196,15 @@ export function analyze(text: string): Analysis {
     const children = node.children ?? [];
     if (span && !inComment(span.from)) {
       switch (node.type) {
+        case 'text': {
+          // A parameter is written in text, and only there (§7.14): code, math, raw HTML and a
+          // destination are not text nodes, and an autolink's text is its address.
+          for (const reference of parameterReferences(text.slice(span.from, span.to))) {
+            const from = span.from + reference.from;
+            if (!inComment(from)) found.push({ kind: 'parameter', from, to: span.from + reference.to, name: reference.name });
+          }
+          break;
+        }
         case 'heading': {
           const line = text.slice(span.from, span.to);
           const marker = /^#{1,6}(?:[ \t]+|$)/.exec(line);
@@ -233,8 +247,13 @@ export function analyze(text: string): Analysis {
           break;
         }
         case 'link': {
-          if (inWikilink(span)) break;
           const raw = text.slice(span.from, span.to);
+          // An autolink is its address, which writes no parameter.
+          if (!raw.startsWith('[')) {
+            if (!inWikilink(span)) found.push({ kind: 'link', ...span, label: null, url: node.url ?? '' });
+            return;
+          }
+          if (inWikilink(span)) break;
           const first = children[0] && offsets(children[0]);
           const last = children[children.length - 1] && offsets(children[children.length - 1]!);
           const label = raw.startsWith('[') && first && last ? { from: first.from, to: last.to } : null;
@@ -319,7 +338,8 @@ export function analyze(text: string): Analysis {
         case 'paragraph': {
           const raw = text.slice(span.from, span.to);
           const embed = EMBED_LINE.exec(raw.trim());
-          if (embed && !raw.includes('\n') && !inCallout && span.from === text.lastIndexOf('\n', span.from - 1) + 1) {
+          // An embed of a parameter transcludes nothing (§7.14): it is drawn as a wikilink is.
+          if (embed && !hasParameterReference(embed[1]!) && !raw.includes('\n') && !inCallout && span.from === text.lastIndexOf('\n', span.from - 1) + 1) {
             found.push({ kind: 'embed', ...span, target: embed[1]!.trim(), anchor: embed[2]?.trim() ?? null });
             return;
           }

@@ -75,6 +75,7 @@
     "@codemirror/view": "6.43.13",
     "hast-util-to-jsx-runtime": "2.3.6",
     "mermaid": "11.17.0",
+    "micromark-util-decode-string": "2.0.1",
     "react-markdown": "9.1.0",
     "refractor": "5.0.0",
     "rehype-katex": "7.0.1",

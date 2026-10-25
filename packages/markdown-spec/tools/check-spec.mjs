@@ -162,6 +162,9 @@ for (const entry of notations) {
 
 const KINDS = new Set(['note', 'attachment', 'pending']);
 
+/** The name of a parameter (§7.14): a letter or `_`, then letters, marks, digits, `_` and `-`. */
+const PARAMETER_NAME = /^[\p{L}_][\p{L}\p{M}\p{N}_-]*$/u;
+
 const seenCases = new Set();
 for (const testCase of cases) {
   if (seenCases.has(testCase.id))
@@ -184,12 +187,32 @@ for (const testCase of cases) {
     !('facets' in testCase) &&
     !('name' in testCase) &&
     !('resolution' in testCase) &&
-    !('notices' in testCase)
+    !('notices' in testCase) &&
+    !('parameters' in testCase)
   ) {
     fail(
       'tests/conformance.json',
-      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, nor notices, so it asserts nothing`,
+      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, nor notices, nor parameters, so it asserts nothing`,
     );
+  }
+
+  // A parameter is a name (§7.14), written as a reader compares it: in NFC, and once.
+  if ('parameters' in testCase) {
+    const parameters = testCase.parameters;
+    if (!Array.isArray(parameters) || parameters.some((name) => typeof name !== 'string')) {
+      fail('tests/conformance.json', `the case "${testCase.id}" has "parameters" that is not a list of names`);
+    } else {
+      for (const name of parameters) {
+        if (!PARAMETER_NAME.test(name)) {
+          fail('tests/conformance.json', `the case "${testCase.id}" lists the parameter "${name}", which is not a name`);
+        } else if (name !== name.normalize('NFC')) {
+          fail('tests/conformance.json', `the case "${testCase.id}" lists the parameter "${name}" in a form other than NFC`);
+        }
+      }
+      if (new Set(parameters).size !== parameters.length) {
+        fail('tests/conformance.json', `the case "${testCase.id}" lists a parameter twice`);
+      }
+    }
   }
 
   for (const notice of testCase.notices ?? []) {

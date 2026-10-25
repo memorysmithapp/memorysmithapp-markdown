@@ -43,6 +43,9 @@ export interface ThemeProperties {
   readonly textSoft?: string;
   readonly accent?: string;
   readonly pending?: string;
+  // A parameter of a model, `{{name}}`, as an RGB triplet (`109, 40, 217`): its text, and its tint at
+  // an alpha of its own (§7.14).
+  readonly parameter?: string;
   // Code.
   readonly codeBg?: string;
   readonly codeColor?: string;
@@ -146,7 +149,7 @@ export interface ThemeProperties {
 
 /** The names of `ThemeProperties`, in the order the documentation lists them. */
 export const THEME_PROPERTIES = Object.keys({
-  bg: 1, surface: 1, border: 1, text: 1, textSoft: 1, accent: 1, pending: 1,
+  bg: 1, surface: 1, border: 1, text: 1, textSoft: 1, accent: 1, pending: 1, parameter: 1,
   codeBg: 1, codeColor: 1, codeBorder: 1, inlineCodeBg: 1, inlineCodePadding: 1,
   tokenKeyword: 1, tokenString: 1, tokenNumber: 1, tokenComment: 1, tokenPunctuation: 1,
   calloutInfo: 1, calloutIdea: 1, calloutDone: 1, calloutWarn: 1, calloutStop: 1, calloutAside: 1, calloutQuote: 1,

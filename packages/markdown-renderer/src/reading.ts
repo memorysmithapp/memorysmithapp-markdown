@@ -4,6 +4,7 @@
 import type { PluggableList } from 'unified';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import { remarkParameters } from './parameters.js';
 import { remarkCallouts } from './remark-callouts.js';
 import { remarkBlockIds, remarkHighlight, remarkMathDollarRule } from './remark-ring.js';
 
@@ -11,7 +12,11 @@ import { remarkBlockIds, remarkHighlight, remarkMathDollarRule } from './remark-
  * The remark plugins of the reading surface, in their order. `planFootnotes` reads a note
  * through the same list, so it counts the references this surface draws and no other.
  */
-export function readingPlugins(titleOf: (kind: string) => string | undefined): PluggableList {
+export function readingPlugins(
+  titleOf: (kind: string) => string | undefined,
+  /** The title a parameter carries, in the reader's language; none for a reading that draws nothing. */
+  parameterTitle?: string,
+): PluggableList {
   return [
     /**
      * `singleTilde: false` is a decision and not a default.
@@ -25,6 +30,9 @@ export function readingPlugins(titleOf: (kind: string) => string | undefined): P
      * the specification says they get, which is nothing.
      */
     [remarkGfm, { singleTilde: false }],
+    // First of the transforms: it reads the positions the parser gave each text node, which the
+    // transforms after it do not keep, and they read a parameter as one character of the text.
+    [remarkParameters, { title: parameterTitle }],
     [remarkCallouts, { titleOf }],
     remarkHighlight,
     remarkBlockIds,

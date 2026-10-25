@@ -2,6 +2,7 @@
 // Nothing here rewrites the note a host keeps; each function returns a new string for display.
 
 import { readDimensions, writeDimensions } from './image-dimensions.js';
+import { hasParameterReference } from './parameters.js';
 
 export interface SplitDocument {
   frontmatter: Record<string, string>;
@@ -383,6 +384,10 @@ function resolveWikilinksIn(
       const embed = bang !== undefined;
       const text = displayText(clean, label, target, (name) => embed && keeps(name));
       if (!clean) return `[${text}](pending:)`;
+      // A target that writes a parameter names no note until a notebook is created from the model
+      // (§7.14): it is drawn as the parameter it holds, neither a link nor pending, and an embed of
+      // it transcludes nothing.
+      if (hasParameterReference(clean)) return `[${text}](parameter:)`;
       // The pipe is read by WHAT THE TARGET IS: a note takes the alias, an
       // attachment takes the dimensions, and a target that resolves to neither
       // takes the alias — because reading it as a dimension would discard text

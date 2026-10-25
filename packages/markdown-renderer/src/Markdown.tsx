@@ -283,6 +283,15 @@ export function MarkdownAnchor({ href, children, node: _node, ...rest }: WithNod
     const name = measured ? address.slice(0, at) : address;
     return <Attachment name={name} size={measured ?? { width: null, height: null, percent: null }} />;
   }
+  // A wikilink whose target writes a parameter (§7.14): it leads nowhere until a notebook is
+  // created from the model, so it is the parameter it holds, drawn, and not something to follow.
+  if (href?.startsWith('parameter:')) {
+    return (
+      <span className="wikilink-parameter" title={host.strings.parameterLink}>
+        {children}
+      </span>
+    );
+  }
   if (href?.startsWith('pending:')) {
     const pending = (label: ReactNode) => (
       <span className="wikilink-pending" title={host.strings.pendingLink}>
@@ -560,7 +569,7 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
     // so its section keeps the space a section takes at the end of a note.
     <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
-        remarkPlugins={readingPlugins(calloutTitle)}
+        remarkPlugins={readingPlugins(calloutTitle, strings.parameter)}
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a

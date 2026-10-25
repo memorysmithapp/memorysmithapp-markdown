@@ -123,6 +123,20 @@ describe('check-spec', () => {
     expect(result.output).toMatch(/raises the notice "no-such-notice", which spec.json does not declare/);
   });
 
+  it.each([
+    ['is not a name', ['123'], /lists the parameter "123", which is not a name/],
+    ['is not in NFC', ['condomi\u0301nio'], /in a form other than NFC/],
+    ['is listed twice', ['a', 'a'], /lists a parameter twice/],
+  ])('fails on a case whose parameter %s', (_, parameters, message) => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({ id: 'parameter/invented', notation: 'parameter-reference', markdown: '{{a}}', parameters });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(message);
+  });
+
   it('fails when the table of notices in SPEC.md and spec.json disagree', () => {
     const root = copy();
     editJson(root, 'spec.json', (spec) => {

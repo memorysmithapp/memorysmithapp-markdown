@@ -15,6 +15,7 @@
 import type { ReactNode } from 'react';
 import { useHost } from './host.js';
 import { MarkdownAnchor } from './Markdown.js';
+import { hasParameterReference, splitParameters } from './parameters.js';
 import {
   DRAWN_RESERVED_KEYS,
   isTrue,
@@ -26,27 +27,50 @@ import { drawSlot, useSlot } from './slots.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
 /**
+ * Text as it was typed, with each parameter it writes drawn as one (§7.14): a value of the
+ * frontmatter, or the name of a note, in a model.
+ */
+export function useParameters(): (text: string) => ReactNode {
+  const { strings } = useHost();
+  return (text) => {
+    const pieces = splitParameters(text);
+    if (pieces.length === 1 && typeof pieces[0] === 'string') return pieces[0];
+    return pieces.map((piece, index) =>
+      typeof piece === 'string' ? (
+        piece
+      ) : (
+        <span key={index} className="parameter" data-parameter={piece.name} title={strings.parameter}>
+          {text.slice(piece.from, piece.to)}
+        </span>
+      ),
+    );
+  };
+}
+
+/**
  * A value as the note means it: a wikilink a link to where the host resolved it — the note, the
  * choice, or the pending marker — a Markdown link or a bare address to the web a link to it, each
  * through the anchor the body's links take, so the address filter holds and a theme's `wikilink`
- * slot draws them too; everything else as text, never as markup.
+ * slot draws them too; a parameter as a parameter; everything else as text, never as markup.
  */
 function useValue(): (text: string) => ReactNode {
   const host = useHost();
+  const drawn = useParameters();
   return (text) => {
     const parts: ReactNode[] = [];
     let cursor = 0;
     for (const match of text.matchAll(VALUE_LINK)) {
       const at = match.index ?? 0;
-      if (at > cursor) parts.push(text.slice(cursor, at));
+      if (at > cursor) parts.push(drawn(text.slice(cursor, at)));
       const [whole, wikiTarget, wikiLabel, mdLabel, mdUrl, rawUrl] = match;
       if (wikiTarget) {
         const target = wikiTarget.trim();
         const name = target.split('#')[0]?.trim() ?? '';
-        const address = name ? wikilinkAddress(host, name.normalize('NFC')) : null;
+        // A target that writes a parameter leads nowhere until a notebook is created from the model.
+        const address = hasParameterReference(name) ? 'parameter:' : name ? wikilinkAddress(host, name.normalize('NFC')) : null;
         parts.push(
           <MarkdownAnchor key={at} href={address ?? `pending:${encodeURIComponent(name)}`}>
-            {wikiLabel?.trim() || target}
+            {drawn(wikiLabel?.trim() || target)}
           </MarkdownAnchor>,
         );
       } else {
@@ -58,7 +82,7 @@ function useValue(): (text: string) => ReactNode {
       }
       cursor = at + whole.length;
     }
-    if (cursor < text.length) parts.push(text.slice(cursor));
+    if (cursor < text.length) parts.push(drawn(text.slice(cursor)));
     return parts.length === 1 ? parts[0] : <>{parts}</>;
   };
 }
@@ -136,13 +160,14 @@ export function Properties({ properties }: { properties: NoteProperties }) {
   const { strings } = useHost();
   const slot = useSlot('properties');
   const value = useValue();
+  const drawn = useParameters();
   if (slot) return drawSlot(slot, { name: properties.name, entries: properties.entries, value });
   const shown = ordered(properties.entries);
   return (
     <>
       {/* The name, always: a note with none says so where its name would be. */}
       <h1 className={properties.name === null ? 'note-title note-unnamed' : 'note-title'}>
-        {properties.name ?? strings.unnamedNote}
+        {properties.name === null ? strings.unnamedNote : drawn(properties.name)}
       </h1>
       {shown.length > 0 && (
         <details className="properties-box" open>

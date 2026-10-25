@@ -462,6 +462,14 @@
       "example": "The phases ran in parallel[^rup].\n\n[^rup]: Wikipedia. *Rational Unified Process*.\n",
       "effect": "The reference is a link to a note gathered at the end of the note, numbered by the order of first reference, with a link back; following either moves within the note. Display only: no edge, no attribute, no index entry, and the definition is never a link reference definition.",
       "spec": "7.12, 3.8"
+    },
+    {
+      "id": "parameter-reference",
+      "reader": "reading-surface",
+      "syntax": "{{name}}",
+      "example": "---\nname: \"Assembly of {{condominium}}\"\nmanager: \"{{manager}}\"\n---\n# Assembly of {{condominium}}\n\nChaired by [[{{manager}}]]. The notation itself is written \\{{condominium}}.\n",
+      "effect": "Where a value goes in a note of a model, filled in when a notebook is created from it. The name opens with a letter or `_` and goes on in letters, combining marks, digits, `_` and `-`, compared after NFC; a reference is the shortest match, needs two unescaped braces, and anything that does not close as one is text. It is read in text, in a wikilink's target and alias, and in a value of the frontmatter, which a Writer quotes; never in code, a diagram, mathematics, a destination, an autolink or raw HTML. A Reader draws one nobody filled in as a parameter, braces and all. A wikilink whose target writes one is no edge and not pending, an embed of one transcludes nothing, and an attribute a value of which writes one is not indexed.",
+      "spec": "7.14, 5.2, 6.3"
     }
   ],
   "notices": [

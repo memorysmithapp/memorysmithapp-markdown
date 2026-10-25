@@ -18,6 +18,7 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import type { NoteHost } from './host.js';
 import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type HiddenComments } from './source.js';
+import { hasParameterReference } from './parameters.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
 
@@ -362,6 +363,8 @@ function pending(hidden: HiddenComments, split: number, options: DiagnoseOptions
     const name = (match[2] ?? '').split('#')[0]?.trim().replace(/\\$/, '').trim() ?? '';
     // `[[#Section]]` is a link within the note itself.
     if (!name) continue;
+    // A target that writes a parameter is neither a link nor pending (§7.14).
+    if (hasParameterReference(name)) continue;
     const embed = match[1] !== undefined;
     if (answered(name) || (embed && keeps(name))) continue;
     const end = match.index + match[0].length;
