@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
 ### Added
 
 - The specification declares the `table` block, a fenced block that presents a table of the notebook through a query (#137, `SPEC.md` §7.15): `table` names it, `columns` chooses and orders its columns, `where` filters its rows, `sort` orders them by columns `asc` or `desc`, `page` takes from 1 to 100 rows a page, 25 when absent, and `total` sums a number column over every row the filter returns. Its keys are in English in every notebook; a block that cannot be read is drawn as what is wrong with it, a printed note carries every filtered row, and where no tables are kept the block is a code block. A table is data the notebook keeps beside its notes, with columns of kind `text`, `number`, `date`, `boolean` or `list` named by one word (§5.9): a block references the table it names, compared after NFC with case folded and in a namespace of its own, never an edge, and pending when no table carries the name.
@@ -272,7 +274,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...v0.8.4
