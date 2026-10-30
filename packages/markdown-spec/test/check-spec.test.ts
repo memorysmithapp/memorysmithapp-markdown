@@ -137,6 +137,55 @@ describe('check-spec', () => {
     expect(result.output).toMatch(message);
   });
 
+  it.each([
+    ['is not in NFC', ['março'], /lists the table "março" in a form other than trimmed NFC/],
+    ['is not trimmed', [' expenses'], /in a form other than trimmed NFC/],
+    ['is listed twice once case is folded', ['Expenses', 'expenses'], /lists a table twice/],
+  ])('fails on a case whose table %s', (_, tables, message) => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({ id: 'table/invented', notation: 'table-reference', markdown: '```table\ntable: x\n```\n', tables });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(message);
+  });
+
+  it.each([
+    ['a column of a kind it does not declare', { name: 'expenses', columns: [{ name: 'amount', kind: 'money' }] }, /a column that is not a name and one of the kinds/],
+    ['a table with no columns list', { name: 'expenses' }, /keeps a table that is not a name and a list of columns/],
+  ])('fails on a notebook keeping %s', (_, table, message) => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({
+        id: 'table/invented',
+        notation: 'table-reference',
+        markdown: '```table\ntable: expenses\n```\n',
+        notebook: { tables: [table] },
+        resolution: [{ target: 'expenses', kind: 'table', edges: 0 }],
+      });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(message);
+  });
+
+  it('fails on a table that resolves to an edge', () => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({
+        id: 'table/invented',
+        notation: 'table-reference',
+        markdown: '```table\ntable: expenses\n```\n',
+        notebook: { tables: [{ name: 'expenses', columns: [] }] },
+        resolution: [{ target: 'expenses', kind: 'table', edges: 1 }],
+      });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/resolves "expenses" to the kind table and to 1 edges. Only a note produces an edge/);
+  });
+
   it('fails when the table of notices in SPEC.md and spec.json disagree', () => {
     const root = copy();
     editJson(root, 'spec.json', (spec) => {

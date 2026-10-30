@@ -130,13 +130,14 @@ import { diagnose } from '@memorysmithapp/markdown-renderer/diagnose';
 const notices = await diagnose(note, {
   resolve: (name) => addressOfTheOneNoteNamed(name), // or reaches; leave both out and no link is pending
   keeps: (name) => notebookKeepsAFile(name),
+  tables: (name) => columnsOfTheTableNamed(name), // { name, columns: [{ name, kind }] }, or null
 });
 // [{ code: 'heading-skipped-level', severity: 'notice', section: '3.3',
 //    message: 'This heading skips a level below the heading before it.',
 //    line: 12, column: 1, endLine: 12, endColumn: 14 }, …]
 ```
 
-A `notice` says the page will differ from the text — a fence never closed, a formula KaTeX cannot typeset, a diagram Mermaid cannot read, raw HTML, a footnote with no definition or no reference, a single-tilde strikethrough, a frontmatter never closed, a `name` that leaves the note unnamed or none at all, `aliases` or `tags` that are not a list, a body that does not start at `#` or skips a level. A `hint` says nothing is drawn wrong: no `aliases`, no `tags`, a link or an embed no note answers yet. Lines and columns count from 1 over the whole note, frontmatter included, and the `message` is English; a host words it in its own language from the `code`, which is stable. Mermaid is loaded only for a note that holds a diagram, and `diagrams: false` skips it.
+A `notice` says the page will differ from the text — a fence never closed, a formula KaTeX cannot typeset, a diagram Mermaid cannot read, raw HTML, a footnote with no definition or no reference, a single-tilde strikethrough, a frontmatter never closed, a `name` that leaves the note unnamed or none at all, `aliases` or `tags` that are not a list, a body that does not start at `#` or skips a level, and a `table` block that names no table, holds a key it does not have or cannot read, names a column its table lacks, or filters with a query that cannot be answered. A `hint` says nothing is drawn wrong: no `aliases`, no `tags`, a link or an embed no note answers yet, a `table` block naming a table the notebook does not keep. Without `tables`, nothing is known of the notebook's tables, so no block is pending and none is checked against its columns. Lines and columns count from 1 over the whole note, frontmatter included, and the `message` is English; a host words it in its own language from the `code`, which is stable. Mermaid is loaded only for a note that holds a diagram, and `diagrams: false` skips it.
 
 The host contract, the stylesheet's properties, the slots and the decisions behind them are in the repository's [`ARCHITECTURE.md`](https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/docs/ARCHITECTURE.md).
 

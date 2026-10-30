@@ -259,6 +259,9 @@ const DETECTS: Record<string, Detector> = {
   'inline-tag': inBody(/(^|\s)#[a-z][a-z-]{2,}/m),
   callout: inBody(/^>\s*\[![a-z]+\]/m),
   mermaid: inBody(/^```mermaid$/m),
+  // A table block naming its table, and one asking it through a filter, a sort and a total.
+  'table-reference': inBody(/^```table\n(?:[a-z_]+: .*\n)*?table: \S/m),
+  'table-block': inBody(/^```table\n(?=(?:[a-z_]+: .*\n)*where: \S)(?=(?:[a-z_]+: .*\n)*sort: \S)(?=(?:[a-z_]+: .*\n)*total: \S)/m),
   transclusion: inBody(/!\[\[/),
   // A footnote referenced inside a line of prose, and defined at the start of
   // a line further down, in a note that cites a source.

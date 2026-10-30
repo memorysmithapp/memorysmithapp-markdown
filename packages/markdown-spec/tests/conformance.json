@@ -1762,6 +1762,783 @@
       "markdown": "---\nmanager: {{manager}}\n---\nBody.\n",
       "parameters": ["manager"],
       "facets": {}
+    },
+    {
+      "id": "table/the-reference-is-the-table-key",
+      "notation": "table-reference",
+      "markdown": "```table\ntable: expenses\nwhere: status:pending\n```\n",
+      "tables": ["expenses"],
+      "links": []
+    },
+    {
+      "id": "table/the-name-is-trimmed-and-normalised",
+      "notation": "table-reference",
+      "markdown": "```table\ntable:    Despesas de março   \n```\n",
+      "tables": ["Despesas de março"]
+    },
+    {
+      "id": "table/everything-after-the-first-colon-is-the-name",
+      "notation": "table-reference",
+      "markdown": "```table\ntable: Notas: 2026\n```\n",
+      "tables": ["Notas: 2026"]
+    },
+    {
+      "id": "table/two-blocks-naming-one-table-are-one-reference",
+      "notation": "table-reference",
+      "markdown": "```table\ntable: Expenses\npage: 10\n```\n\n```table\ntable: expenses\nwhere: status:paid\n```\n",
+      "tables": ["Expenses"]
+    },
+    {
+      "id": "table/a-tilde-fence-is-a-table-block",
+      "notation": "table-reference",
+      "markdown": "~~~table\ntable: expenses\n~~~\n",
+      "tables": ["expenses"]
+    },
+    {
+      "id": "table/a-block-in-a-quote-or-a-list-is-a-table-block",
+      "notation": "table-reference",
+      "markdown": "> ```table\n> table: expenses\n> ```\n\n- An item.\n\n  ```table\n  table: readings\n  ```\n",
+      "tables": ["expenses", "readings"]
+    },
+    {
+      "id": "table/a-link-inside-the-block-is-no-edge",
+      "notation": "table-reference",
+      "markdown": "See [[Lei 14.133]].\n\n```table\ntable: expenses\nwhere: \"[[Orçamento]]\"\n```\n",
+      "tables": ["expenses"],
+      "links": [
+        {
+          "name": "Lei 14.133",
+          "anchor": null
+        }
+      ]
+    },
+    {
+      "id": "table/a-block-inside-another-fence-is-an-example",
+      "notation": "table-reference",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n````markdown\n```table\ntable: expenses\ncolour: red\n```\n````\n",
+      "tables": [],
+      "links": [],
+      "notices": []
+    },
+    {
+      "id": "table/an-indented-block-is-code",
+      "notation": "table-reference",
+      "markdown": "    ```table\n    table: expenses\n    ```\n",
+      "tables": []
+    },
+    {
+      "id": "table/the-info-string-is-table-and-nothing-else",
+      "notation": "table-reference",
+      "markdown": "```Table\ntable: expenses\n```\n\n```tables\ntable: expenses\n```\n\n```table sorted\ntable: expenses\n```\n",
+      "tables": []
+    },
+    {
+      "id": "table/no-table-key-references-nothing",
+      "notation": "table-reference",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ncolumns: date, amount\n```\n",
+      "tables": [],
+      "notices": [
+        { "code": "table-unnamed", "line": 8 }
+      ]
+    },
+    {
+      "id": "table/an-empty-table-key-references-nothing",
+      "notation": "table-reference",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable:\nwhere: status:pending\n```\n",
+      "tables": [],
+      "notices": [
+        { "code": "table-unnamed", "line": 8 }
+      ]
+    },
+    {
+      "id": "table/two-table-keys-reference-nothing",
+      "notation": "table-reference",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ntable: readings\n```\n",
+      "tables": [],
+      "notices": [
+        { "code": "table-unnamed", "line": 8 }
+      ]
+    },
+    {
+      "id": "table/a-mistake-in-the-block-still-references-the-table",
+      "notation": "table-reference",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolour: red\nwhere: \"never closed\n```\n",
+      "tables": ["expenses"],
+      "notices": [
+        { "code": "table-key-unknown", "line": 10 },
+        { "code": "table-filter-invalid", "line": 11 }
+      ]
+    },
+    {
+      "id": "resolution/a-table-by-its-name-with-case-folded",
+      "notation": "table-reference",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: EXPENSES\n```\n",
+      "tables": ["EXPENSES"],
+      "resolution": [
+        {
+          "target": "EXPENSES",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": []
+    },
+    {
+      "id": "resolution/a-table-name-compared-after-nfc",
+      "notation": "table-reference",
+      "notebook": {
+        "tables": [
+          {
+            "name": "despesas de MARÇO",
+            "columns": [
+              {
+                "name": "valor",
+                "kind": "number"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: Despesas de março\n```\n",
+      "tables": ["Despesas de março"],
+      "resolution": [
+        {
+          "target": "Despesas de março",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": []
+    },
+    {
+      "id": "resolution/a-table-the-notebook-does-not-keep-is-pending",
+      "notation": "table-reference",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: budget\ncolumns: colour\n```\n",
+      "tables": ["budget"],
+      "resolution": [
+        {
+          "target": "budget",
+          "kind": "pending",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-pending", "line": 9 }
+      ]
+    },
+    {
+      "id": "resolution/a-note-or-a-file-of-that-name-is-not-a-table",
+      "notation": "table-reference",
+      "notebook": {
+        "notes": ["---\nname: budget\n---\n"],
+        "attachments": ["budget"],
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: budget\n```\n",
+      "tables": ["budget"],
+      "links": [],
+      "resolution": [
+        {
+          "target": "budget",
+          "kind": "pending",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-pending", "line": 9 }
+      ]
+    },
+    {
+      "id": "notice/a-whole-table-block-raises-nothing",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolumns: date, descrição, amount, status\nwhere: status:pending date:2026-10\nsort: date desc, amount\npage: 20\ntotal: amount\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": []
+    },
+    {
+      "id": "notice/table-defaults-raise-nothing",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\n\ntable: expenses\n\ncolumns:\nwhere:   \n```\n",
+      "notices": []
+    },
+    {
+      "id": "notice/table-a-key-not-of-the-six",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolour: red\nfilter: status:pending\nnot a key at all\n```\n",
+      "notices": [
+        { "code": "table-key-unknown", "line": 10 },
+        { "code": "table-key-unknown", "line": 11 },
+        { "code": "table-key-unknown", "line": 12 }
+      ]
+    },
+    {
+      "id": "notice/table-keys-are-written-in-lower-case",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\nTable: expenses\n```\n",
+      "notices": [
+        { "code": "table-unnamed", "line": 8 },
+        { "code": "table-key-unknown", "line": 9 }
+      ]
+    },
+    {
+      "id": "notice/table-a-key-written-twice",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\npage: 10\npage: 20\n```\n",
+      "notices": [
+        { "code": "table-key-invalid", "line": 11 }
+      ]
+    },
+    {
+      "id": "notice/table-page-is-a-whole-number-from-1-to-100",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\npage: 1\n```\n\n```table\ntable: expenses\npage: 100\n```\n\n```table\ntable: expenses\npage: 0\n```\n\n```table\ntable: expenses\npage: 101\n```\n\n```table\ntable: expenses\npage: ten\n```\n\n```table\ntable: expenses\npage: 20.5\n```\n\n```table\ntable: expenses\npage: +5\n```\n",
+      "notices": [
+        { "code": "table-key-invalid", "line": 20 },
+        { "code": "table-key-invalid", "line": 25 },
+        { "code": "table-key-invalid", "line": 30 },
+        { "code": "table-key-invalid", "line": 35 },
+        { "code": "table-key-invalid", "line": 40 }
+      ]
+    },
+    {
+      "id": "notice/table-sort-takes-asc-desc-or-nothing",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nsort: date desc, amount asc, status\n```\n\n```table\ntable: expenses\nsort: date down\n```\n\n```table\ntable: expenses\nsort: date DESC\n```\n\n```table\ntable: expenses\nsort: date desc, date\n```\n\n```table\ntable: expenses\nsort: date,\n```\n",
+      "notices": [
+        { "code": "table-key-invalid", "line": 15 },
+        { "code": "table-key-invalid", "line": 20 },
+        { "code": "table-key-invalid", "line": 25 },
+        { "code": "table-key-invalid", "line": 30 }
+      ]
+    },
+    {
+      "id": "notice/table-columns-names-each-column-once",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolumns: date, , amount\n```\n\n```table\ntable: expenses\ncolumns: date, Date\n```\n\n```table\ntable: expenses\ncolumns: date, data de pagamento\n```\n\n```table\ntable: expenses\ntotal: amount paid\n```\n",
+      "notices": [
+        { "code": "table-key-invalid", "line": 10 },
+        { "code": "table-key-invalid", "line": 15 },
+        { "code": "table-key-invalid", "line": 20 },
+        { "code": "table-key-invalid", "line": 25 }
+      ]
+    },
+    {
+      "id": "notice/table-total-is-a-number-column-that-is-drawn",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ntotal: amount\n```\n\n```table\ntable: expenses\ncolumns: date, amount\ntotal: amount\n```\n\n```table\ntable: expenses\ntotal: status\n```\n\n```table\ntable: expenses\ncolumns: date, status\ntotal: amount\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-key-invalid", "line": 21 },
+        { "code": "table-key-invalid", "line": 27 }
+      ]
+    },
+    {
+      "id": "notice/table-a-column-the-table-does-not-have",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolumns: date, colour\nsort: weight desc\nwhere: status:pending colour:red\ntotal: weight\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-column-unknown", "line": 10 },
+        { "code": "table-column-unknown", "line": 11 },
+        { "code": "table-column-unknown", "line": 12 },
+        { "code": "table-column-unknown", "line": 13 }
+      ]
+    },
+    {
+      "id": "notice/table-columns-are-named-with-case-and-marks-folded",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\ncolumns: DATE, Descricao, amount\nwhere: DESCRIÇÃO:aluguel Status:pending\nsort: descricao\ntotal: Amount\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": []
+    },
+    {
+      "id": "notice/table-columns-are-not-checked-against-a-table-that-is-pending",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: budget\ncolumns: colour\nwhere: weight:>3\n```\n",
+      "resolution": [
+        {
+          "target": "budget",
+          "kind": "pending",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-pending", "line": 9 }
+      ]
+    },
+    {
+      "id": "notice/table-a-line-raises-its-first-mistake",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nsort: colour sideways\nwhere: colour:\"never closed\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-key-invalid", "line": 10 },
+        { "code": "table-filter-invalid", "line": 11 }
+      ]
+    },
+    {
+      "id": "notice/table-notices-are-not-raised-by-an-example",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n````markdown\n```table\ncolour: red\npage: 0\nwhere: (\n```\n````\n",
+      "notices": []
+    },
+    {
+      "id": "notice/table-a-filter-that-can-be-read",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nwhere: lei-14133 -rascunho (contrato OR convênio) \"lei 14.133\" nome:\"two words\" nota: : -(a b) a OR b\n```\n\n```table\ntable: expenses\nwhere: date:>=2026-01 date:2026-01..2026-03 amount:<100.5 amount:-3..-1\n```\n",
+      "notices": []
+    },
+    {
+      "id": "notice/table-a-filter-that-cannot-be-read",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nwhere: \"never closed\n```\n\n```table\ntable: expenses\nwhere: contrato \"\"\n```\n\n```table\ntable: expenses\nwhere: (contrato OR convênio\n```\n\n```table\ntable: expenses\nwhere: contrato)\n```\n\n```table\ntable: expenses\nwhere: contrato OR\n```\n\n```table\ntable: expenses\nwhere: OR contrato\n```\n\n```table\ntable: expenses\nwhere: a OR OR b\n```\n\n```table\ntable: expenses\nwhere: contrato -\n```\n\n```table\ntable: expenses\nwhere: ()\n```\n\n```table\ntable: expenses\nwhere: date:>=\n```\n\n```table\ntable: expenses\nwhere: date:..2026-03\n```\n\n```table\ntable: expenses\nwhere: date:2026-01..\n```\n\n```table\ntable: expenses\nwhere: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n```\n",
+      "notices": [
+        { "code": "table-filter-invalid", "line": 10 },
+        { "code": "table-filter-invalid", "line": 15 },
+        { "code": "table-filter-invalid", "line": 20 },
+        { "code": "table-filter-invalid", "line": 25 },
+        { "code": "table-filter-invalid", "line": 30 },
+        { "code": "table-filter-invalid", "line": 35 },
+        { "code": "table-filter-invalid", "line": 40 },
+        { "code": "table-filter-invalid", "line": 45 },
+        { "code": "table-filter-invalid", "line": 50 },
+        { "code": "table-filter-invalid", "line": 55 },
+        { "code": "table-filter-invalid", "line": 60 },
+        { "code": "table-filter-invalid", "line": 65 },
+        { "code": "table-filter-invalid", "line": 70 }
+      ]
+    },
+    {
+      "id": "notice/table-a-filter-of-500-characters-can-be-read",
+      "notation": "table-block",
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nwhere: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n```\n",
+      "notices": []
+    },
+    {
+      "id": "notice/table-a-filter-is-checked-against-the-kinds-of-its-columns",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nwhere: status:>a\n```\n\n```table\ntable: expenses\nwhere: paid:true labels:casa descrição:aluguel\n```\n\n```table\ntable: expenses\nwhere: paid:>=true\n```\n\n```table\ntable: expenses\nwhere: labels:a..b\n```\n\n```table\ntable: expenses\nwhere: amount:ten\n```\n\n```table\ntable: expenses\nwhere: amount:>1e3\n```\n\n```table\ntable: expenses\nwhere: amount:12.50 amount:>9 -amount:-3\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-filter-invalid", "line": 10 },
+        { "code": "table-filter-invalid", "line": 20 },
+        { "code": "table-filter-invalid", "line": 25 },
+        { "code": "table-filter-invalid", "line": 30 },
+        { "code": "table-filter-invalid", "line": 35 }
+      ]
+    },
+    {
+      "id": "notice/table-an-inverted-range-is-inverted-as-its-kind-compares",
+      "notation": "table-block",
+      "notebook": {
+        "tables": [
+          {
+            "name": "expenses",
+            "columns": [
+              {
+                "name": "date",
+                "kind": "date"
+              },
+              {
+                "name": "descrição",
+                "kind": "text"
+              },
+              {
+                "name": "amount",
+                "kind": "number"
+              },
+              {
+                "name": "status",
+                "kind": "text"
+              },
+              {
+                "name": "paid",
+                "kind": "boolean"
+              },
+              {
+                "name": "labels",
+                "kind": "list"
+              }
+            ]
+          }
+        ]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n```table\ntable: expenses\nwhere: amount:9..10 date:2026-01..2026-03 date:2026-02..2026-02\n```\n\n```table\ntable: expenses\nwhere: amount:20..10\n```\n\n```table\ntable: expenses\nwhere: date:2026-03..2026-01\n```\n\n```table\ntable: expenses\nwhere: date:9..10\n```\n",
+      "resolution": [
+        {
+          "target": "expenses",
+          "kind": "table",
+          "edges": 0
+        }
+      ],
+      "notices": [
+        { "code": "table-filter-invalid", "line": 15 },
+        { "code": "table-filter-invalid", "line": 20 },
+        { "code": "table-filter-invalid", "line": 25 }
+      ]
     }
   ]
 }

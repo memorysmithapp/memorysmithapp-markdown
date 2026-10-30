@@ -7,7 +7,7 @@ The MemorySmith Markdown Specification — the notation MemorySmith notebooks ar
 | [`SPEC.md`](SPEC.md) | The specification, the text an implementation is written against |
 | [`spec.json`](spec.json) | Every notation as data: its identifier, which reader decides it, the syntax, an example and the observable effect; and every notice an implementation may report about a note (§7.13), with its severity |
 | [`schema/spec.schema.json`](schema/spec.schema.json) | The JSON Schema of `spec.json` |
-| [`tests/conformance.json`](tests/conformance.json) | The conformance suite: a Markdown input and what a conforming indexer derives from it, the parameters it references, or the notices it raises; [`tests/README.md`](tests/README.md) says how to run it |
+| [`tests/conformance.json`](tests/conformance.json) | The conformance suite: a Markdown input and what a conforming indexer derives from it, the parameters and the tables it references, or the notices it raises; [`tests/README.md`](tests/README.md) says how to run it |
 | [`tools/check-spec.mjs`](tools/check-spec.mjs) | The checker that keeps the document, the data and the suite together |
 
 The specification has no version of its own: it is the version of this package, and the `url` of `spec.json` names `SPEC.md` at that version's tag.

@@ -160,7 +160,13 @@ for (const entry of notations) {
   seenNotations.add(entry.id);
 }
 
-const KINDS = new Set(['note', 'attachment', 'pending']);
+const KINDS = new Set(['note', 'attachment', 'table', 'pending']);
+
+/** The kinds of a table's column (§5.9). */
+const COLUMN_KINDS = new Set(['text', 'number', 'date', 'boolean', 'list']);
+
+/** A table's name as it is compared (§5.9): in NFC, with case folded. */
+const tableKey = (name) => name.normalize('NFC').toLowerCase();
 
 /** The name of a parameter (§7.14): a letter or `_`, then letters, marks, digits, `_` and `-`. */
 const PARAMETER_NAME = /^[\p{L}_][\p{L}\p{M}\p{N}_-]*$/u;
@@ -188,12 +194,30 @@ for (const testCase of cases) {
     !('name' in testCase) &&
     !('resolution' in testCase) &&
     !('notices' in testCase) &&
-    !('parameters' in testCase)
+    !('parameters' in testCase) &&
+    !('tables' in testCase)
   ) {
     fail(
       'tests/conformance.json',
-      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, nor notices, nor parameters, so it asserts nothing`,
+      `the case "${testCase.id}" claims neither a name, nor links, nor facets, nor a resolution, nor notices, nor parameters, nor tables, so it asserts nothing`,
     );
+  }
+
+  // A table reference is a name (§5.9), written as a reader compares it: in NFC, and once with case folded.
+  if ('tables' in testCase) {
+    const tables = testCase.tables;
+    if (!Array.isArray(tables) || tables.some((name) => typeof name !== 'string' || name.trim() === '')) {
+      fail('tests/conformance.json', `the case "${testCase.id}" has "tables" that is not a list of names`);
+    } else {
+      for (const name of tables) {
+        if (name !== name.normalize('NFC') || name !== name.trim()) {
+          fail('tests/conformance.json', `the case "${testCase.id}" lists the table "${name}" in a form other than trimmed NFC`);
+        }
+      }
+      if (new Set(tables.map(tableKey)).size !== tables.length) {
+        fail('tests/conformance.json', `the case "${testCase.id}" lists a table twice`);
+      }
+    }
   }
 
   // A parameter is a name (§7.14), written as a reader compares it: in NFC, and once.
@@ -245,6 +269,7 @@ for (const testCase of cases) {
     const notebook = testCase.notebook ?? {};
     const notes = notebook.notes ?? [];
     const attachments = notebook.attachments ?? [];
+    const tables = notebook.tables ?? [];
     if (!Array.isArray(notes) || notes.some((note) => typeof note !== 'string')) {
       fail(
         'tests/conformance.json',
@@ -257,7 +282,30 @@ for (const testCase of cases) {
         `the case "${testCase.id}" has a notebook whose "attachments" is not a list of names`,
       );
     }
-    if (notes.length === 0 && attachments.length === 0) {
+    if (!Array.isArray(tables)) {
+      fail('tests/conformance.json', `the case "${testCase.id}" has a notebook whose "tables" is not a list`);
+    } else {
+      const names = new Set();
+      for (const table of tables) {
+        if (typeof table?.name !== 'string' || !Array.isArray(table.columns)) {
+          fail('tests/conformance.json', `the case "${testCase.id}" keeps a table that is not a name and a list of columns`);
+          continue;
+        }
+        if (names.has(tableKey(table.name))) {
+          fail('tests/conformance.json', `the case "${testCase.id}" keeps two tables named "${table.name}" once case is folded`);
+        }
+        names.add(tableKey(table.name));
+        for (const column of table.columns) {
+          if (typeof column?.name !== 'string' || !COLUMN_KINDS.has(column.kind)) {
+            fail(
+              'tests/conformance.json',
+              `the case "${testCase.id}" gives the table "${table.name}" a column that is not a name and one of the kinds ${[...COLUMN_KINDS].join(', ')}`,
+            );
+          }
+        }
+      }
+    }
+    if (notes.length === 0 && attachments.length === 0 && (Array.isArray(tables) ? tables.length : 0) === 0) {
       fail(
         'tests/conformance.json',
         `the case "${testCase.id}" has an empty notebook, which resolves nothing`,
@@ -284,8 +332,8 @@ for (const testCase of cases) {
       );
       continue;
     }
-    // The specification § 5.4, 5.5 and 5.8: only a note produces an edge, and a note that matches
-    // produces one per match.
+    // The specification § 5.4, 5.5, 5.8 and 5.9: only a note produces an edge, and a note that
+    // matches produces one per match.
     if (outcome.kind !== 'note' && outcome.edges !== 0) {
       fail(
         'tests/conformance.json',

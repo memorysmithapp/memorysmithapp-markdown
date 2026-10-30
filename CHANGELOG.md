@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The specification declares the `table` block, a fenced block that presents a table of the notebook through a query (#137, `SPEC.md` §7.15): `table` names it, `columns` chooses and orders its columns, `where` filters its rows, `sort` orders them by columns `asc` or `desc`, `page` takes from 1 to 100 rows a page, 25 when absent, and `total` sums a number column over every row the filter returns. Its keys are in English in every notebook; a block that cannot be read is drawn as what is wrong with it, a printed note carries every filtered row, and where no tables are kept the block is a code block. A table is data the notebook keeps beside its notes, with columns of kind `text`, `number`, `date`, `boolean` or `list` named by one word (§5.9): a block references the table it names, compared after NFC with case folded and in a namespace of its own, never an edge, and pending when no table carries the name.
+- The specification declares the query language whole (§6.9), with MemorySmith's search as its source: terms that must all match, phrases, a dash that starts a term, `OR`, groups, `field:value` with case and marks folded, and intervals, which now compare a number as well as a date; §6.7 and §6.8 are its rules for dates. What makes a query an error is listed, and a range is inverted as its field's kind compares it.
+- `spec.json` carries the block as `table-block` and the reference as `table-reference`, and six notices: `table-unnamed`, `table-key-unknown`, `table-key-invalid`, `table-column-unknown`, `table-filter-invalid` and `table-pending`. Thirty-seven conformance cases cover the keys, their defaults and limits, the reference and the pending reference, and filters that read and that do not, under a new field, `tables`, and tables a case's notebook keeps, each with its columns, which the checker and the types know; a resolution may be of kind `table`.
+- The renderer reads a `table` block and its filter (`src/table-block.ts`, a port of MemorySmith's search parser), and `diagnose` reports the six notices on the line of the key each is about, a pending table and a mistake against a table's columns only when the host gives `tables` (#137). On the page the block is drawn as a code block. The two demonstration notebooks each write one, in context.
+
 ## [0.9.0] - 2026-10-25
 
 ### Added

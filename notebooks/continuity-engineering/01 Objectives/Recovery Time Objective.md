@@ -32,6 +32,19 @@ Availability is what the objective buys, and it is arithmetic before it is engin
 The budget for a month is $$B = (1 - A) \times 43200$$ minutes, and an RTO
 larger than $B$ means the objective is unreachable in a single incident.[^budget]
 
+What has been spent of it is not written on this page. Every outage is a row of the table `outages`, filled from the incident log, and the block below asks it for the ones of the payments service this year, newest first; the sum under the minutes is the part of the budget already gone:
+
+```table
+table: outages
+columns: date, cause, minutes, detected_by
+where: service:payments date:2026 -cause:planned
+sort: date desc
+page: 10
+total: minutes
+```
+
+The page keeps the question and the table keeps the answers, so the figure is the day's whenever the note is opened, and a planned maintenance window, which the contract does not count, is left out by the filter rather than by whoever reads it.
+
 The objective is stored where the monitor reads it, and that file, not this page, is what an alert compares against:
 
 ```json

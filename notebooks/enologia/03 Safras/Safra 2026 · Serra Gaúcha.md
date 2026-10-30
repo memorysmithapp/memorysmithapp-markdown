@@ -37,6 +37,19 @@ A caderneta do campo, copiada como foi anotada, sem colunas, porque quem anota n
 
 Colhemos com IPT 58 e não com os 62 de [[Índice de Polifenóis Totais#^faixa-de-guarda]]. ^decisao-2026
 
+As leituras de todas as quadras, da caderneta e do laboratório, são linhas da tabela `leituras`, e não desta página. O bloco abaixo pergunta pelas três semanas antes da colheita, sem a quadra 7, que foi colhida no dia seguinte, e soma a chuva do período no rodapé:
+
+```table
+table: leituras
+columns: data, quadra, brix, ipt, chuva_mm
+where: data:2026-02-03..2026-02-24 -quadra:7
+sort: data desc, quadra
+page: 10
+total: chuva_mm
+```
+
+A nota guarda a pergunta, e a tabela as respostas: uma leitura corrigida no laboratório muda o que esta página mostra sem que ninguém reescreva a nota.
+
 A meta escrita no protocolo era ~~62~~ 58 depois da chuva do dia 17, e o número riscado é o que valia quando a safra começou. O boletim que anunciou a chuva está em https://boletim.example.org/serra-gaucha, fora deste caderno: um endereço solto é link na página e nunca aresta no grafo.
 
 # O que deu errado
