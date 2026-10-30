@@ -1,3 +1,5 @@
+import type { TableNoticeCode } from './table-block.js';
+
 /**
  * The words the reading surface shows of its own, around what a note says.
  *
@@ -40,6 +42,10 @@ export interface NoteStrings {
   readonly tableEmpty: string;
   /** The title of a column's header, which sorts the table by it for the reader alone. */
   readonly tableSortBy: (column: string) => string;
+  /** What a `table` block says in place of its table, by the code of its notice (§7.13); `table` is what it names, if anything. */
+  readonly tableProblem: (code: TableNoticeCode, table: string | null) => string;
+  /** The line that closes a printed `table` block: the table, its filter or `null`, how many rows and when they were read. */
+  readonly tablePrinted: (read: { readonly table: string; readonly filter: string | null; readonly count: number; readonly readAt: string }) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -275,6 +281,24 @@ export const ENGLISH: NoteStrings = {
   tableTotal: 'Total',
   tableEmpty: 'No row answers this filter.',
   tableSortBy: (column) => `Sort by ${column}, for you alone: the note keeps its order`,
+  tableProblem: (code, table) => {
+    switch (code) {
+      case 'table-unnamed':
+        return 'This table block names no table: write its name once, as table: name.';
+      case 'table-key-unknown':
+        return 'A table block has six keys, and this line is none of them:';
+      case 'table-key-invalid':
+        return 'This key is written twice, or its value cannot be read:';
+      case 'table-column-unknown':
+        return `The table ${table ?? ''} has no such column:`;
+      case 'table-filter-invalid':
+        return 'This filter cannot be answered:';
+      case 'table-pending':
+        return `This notebook keeps no table named ${table ?? ''} yet.`;
+    }
+  },
+  tablePrinted: ({ table, filter, count, readAt }) =>
+    `Table ${table}${filter === null ? '' : `, filtered by ${filter}`}: ${count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`}, read on ${readAt}.`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',

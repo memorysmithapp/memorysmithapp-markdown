@@ -59,6 +59,8 @@ interface View {
    * memoize them does: no block of the editor may be drawn again for it (#99).
    */
   readonly unstable: boolean;
+  /** The note drawn for paper (`?print=1`): each `table` block with every row its filter returns (#139). */
+  readonly printing: boolean;
 }
 
 /** The host with each of its functions wrapped anew, the same meaning under another identity. */
@@ -133,6 +135,7 @@ function readView(): View {
     editable: query.get('editable') !== '0' && query.get('bare') !== '1',
     button: BUTTONS.find((each) => each === query.get('button')) ?? 'icon',
     unstable: query.get('host') === 'unstable',
+    printing: query.get('print') === '1',
   };
 }
 
@@ -285,6 +288,7 @@ export function App() {
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}
         editable={view.editable}
         buttons={view.button}
+        printing={view.printing}
         // The comparison screenshots the note alone, as MemorySmith's own component draws it.
         actions={!view.bare}
         onChange={(next) => saveEdit(key, next)}

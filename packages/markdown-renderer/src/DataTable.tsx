@@ -10,8 +10,13 @@
  * Markdown, so a `[[link]]` or a `<b>` a row holds is its characters (§7.15, §7.9). A number
  * arrives as its digits and is formatted from them, so a decimal of 38 digits is never rounded.
  *
- * A block the component cannot draw as a table — one it cannot read, a table the host does not
- * keep, a host that failed — is drawn as `fallback`, the code block it would be with no tables.
+ * A block that cannot be answered is drawn as what is wrong with it, in place of the table and in
+ * the reader's words, each mistake with the line that makes it (§7.15, #139). A host that failed is
+ * no mistake of the block: it says so above `fallback`, the code block the block would be with no
+ * tables, so nothing the author wrote is hidden.
+ *
+ * With `printing`, the block asks for every row in its declared order and is drawn with no control
+ * a page of paper could not use, closed by the line that says what was read and when (§7.15, #139).
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -20,8 +25,10 @@ import {
   checkTableBlock,
   fold,
   readTableBlock,
+  type TableBlock,
   type TableColumn,
   type TablePage,
+  type TableProblem,
   type TableSortKey,
   type TableValue,
 } from './table-block.js';
@@ -29,12 +36,16 @@ import {
 type State =
   | { readonly kind: 'loading'; readonly answer: TablePage | null }
   | { readonly kind: 'ready'; readonly answer: TablePage }
-  | { readonly kind: 'unavailable' };
+  | { readonly kind: 'problems'; readonly problems: readonly TableProblem[] }
+  | { readonly kind: 'failed' };
 
 export function DataTable({ source, fallback }: { readonly source: string; readonly fallback: ReactNode }) {
-  const { queryTable, strings } = useHost();
+  const { queryTable, strings, printing } = useHost();
   const block = useMemo(() => readTableBlock(source), [source]);
-  const readable = block.table !== null && block.problems.length === 0 && queryTable !== null;
+  const readable = block.table !== null && block.problems.length === 0;
+  // Read through a ref: a host that gives its functions anew on each render asks nothing again (#99).
+  const query = useRef(queryTable);
+  query.current = queryTable;
   const [page, setPage] = useState(1);
   // The reader's order, from a header: theirs alone, and gone when the note is opened again.
   const [order, setOrder] = useState<readonly TableSortKey[] | null>(null);
@@ -47,28 +58,38 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
   }, [source]);
 
   useEffect(() => {
-    if (!readable || block.table === null || !queryTable) return;
+    if (!readable || block.table === null || !query.current) return;
     const ticket = ++asked.current;
-    setState((before) => ({ kind: 'loading', answer: before.kind === 'unavailable' ? null : before.answer }));
-    queryTable({
+    setState((before) => ({ kind: 'loading', answer: before.kind === 'loading' || before.kind === 'ready' ? before.answer : null }));
+    query.current({
       table: block.table,
       columns: block.columns,
       where: block.whereText,
-      sort: order ?? block.sort ?? [],
-      page,
-      size: block.page,
+      // Paper carries the declared order, whatever a reader asked for on the screen.
+      sort: printing ? (block.sort ?? []) : (order ?? block.sort ?? []),
+      page: printing ? 1 : page,
+      size: printing ? 'all' : block.page,
       total: block.total,
     }).then(
       (answer) => {
         if (ticket !== asked.current) return;
-        // A table the notebook does not keep, or that the block asks what it cannot answer.
-        setState(answer && checkTableBlock(block, answer.schema).length === 0 ? { kind: 'ready', answer } : { kind: 'unavailable' });
+        const problems = checkTableBlock(block, answer ? answer.schema : null);
+        setState(answer && problems.length === 0 ? { kind: 'ready', answer } : { kind: 'problems', problems });
       },
-      () => ticket === asked.current && setState({ kind: 'unavailable' }),
+      () => ticket === asked.current && setState({ kind: 'failed' }),
     );
-  }, [readable, block, queryTable, order, page]);
+  }, [readable, block, order, page, printing]);
 
-  if (!readable || state.kind === 'unavailable') return <>{fallback}</>;
+  if (!readable) return <TableProblems block={block} source={source} problems={block.problems} />;
+  if (state.kind === 'problems') return <TableProblems block={block} source={source} problems={state.problems} />;
+  if (state.kind === 'failed') {
+    return (
+      <div className="data-table-failed">
+        <p role="status">{strings.failed}</p>
+        {fallback}
+      </div>
+    );
+  }
   const answer = state.answer;
   if (!answer) {
     return (
@@ -90,7 +111,7 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
   const totalAt = block.total === null ? -1 : columns.findIndex((column) => fold(column.name) === fold(block.total!));
 
   return (
-    <div className="data-table" aria-busy={state.kind === 'loading'}>
+    <div className={printing ? 'data-table data-table-printing' : 'data-table'} aria-busy={state.kind === 'loading'}>
       <div className="data-table-scroll">
         <table>
           <thead>
@@ -100,10 +121,14 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
                 const sorted = first !== undefined && fold(first.column) === fold(column.name) ? (first.descending ? 'descending' : 'ascending') : undefined;
                 return (
                   <th key={column.name} aria-sort={sorted} className={alignOf(column)}>
-                    <button type="button" className="data-table-sort" title={strings.tableSortBy(column.name)} onClick={() => sortBy(column)}>
-                      {column.name}
-                      {sorted && <span aria-hidden="true">{sorted === 'ascending' ? ' ▲' : ' ▼'}</span>}
-                    </button>
+                    {printing ? (
+                      <span className="data-table-sort">{column.name}</span>
+                    ) : (
+                      <button type="button" className="data-table-sort" title={strings.tableSortBy(column.name)} onClick={() => sortBy(column)}>
+                        {column.name}
+                        {sorted && <span aria-hidden="true">{sorted === 'ascending' ? ' ▲' : ' ▼'}</span>}
+                      </button>
+                    )}
                   </th>
                 );
               })}
@@ -141,6 +166,11 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
           )}
         </table>
       </div>
+      {printing ? (
+        <p className="data-table-printed">
+          {strings.tablePrinted({ table: block.table ?? '', filter: block.whereText, count: answer.count, readAt: formatDate(answer.readAt, strings.locale) ?? answer.readAt })}
+        </p>
+      ) : (
       <div className="data-table-footer">
         <span className="data-table-count">{strings.tableRows(answer.count)}</span>
         {pages > 1 && (
@@ -155,6 +185,25 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
           </span>
         )}
       </div>
+      )}
+    </div>
+  );
+}
+
+/** What is wrong with a block, in place of its table: each mistake, with the line that makes it. */
+function TableProblems({ block, source, problems }: { readonly block: TableBlock; readonly source: string; readonly problems: readonly TableProblem[] }) {
+  const { strings } = useHost();
+  const lines = source.split('\n');
+  return (
+    <div className="data-table-problems" role="status" data-table-name={block.table ?? undefined}>
+      <ul>
+        {problems.map((problem, index) => (
+          <li key={index} data-code={problem.code}>
+            {strings.tableProblem(problem.code, block.table)}
+            {problem.line > 0 && <code>{lines[problem.line - 1]?.trim()}</code>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

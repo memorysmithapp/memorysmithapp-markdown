@@ -56,6 +56,14 @@ export interface NoteHost {
    */
   readonly queryTable?: (request: TableRequest) => Promise<TablePage | null>;
   /**
+   * Whether the note is being drawn for paper or a PDF (#139). Each `table` block then asks
+   * `queryTable` for every row its filter returns, in its declared order, and is drawn with no
+   * control, closed by the line naming what was read. It is the host that knows: an answer cannot
+   * arrive between the browser's print command and its page, so give it, wait until no
+   * `[aria-busy="true"]` is left under the note, then print. Defaults to `false`.
+   */
+  readonly printing?: boolean;
+  /**
    * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
    * its state and none answers a click.
    */
@@ -266,6 +274,7 @@ export const HOST_KEYS = Object.keys({
   navigate: 1,
   loadNote: 1,
   queryTable: 1,
+  printing: 1,
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
@@ -291,6 +300,7 @@ export interface ResolvedHost {
   readonly remoteNotice: boolean;
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
   readonly queryTable: ((request: TableRequest) => Promise<TablePage | null>) | null;
+  readonly printing: boolean;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
@@ -331,6 +341,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     remoteNotice: host.remoteNotice ?? true,
     loadNote: host.loadNote ?? null,
     queryTable: host.queryTable ?? null,
+    printing: host.printing ?? false,
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,

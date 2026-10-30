@@ -131,25 +131,85 @@ describe('a table block, where the host reaches the tables', () => {
     expect(container.querySelector('.data-table-pages')).toBeNull();
   });
 
-  it('stays a code block when the block cannot be read, and asks the host nothing', async () => {
+  const problems = (container: HTMLElement): (string | undefined)[] =>
+    [...container.querySelectorAll<HTMLElement>('.data-table-problems li')].map((item) => item.dataset['code']);
+
+  it('draws what is wrong with a block it cannot read in place of the table, and asks the host nothing', async () => {
     const host = hostOf();
-    const container = await draw('```table\ntable: expenses\npage: 0\n```\n', host);
+    const container = await draw('```table\ntable: expenses\ncolour: red\npage: 0\nwhere: "open\n```\n', host);
     expect(host.queryTable).not.toHaveBeenCalled();
-    expect(container.querySelector('code.language-table')?.textContent).toContain('page: 0');
+    expect(container.querySelector('table, pre')).toBeNull();
+    expect(problems(container)).toEqual(['table-key-unknown', 'table-key-invalid', 'table-filter-invalid']);
+    expect(cells(container, '.data-table-problems code')).toEqual(['colour: red', 'page: 0', 'where: "open']);
   });
 
-  it('stays a code block when the notebook keeps no such table, or the block names a column it lacks', async () => {
-    const missing = await draw('```table\ntable: budget\n```\n', hostOf());
-    expect(missing.querySelector('code.language-table')).not.toBeNull();
-    mounted?.unmount();
-    mounted = null;
-    const column = await draw('```table\ntable: expenses\ncolumns: colour\n```\n', hostOf());
-    expect(column.querySelector('code.language-table')).not.toBeNull();
+  it('says a block names no table', async () => {
+    const container = await draw('```table\ncolumns: date\n```\n', hostOf());
+    expect(problems(container)).toEqual(['table-unnamed']);
   });
 
-  it('stays a code block when the host fails', async () => {
+  it('says the notebook keeps no such table, by its name', async () => {
+    const container = await draw('```table\ntable: budget\n```\n', hostOf());
+    expect(problems(container)).toEqual(['table-pending']);
+    expect(container.querySelector('.data-table-problems')?.textContent).toContain('budget');
+  });
+
+  it('says what the columns of the table cannot answer', async () => {
+    const container = await draw('```table\ntable: expenses\ncolumns: colour\nwhere: paid:>true\ntotal: paid\n```\n', hostOf());
+    expect(problems(container)).toEqual(['table-column-unknown', 'table-filter-invalid', 'table-key-invalid']);
+  });
+
+  it('leaves the rest of the note as written', async () => {
+    const container = await draw('Before.\n\n```table\ntable: budget\n```\n\nAfter.\n', hostOf());
+    expect(container.textContent).toContain('Before.');
+    expect(container.textContent).toContain('After.');
+  });
+
+  it('says the host failed above the block as written, which is no mistake of the block', async () => {
     const container = await draw('```table\ntable: expenses\n```\n', { queryTable: vi.fn(async () => Promise.reject(new Error('down'))) });
+    expect(container.querySelector('.data-table-failed [role="status"]')).not.toBeNull();
     expect(container.querySelector('code.language-table')).not.toBeNull();
+  });
+
+  it('asks a host that gives its function anew on each render once', async () => {
+    const host = hostOf();
+    mounted = await mount(<NoteBody markdown={BLOCK} actions={false} queryTable={(request) => host.queryTable(request)} />);
+    await act(async () => undefined);
+    await act(async () => mounted!.root.render(<NoteBody markdown={BLOCK} actions={false} queryTable={(request) => host.queryTable(request)} />));
+    expect(host.queryTable).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a table block being printed', () => {
+  async function printed(markdown: string, host = hostOf(), locale = 'en-US'): Promise<HTMLElement> {
+    mounted = await mount(<NoteBody markdown={markdown} actions={false} queryTable={host.queryTable} printing strings={{ locale }} />);
+    await act(async () => undefined);
+    return mounted.container;
+  }
+
+  it('asks for every row the filter returns, in the declared order', async () => {
+    const host = hostOf();
+    const container = await printed(BLOCK, host);
+    expect(host.queryTable.mock.calls[0]?.[0]).toMatchObject({ page: 1, size: 'all', sort: [{ column: 'date', descending: true }] });
+    expect(cells(container, 'tbody td:nth-child(2)')).toEqual(['Farmácia', 'Conserto', 'Mercado', 'Aluguel de outubro']);
+  });
+
+  it('draws no control, and keeps the header and the total', async () => {
+    const container = await printed(BLOCK);
+    expect(container.querySelector('.data-table button')).toBeNull();
+    expect(container.querySelector('.data-table-pages')).toBeNull();
+    expect(container.querySelector('thead th')?.textContent).toBe('date');
+    expect(cells(container, 'tfoot td')[2]).toBe('3,099.90');
+  });
+
+  it('closes with a line naming the table, the filter, the count and when the rows were read', async () => {
+    const container = await printed(BLOCK);
+    expect(container.querySelector('.data-table-printed')?.textContent).toBe('Table expenses, filtered by date:2026-10: 4 rows, read on Oct 29, 2026, 12:00 PM.');
+  });
+
+  it('says nothing of a filter the block does not write', async () => {
+    const container = await printed('```table\ntable: expenses\n```\n');
+    expect(container.querySelector('.data-table-printed')?.textContent).toMatch(/^Table expenses: 5 rows, read on /);
   });
 });
 

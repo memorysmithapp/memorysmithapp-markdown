@@ -506,6 +506,58 @@
 .markdown .data-table-loading {
   color: var(--ms-text-soft);
 }
+/* A block that cannot be answered says why, in place of its table. */
+.markdown .data-table-problems {
+  margin-block: var(--ms-p-spacing);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ms-border);
+  border-inline-start: 3px solid var(--ms-pending);
+  border-radius: 6px;
+}
+.markdown .data-table-problems ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.markdown .data-table-problems code {
+  display: block;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+.markdown .data-table-failed > p {
+  margin-block: var(--ms-p-spacing) 0;
+  color: var(--ms-text-soft);
+}
+/* On paper a table is a table: `display: block`, which lets it scroll on a
+   screen, is what would stop the header repeating on each page. */
+.markdown .data-table-printing table {
+  display: table;
+  width: 100%;
+}
+.markdown .data-table-printing thead {
+  display: table-header-group;
+}
+.markdown .data-table-printing tr {
+  break-inside: avoid;
+}
+.markdown .data-table-printed {
+  margin-block: 0.4rem 0;
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+@media print {
+  .markdown .data-table table {
+    display: table;
+    width: 100%;
+  }
+  .markdown .data-table thead {
+    display: table-header-group;
+  }
+  .markdown .data-table-page,
+  .markdown .data-table-sort span {
+    display: none;
+  }
+}
 .markdown .data-table-footer {
   display: flex;
   flex-wrap: wrap;

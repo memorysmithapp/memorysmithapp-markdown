@@ -50,6 +50,24 @@ export const PORTUGUESE: Partial<NoteStrings> = {
   tableTotal: 'Total',
   tableEmpty: 'Nenhuma linha atende a este filtro.',
   tableSortBy: (column) => `Ordenar por ${column}, só para você: a nota mantém a ordem dela`,
+  tableProblem: (code, table) => {
+    switch (code) {
+      case 'table-unnamed':
+        return 'Este bloco table não nomeia uma tabela: escreva o nome uma vez, como table: nome.';
+      case 'table-key-unknown':
+        return 'Um bloco table tem seis chaves, e esta linha não é nenhuma delas:';
+      case 'table-key-invalid':
+        return 'Esta chave foi escrita duas vezes, ou o valor dela não pode ser lido:';
+      case 'table-column-unknown':
+        return `A tabela ${table ?? ''} não tem esta coluna:`;
+      case 'table-filter-invalid':
+        return 'Este filtro não pode ser respondido:';
+      case 'table-pending':
+        return `Este caderno ainda não guarda uma tabela chamada ${table ?? ''}.`;
+    }
+  },
+  tablePrinted: ({ table, filter, count, readAt }) =>
+    `Tabela ${table}${filter === null ? '' : `, filtrada por ${filter}`}: ${count === 1 ? '1 linha' : `${count.toLocaleString('pt-BR')} linhas`}, lidas em ${readAt}.`,
   attachmentMissing: 'Este caderno não guarda nenhum arquivo com esse nome.',
   attachmentOpen: 'Abrir',
   attachmentDownload: 'Baixar',
