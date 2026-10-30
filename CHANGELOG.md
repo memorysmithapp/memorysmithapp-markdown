@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A `table` block that cannot be answered is drawn as what is wrong with it, in place of the table: a block that names no table, an unknown key, a key written twice or a value that cannot be read, a column the table lacks, a filter that is an error, and a table the notebook does not keep, each in the reader's words (`tableProblem`) with the line that makes it (#139). A host that fails says so (`failed`) above the block as written.
 - With the new `printing` prop, a `table` block asks for every row its filter returns, in its declared order, and is drawn with no control, its header repeated on each printed page, its total, and a line naming the table, the filter, the row count and when the rows were read (`tablePrinted`) (#139). The host sets it and prints once no `aria-busy="true"` is left; the playground shows it at `?print=1`.
 
+### Changed
+
+- A fenced block whose info string is the word `table` is no longer an ordinary code block (#137, #138). A note that already writes one for another purpose raises the table notices in `diagnose`, and is drawn as a table, or as what is wrong with it, under a host that gives `queryTable`; its bytes are unchanged, and any other info string keeps it code.
+
 ### Fixed
 
 - A flag of a Bash code block, `-euo` or `-name`, is no longer drawn in violet on a violet tint, as a parameter reference is (#140). The style of a parameter reference, added in v0.9.0, also matched the class Prism gives a shell flag; it is now named by the `data-parameter` attribute that only a parameter carries.
