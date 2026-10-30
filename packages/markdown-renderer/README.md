@@ -22,6 +22,7 @@ import 'katex/dist/katex.min.css';
   fileOf={(name) => describe(name)}               // { mimeType, bytes, url, description }: drawn by its type, as MemorySmith does
   renderLink={({ href, className, children }) => <a href={href} className={className} onClick={follow(href)}>{children}</a>} // follow: your router's navigate, captured where it is
   loadNote={(name) => fetchTheBodyOf(name)}        // for an embedded note; the package never fetches
+  queryTable={(request) => queryYourTable(request)} // the rows a ```table block asks for: one page, the count, the total
   writable
   onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"
@@ -29,7 +30,7 @@ import 'katex/dist/katex.min.css';
 />;
 ```
 
-Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. In edit mode, `renderLink`, `renderAttachment` and a theme's slots may be drawn in a root of their own, outside your React tree, so what they return must not read your context: a router's `<Link>` throws there, and the block shows its Markdown under a notice instead. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
+Every prop is optional, and every default is the safe one: with no `resolve` every link is pending, with no `keeps` no embed reaches a file. A file `fileOf` describes is drawn by its media type, never its name: an image, an audio or a video player, and anything else a card with its type, size, description, *Open* where a browser shows it and *Download*; give `renderAttachment` instead to draw files yourself. A `table` block is drawn as its table through `queryTable`: it hands you the table, the columns, the filter as written, the order, the page and its size and the column to sum, you run the filter and answer the table's columns with their kinds, the page's rows — a number as its digits, so none is rounded — the row count, the total and when you read them; `runTableQuery` answers from rows you hold in memory. A reader sorts by a header for themselves, which asks you again; without `queryTable` the block is a code block. In edit mode, `renderLink`, `renderAttachment` and a theme's slots may be drawn in a root of their own, outside your React tree, so what they return must not read your context: a router's `<Link>` throws there, and the block shows its Markdown under a notice instead. The stylesheet styles nothing outside `.markdown`. The faces of the default theme are Inter and Space Grotesk, which the page loads.
 
 ## Themes
 

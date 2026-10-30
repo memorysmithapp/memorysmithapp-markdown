@@ -463,3 +463,191 @@ function kindMistake(node: QueryNode, columns: ReadonlyMap<string, TableColumn>)
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// What the host answers, and a reference of how a query is answered.
+// ---------------------------------------------------------------------------
+
+/**
+ * One value of a row. A number and a date travel as text — a number as its decimal digits, so a
+ * value of 38 digits is never rounded through a floating point, a date in ISO 8601 — a boolean as
+ * itself, a list as its items, and an empty value as `null`.
+ */
+export type TableValue = string | boolean | readonly string[] | null;
+
+/** A row, by the name of each column as the table writes it. A column it lacks is empty. */
+export type TableRow = Readonly<Record<string, TableValue>>;
+
+/** What a `table` block asks the host for (#138). */
+export interface TableRequest {
+  /** The table, as the block names it: trimmed and in NFC, compared by the host with case folded (§5.9). */
+  readonly table: string;
+  /** The columns the block draws, as it wrote them, or `null` for every one. */
+  readonly columns: readonly string[] | null;
+  /** The filter as the block wrote it (§6.9), or `null` for every row. The host runs it. */
+  readonly where: string | null;
+  /** The order: the block's, or the reader's once they sort by a header; empty is insertion order. */
+  readonly sort: readonly TableSortKey[];
+  /** The page, from 1. */
+  readonly page: number;
+  /** Rows to a page, or `'all'` for every row the filter returns, which printing asks for. */
+  readonly size: number | 'all';
+  /** The column whose sum over the whole filter closes the table, or `null`. */
+  readonly total: string | null;
+}
+
+/** What the host answers for a table it keeps (#138). */
+export interface TablePage {
+  /** The table's columns, in its own order, with their kinds. */
+  readonly schema: TableSchema;
+  /** The rows of the page asked for. */
+  readonly rows: readonly TableRow[];
+  /** How many rows the whole filter returns, which numbers the pages. */
+  readonly count: number;
+  /** The sum of `total` over the whole filter, as decimal digits, or `null` when none was asked. */
+  readonly total: string | null;
+  /** When the rows were read, in ISO 8601. */
+  readonly readAt: string;
+}
+
+/**
+ * Answers a request from a table held in memory, as `SPEC.md` §6.9 and §7.15 say a query is
+ * answered: the filter, the order, the page and the total. A host that keeps its tables elsewhere
+ * answers in its own store; this is the reference its answers can be compared with, and what the
+ * playground answers with. A filter that cannot be read throws `QuerySyntaxError`.
+ */
+export function runTableQuery(
+  table: { readonly schema: TableSchema; readonly rows: readonly TableRow[] },
+  request: TableRequest,
+  readAt: string = new Date().toISOString(),
+): TablePage {
+  const byName = new Map(table.schema.columns.map((column) => [fold(column.name), column]));
+  const where = request.where === null || request.where.trim() === '' ? null : parseQuery(request.where);
+  const matching = where === null ? [...table.rows] : table.rows.filter((row) => matches(where, row, byName));
+
+  const keys = request.sort
+    .map((key) => ({ column: byName.get(fold(key.column)), descending: key.descending }))
+    .filter((key): key is { column: TableColumn; descending: boolean } => key.column !== undefined);
+  const ordered = matching
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      for (const key of keys) {
+        const order = compareValues(a.row[key.column.name] ?? null, b.row[key.column.name] ?? null, key.column.kind, key.descending);
+        if (order !== 0) return order;
+      }
+      return a.index - b.index;
+    })
+    .map(({ row }) => row);
+
+  const size = request.size === 'all' ? Math.max(ordered.length, 1) : request.size;
+  const start = request.size === 'all' ? 0 : (Math.max(request.page, 1) - 1) * size;
+  const summed = request.total === null ? undefined : byName.get(fold(request.total));
+  return {
+    schema: table.schema,
+    rows: ordered.slice(start, start + size),
+    count: ordered.length,
+    total: summed ? sumDecimals(matching.map((row) => row[summed.name]).filter((value): value is string => typeof value === 'string')) : null,
+    readAt,
+  };
+}
+
+/** Whether a row answers a query, by the kinds of its columns (§6.9). */
+function matches(node: QueryNode, row: TableRow, columns: ReadonlyMap<string, TableColumn>): boolean {
+  switch (node.kind) {
+    case 'and':
+      return node.nodes.every((each) => matches(each, row, columns));
+    case 'or':
+      return node.nodes.some((each) => matches(each, row, columns));
+    case 'not':
+      return !matches(node.node, row, columns);
+    case 'term': {
+      if (node.field === null) {
+        return [...columns.values()]
+          .filter((column) => column.kind === 'text' || column.kind === 'list')
+          .some((column) => textsOf(row[column.name] ?? null).some((text) => fold(text).includes(node.value)));
+      }
+      const column = columns.get(node.field);
+      if (!column) return false;
+      const value = row[column.name] ?? null;
+      if (value === null) return false;
+      if (column.kind === 'date') return String(value).startsWith(node.value);
+      if (column.kind === 'number') return compareDecimals(String(value), node.value) === 0;
+      return textsOf(value).some((text) => fold(text).includes(node.value));
+    }
+    case 'compare':
+    case 'range': {
+      const column = columns.get(node.field);
+      const value = column ? (row[column.name] ?? null) : null;
+      if (!column || typeof value !== 'string') return false;
+      const bounds: [Comparison, string][] = node.kind === 'compare' ? [[node.op, node.value]] : [['>=', node.from], ['<=', node.to]];
+      return bounds.every(([op, bound]) => {
+        // A date is cut to the length of its bound, so a month is a legal end (§6.8).
+        const order = column.kind === 'number' ? compareDecimals(value, bound) : compareText(value.slice(0, bound.length), bound);
+        return op === '>=' ? order >= 0 : op === '>' ? order > 0 : op === '<=' ? order <= 0 : order < 0;
+      });
+    }
+  }
+}
+
+function textsOf(value: TableValue): string[] {
+  if (value === null) return [];
+  if (Array.isArray(value)) return [...value];
+  return [String(value)];
+}
+
+const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * The order of two values of one kind (§7.15): numbers as numbers, dates in ISO 8601, which orders
+ * as text, booleans `false` first, text and lists by their folded text. An empty value comes last
+ * in either direction.
+ */
+export function compareValues(a: TableValue, b: TableValue, kind: TableColumnKind, descending = false): number {
+  const emptyA = a === null || (Array.isArray(a) && a.length === 0) || a === '';
+  const emptyB = b === null || (Array.isArray(b) && b.length === 0) || b === '';
+  if (emptyA || emptyB) return emptyA === emptyB ? 0 : emptyA ? 1 : -1;
+  let order: number;
+  if (kind === 'number') order = compareDecimals(String(a), String(b));
+  else if (kind === 'boolean') order = Number(a === true || a === 'true') - Number(b === true || b === 'true');
+  else if (kind === 'date') order = compareText(String(a), String(b));
+  else order = compareText(fold(textsOf(a).join(', ')), fold(textsOf(b).join(', ')));
+  return descending ? -order : order;
+}
+
+/** A decimal written in digits, as a whole number and the power of ten it is divided by. */
+function decimal(text: string): { units: bigint; scale: number } | null {
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(text.trim());
+  if (!match) return null;
+  const fraction = match[3] ?? '';
+  return { units: BigInt(`${match[1]}${match[2]}${fraction}`), scale: fraction.length };
+}
+
+function aligned(a: { units: bigint; scale: number }, b: { units: bigint; scale: number }): [bigint, bigint, number] {
+  const scale = Math.max(a.scale, b.scale);
+  return [a.units * 10n ** BigInt(scale - a.scale), b.units * 10n ** BigInt(scale - b.scale), scale];
+}
+
+/** Two decimals compared exactly, with no floating point; what is not a number sorts after one. */
+function compareDecimals(a: string, b: string): number {
+  const x = decimal(a);
+  const y = decimal(b);
+  if (!x || !y) return x ? -1 : y ? 1 : 0;
+  const [left, right] = aligned(x, y);
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** The exact sum of decimals, written in digits. */
+export function sumDecimals(values: readonly string[]): string {
+  let sum = { units: 0n, scale: 0 };
+  for (const value of values) {
+    const next = decimal(value);
+    if (!next) continue;
+    const [left, right, scale] = aligned(sum, next);
+    sum = { units: left + right, scale };
+  }
+  const negative = sum.units < 0n;
+  const digits = (negative ? -sum.units : sum.units).toString().padStart(sum.scale + 1, '0');
+  const whole = digits.slice(0, digits.length - sum.scale);
+  const fraction = digits.slice(digits.length - sum.scale);
+  return `${negative ? '-' : ''}${whole}${fraction ? `.${fraction}` : ''}`;
+}

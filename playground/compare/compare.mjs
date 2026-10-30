@@ -65,6 +65,10 @@ export const DELIBERATE = {
     'Its fence names a language outside the fifteen MemorySmith highlights at this commit: MemorySmith draws it as plain code, the renderer fetches its grammar and highlights it (#84).',
   'enologia/01 Castas/Índice.md':
     'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42). Its picture is written `![…](../assets/…)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins (#104).',
+  'continuity-engineering/01 Objectives/Recovery Time Objective.md':
+    'It writes a `table` block: MemorySmith at this commit draws it as a code block, the renderer as the table it asks for, from the sample tables (#138).',
+  'enologia/03 Safras/Safra 2026 · Serra Gaúcha.md':
+    'It writes a `table` block: MemorySmith at this commit draws it as a code block, the renderer as the table it asks for, from the sample tables (#138).',
   'enologia/03 Safras/Índice.md':
     'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104).',
 };

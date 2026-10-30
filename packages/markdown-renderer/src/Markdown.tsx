@@ -19,6 +19,8 @@ import { CopyButton } from './CopyButton.js';
 import { fileAddress, fileKind, formatBytes, opensInBrowser, rendersAs } from './file-types.js';
 import { keptImageName } from './kept-image.js';
 import { highlightLanguage, highlightTree, languageToLoad, loadGrammar } from './highlight.js';
+import { DataTable } from './DataTable.js';
+import { isTableBlock } from './table-block.js';
 import { useHost, type KeptFile } from './host.js';
 import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from './image-dimensions.js';
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
@@ -410,7 +412,7 @@ function MarkdownCode({ className, children, node: _node, ...rest }: WithNode<HT
  * nothing to copy.
  */
 function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPreElement>>) {
-  const { strings } = useHost();
+  const { strings, queryTable } = useHost();
   const slot = useSlot('codeBlock');
   const code = (node as HastElement | undefined)?.children?.find((child) => child.tagName === 'code');
   const classes = code?.properties?.['className'];
@@ -421,13 +423,12 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
   // The bytes as typed: the text of the fence, less the newline before its closing line.
   const typed = textOf(code).replace(/\n$/, '');
   const copy = <CopyButton className="code-copy" label={strings.copy} done={strings.copied} text={() => typed} />;
-  if (slot) {
-    const language = Array.isArray(classes)
-      ? (classes.map(String).find((name) => name.startsWith('language-'))?.slice('language-'.length) ?? null)
-      : null;
-    return <InBlock.Provider value>{drawSlot(slot, { language, code: typed, children, copy })}</InBlock.Provider>;
-  }
-  return (
+  const language = Array.isArray(classes)
+    ? (classes.map(String).find((name) => name.startsWith('language-'))?.slice('language-'.length) ?? null)
+    : null;
+  const drawn = slot ? (
+    <InBlock.Provider value>{drawSlot(slot, { language, code: typed, children, copy })}</InBlock.Provider>
+  ) : (
     <div className="code-block">
       <InBlock.Provider value>
         <pre {...rest}>{children}</pre>
@@ -435,6 +436,13 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
       {copy}
     </div>
   );
+  // A `table` block is the table it asks for, where the host reaches the notebook's tables, and the
+  // code block it is everywhere else (§7.15).
+  const meta = (code as { data?: { meta?: unknown } } | undefined)?.data?.meta;
+  if (queryTable && isTableBlock(language, typeof meta === 'string' ? meta : null)) {
+    return <DataTable source={typed} fallback={drawn} />;
+  }
+  return drawn;
 }
 
 /** The text of a hast element, which for a fence is the code as typed. */

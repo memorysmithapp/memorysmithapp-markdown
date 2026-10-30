@@ -27,6 +27,19 @@ export interface NoteStrings {
   readonly parameter: string;
   /** The title of a wikilink whose target writes a parameter, which leads nowhere until then. */
   readonly parameterLink: string;
+  /** How many rows the filter of a `table` block returns (§7.15). */
+  readonly tableRows: (count: number) => string;
+  /** Which page of a `table` block is drawn, of how many. */
+  readonly tablePage: (page: number, pages: number) => string;
+  /** The buttons that move a `table` block to the page before and after. */
+  readonly tablePrevious: string;
+  readonly tableNext: string;
+  /** The label of the row that closes a table with its total. */
+  readonly tableTotal: string;
+  /** What a `table` block says when its filter returns no row. */
+  readonly tableEmpty: string;
+  /** The title of a column's header, which sorts the table by it for the reader alone. */
+  readonly tableSortBy: (column: string) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -255,6 +268,13 @@ export const ENGLISH: NoteStrings = {
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
   parameter: 'Parameter: filled in when a notebook is created from this model.',
   parameterLink: 'A link to a parameter: it leads to a note once a notebook is created from this model.',
+  tableRows: (count) => (count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`),
+  tablePage: (page, pages) => `Page ${page} of ${pages}`,
+  tablePrevious: 'Previous page',
+  tableNext: 'Next page',
+  tableTotal: 'Total',
+  tableEmpty: 'No row answers this filter.',
+  tableSortBy: (column) => `Sort by ${column}, for you alone: the note keeps its order`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',
