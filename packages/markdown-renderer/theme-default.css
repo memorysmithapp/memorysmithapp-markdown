@@ -738,8 +738,10 @@
 
 /* A parameter of a model, `{{name}}` (§7.14): drawn as what it is, a place a
    value goes, and never as broken text. The braces stay, so what is copied is
-   what was typed. A wikilink to one leads nowhere yet, so it is not a link. */
-.markdown .parameter {
+   what was typed. A wikilink to one leads nowhere yet, so it is not a link.
+   Named by its attribute: Prism calls a shell flag `token parameter`, and a
+   flag is code, not a parameter (#140). */
+.markdown .parameter[data-parameter] {
   color: rgb(var(--ms-parameter));
   background: rgba(var(--ms-parameter), 0.12);
   border-radius: 4px;
@@ -754,7 +756,7 @@
 }
 /* Marked, it takes the mark's ink: the parameter's violet on the mark's yellow
    holds no contrast in the dark. Its tint still says what it is. */
-.markdown mark .parameter {
+.markdown mark .parameter[data-parameter] {
   color: inherit;
 }
 

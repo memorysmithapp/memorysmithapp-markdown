@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `spec.json` carries the block as `table-block` and the reference as `table-reference`, and six notices: `table-unnamed`, `table-key-unknown`, `table-key-invalid`, `table-column-unknown`, `table-filter-invalid` and `table-pending`. Thirty-seven conformance cases cover the keys, their defaults and limits, the reference and the pending reference, and filters that read and that do not, under a new field, `tables`, and tables a case's notebook keeps, each with its columns, which the checker and the types know; a resolution may be of kind `table`.
 - The renderer reads a `table` block and its filter (`src/table-block.ts`, a port of MemorySmith's search parser), and `diagnose` reports the six notices on the line of the key each is about, a pending table and a mistake against a table's columns only when the host gives `tables` (#137). On the page the block is drawn as a code block. The two demonstration notebooks each write one, in context.
 
+### Fixed
+
+- A flag of a Bash code block, `-euo` or `-name`, is no longer drawn in violet on a violet tint, as a parameter reference is (#140). The style of a parameter reference, added in v0.9.0, also matched the class Prism gives a shell flag; it is now named by the `data-parameter` attribute that only a parameter carries.
+
 ## [0.9.0] - 2026-10-25
 
 ### Added
