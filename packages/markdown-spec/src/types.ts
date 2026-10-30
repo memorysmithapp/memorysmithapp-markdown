@@ -79,12 +79,12 @@ export interface ConformanceFacet {
 }
 
 /** What a target becomes once a notebook exists to resolve it against. */
-export type ResolutionKind = 'note' | 'attachment' | 'pending';
+export type ResolutionKind = 'note' | 'attachment' | 'table' | 'pending';
 
 export interface ConformanceResolution {
   readonly target: string;
   readonly kind: ResolutionKind;
-  /** Only a note produces an edge, one per note that matches. */
+  /** Only a note produces an edge, one per note that matches; an attachment and a table produce none. */
   readonly edges: number;
 }
 
@@ -94,12 +94,28 @@ export interface ConformanceNotice {
   readonly line: number;
 }
 
-/** The notes and attachments that exist while a case runs. */
+/** The kind of a table's column (`SPEC.md` §5.9), which decides how a query matches it (§6.9). */
+export type ColumnKind = 'text' | 'number' | 'date' | 'boolean' | 'list';
+
+export interface ConformanceColumn {
+  readonly name: string;
+  readonly kind: ColumnKind;
+}
+
+/** A table a notebook keeps: its name and its columns, in its own order. Its rows are never part of a case. */
+export interface ConformanceTable {
+  readonly name: string;
+  readonly columns: readonly ConformanceColumn[];
+}
+
+/** The notes, attachments and tables that exist while a case runs. */
 export interface ConformanceNotebook {
   /** Whole Markdown documents; a fixture never declares its own name outside its document. */
   readonly notes?: readonly string[];
   /** Names of kept files. */
   readonly attachments?: readonly string[];
+  /** Tables the notebook keeps (`SPEC.md` §5.9). */
+  readonly tables?: readonly ConformanceTable[];
 }
 
 interface CaseBase {
@@ -127,6 +143,11 @@ interface CaseBase {
    * in NFC, in any order. Absent asserts nothing; `[]` asserts there are none.
    */
   readonly parameters?: readonly string[];
+  /**
+   * The tables the input references (`SPEC.md` §5.9): each name once, trimmed and in NFC, compared
+   * with case folded, in any order. Absent asserts nothing; `[]` asserts there are none.
+   */
+  readonly tables?: readonly string[];
 }
 
 /**

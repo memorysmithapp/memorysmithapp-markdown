@@ -8,7 +8,7 @@ A specification of the Markdown a knowledge notebook is written in: plain `.md` 
 
 ### 1.1 What this document is
 
-This specification defines **which notation a conforming implementation reads, and what it does with it**. It declares no syntax of its own: it profiles CommonMark, GitHub Flavored Markdown and the vault editors that established the rest — chiefly Obsidian — and every form specified here was taken from one of them. Nothing is invented, and §2 names each source.
+This specification defines **which notation a conforming implementation reads, and what it does with it**. It declares no syntax of its own: it profiles CommonMark, GitHub Flavored Markdown and the tools that established the rest — chiefly Obsidian, and MemorySmith's own search for the language of a query — and every form specified here was taken from one of them. Nothing is invented, and §2 names each source.
 
 It is also **self-contained**. §3 and §4 state every block and every inline the specification accepts, with the form as it is typed and what it produces, so that writing a note, or implementing one, does not mean reading three specifications side by side with a finger in each. Where this document and the source a form was taken from disagree, the source governs (§2.1).
 
@@ -51,7 +51,8 @@ Nothing here is invented. Every form this specification declares was taken from 
 |---|---|---|
 | [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) | Blocks and inlines | §3 |
 | [GFM 0.29-gfm](https://github.github.com/gfm/) | Tables, task list items, strikethrough, extended autolinks, disallowed raw HTML | §4 |
-| [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template | §5, §7 |
+| [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template; the `query` block that draws what a query returns in place of itself | §5, §7 |
+| [MemorySmith's search](https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts) | The query language: terms, phrases, negation, `OR`, groups, fields and the intervals over a date | §6 |
 
 Obsidian is a source and not an authority. It publishes documentation rather than a versioned specification, so it carries no version above, and where it and this document differ **this document governs** — the opposite of the precedence CommonMark and GFM hold in §2.1. This specification is not *Obsidian compatible* and does not undertake to follow it; Obsidian is where a form was established and where its established meaning can be checked.
 
@@ -209,7 +210,7 @@ select 1;
 ```
 ````
 
-The word after the opening fence is the **info string**, and by convention it names the language. `mermaid` is the one info string this specification attaches a rendering rule to (§7.2). A tilde fence may carry backticks in its info string; a backtick fence may not.
+The word after the opening fence is the **info string**, and by convention it names the language. `mermaid` and `table` are the two info strings this specification attaches a rule to (§7.2, §7.15). A tilde fence may carry backticks in its info string; a backtick fence may not.
 
 Because a fence closes only on the same character at the same length or longer, **a fence nests**: an outer fence uses more characters than any fence inside it, or a different character. That is the only way to write a code block holding a code block, which is what documenting this specification requires — and it is how the examples in this document are written.
 
@@ -221,7 +222,7 @@ A fence opens at the start of a line — indented up to three spaces within its 
     an indented code block
 ```
 
-Nothing inside a code block is parsed: no emphasis, no links, no wikilinks, no callouts, no frontmatter. That is what lets this document write its own notation down without invoking any of it, and §5.6 makes it binding on an Indexer.
+Nothing inside a code block is parsed: no emphasis, no links, no wikilinks, no callouts, no frontmatter. That is what lets this document write its own notation down without invoking any of it, and §5.6 makes it binding on an Indexer. The `table` block is the one whose lines are read, as keys and nothing else (§7.15).
 
 ### 3.8 Link reference definitions
 
@@ -488,6 +489,8 @@ A wikilink whose target writes a parameter reference is not a pending link: it i
 
 A link inside a code span or a fenced code block is an example, not a reference. An Indexer MUST NOT extract it.
 
+A `table` block is a fenced code block, and this holds inside it too: a `[[link]]` written in one is no edge. What an Indexer reads there is the table its `table` key names, and nothing else (§5.9). A `table` block written inside another code block — as this document writes one, inside a fence of four backticks — is an example, and names nothing.
+
 What is code is decided by the rules of §3.7 and §3.11 and by nothing looser: a fence of backticks or of tildes, closed only by its own character at its own length or longer, and a code span closed by a run of exactly its own length. An Indexer that pairs runs of backticks wherever they fall reads a code span showing ` ``` ` as the opening of a block, and from there every block after it out of phase — extracting the links inside them and dropping the links written between them.
 
 ### 5.7 Embeds
@@ -524,6 +527,20 @@ A note and an attachment are both addressed by a name, and the two are keys of t
 **`![[target|value]]` is read by what the target is.** When the target is a note, the pipe is the alias of §5.1. When it is an attachment, the pipe carries the dimensions of §3.14, a width as a percentage included. When the target resolves to neither — the common case while a notebook is being written — **the pipe is an alias**, because a reference to a note that does not exist yet is what §5.5 exists to keep visible, and reading it as a dimension would discard the text an author wrote.
 
 Whichever it is, **the pipe never changes the target**: `[[Lei 14.133|100]]` and `![[engelbart.jpg|100]]` address `Lei 14.133` and `engelbart.jpg`, and what follows the pipe is display in both.
+
+### 5.9 Tables
+
+A **table** is data a notebook keeps beside its notes: rows under named columns, each column of one kind — `text`, `number`, `date`, `boolean` or `list` — and named by one word, which holds no whitespace and none of `,` `:` `"` `(` `)`, the characters a `table` block and a query separate with. It is neither a note nor an attachment, and how it is stored, typed or written is not this document's business (§1.2). What this document specifies is how a note names one, which is the `table` block of §7.15, and what an Indexer does with the name.
+
+**A `table` block references the table its `table` key names.** The reference is the value of that key, trimmed and normalised to NFC, and nothing else in the block takes part: not its columns, not its filter, and not the rows the table holds. An Indexer MUST extract it, and MUST NOT extract one from a block whose `table` key is missing, empty or written more than once. A block that makes another mistake — an unknown key, a filter that is an error — still references its table: the mistake is the block's, and the reference is what lets the table say which notes show it.
+
+**A table is named in a namespace of its own.** The name is compared, after NFC and with case folded, against the names of the notebook's tables and against nothing else: a note or an attachment of that name is not reached, and no wikilink, embed or image reaches a table. Case is folded here and not for a note (§5.3) because a notebook gives its tables names that stay distinct when folded, so `Expenses` and `expenses` can only name one table.
+
+**One reference per table.** Several blocks naming one table in a note are one reference, as several links to one note are one edge (§5.4).
+
+**A reference is never an edge.** The graph is between notes (§5.1): a table appears in no graph and is no backlink of a note. What an implementation that keeps tables MAY show, from the table's side, is the notes that reference it.
+
+**A name no table carries is a pending reference.** It is kept, it is reported as a pending link is (§5.5, §7.13 `table-pending`), it is never an error, and it resolves on its own the day the notebook keeps a table of that name. Renaming a table rewrites no note that names it, as renaming a note rewrites no link.
 
 ---
 
@@ -610,7 +627,7 @@ A date the author writes in the frontmatter — `created:`, `updated:`, `revisad
 
 ### 6.7 Date granularity in a query
 
-Dates are canonicalised to `YYYY-MM-DD`, which is ordered lexicographically. A query over a `date` attribute MUST match by **prefix**:
+This and §6.8 are the rules of the query language (§6.9) for a date. Dates are canonicalised to `YYYY-MM-DD`, which is ordered lexicographically. A query over a `date` attribute MUST match by **prefix**:
 
 ```
 created:2026            the whole year
@@ -650,15 +667,59 @@ is nothing" and both of these mean "you asked something that has no answer":
 
 Relative and named dates (`last-7-days` and friends) are **not** part of this specification.
 
+### 6.9 The query language
+
+A query is how a person asks a notebook for something — the notes a search returns, the rows a table block shows (§7.15) — and it is one language in both places, so a filter learnt in one works in the other. The form is the query language of MemorySmith's search (§2), and §6.7 and §6.8 are its rules for a date.
+
+```
+lei 14133                       every term must match
+"lei 14.133"                    a phrase, matched as one string
+-rascunho                       a leading dash negates
+contrato OR convênio            either side
+(contrato OR convênio) 2026     parentheses group
+status:pending                  a field: one attribute, or one column
+amount:>=100 date:2026-01..2026-03    intervals
+```
+
+**Terms.** A query is a sequence of terms separated by whitespace, and **every term must match**. `OR`, in capitals and as a word of its own, joins two sides either of which may; it binds more loosely than the implicit *and*, so `a b OR c` is `(a b) OR c`. Parentheses group. A `-` that starts a term — at the beginning of the query, or after whitespace or `(` — negates it, which is how `-rascunho` excludes and `lei-14133` stays one word.
+
+**Words and phrases.** A word runs to whitespace, a parenthesis or a `"`. A `"` opens a phrase that runs to the next `"`, spaces included, and matches as one string; `field:"two words"` gives a field a phrase as its value.
+
+**Fields.** A word with a `:` that is neither its first nor its last character is `field:value`, and it matches in that field only; any other word is text, its colon included, so `:` and `nota:` are text. What a field names is decided by what is queried. Over notes it is an attribute (§6.3), and an implementation MAY read some names as fields of its own — the name of the note, its body, its headings — and MUST document which. Over a table it is a column, and nothing else (§7.15). A term with no field matches the searchable text: over notes, what the implementation searches, which includes the body, the name and its aliases (§6.4); over a table, every column of kind `text` or `list`.
+
+**Matching.** Text is compared after folding case and stripping combining marks, so `vigencia` finds `Vigência`, and a field's name is folded the same way. What a value matches depends on the kind of what it is matched against, and on nothing else:
+
+| Kind | `field:value` matches | An interval |
+|---|---|---|
+| text, an `enum` attribute, each value of a list | a value that contains it | is an error |
+| boolean | a value that contains it, the value being `true` or `false` (§6.3) | is an error |
+| date | a value it is a prefix of (§6.7) | compares (§6.8) |
+| number | a value equal to it, as numbers | compares, as numbers |
+
+A number is written in digits, with an optional `-` before them and an optional `.` and more digits after them: `100`, `-3`, `12.50`. It is compared as a number, so `amount:>9` finds `10` and `amount:12.5` finds `12.50`. An interval — `>=`, `>`, `<=`, `<`, and the range `a..b` with both ends included — is §6.8's, over a date and over a number alike. Notes hold no attribute of kind number (§6.3), so over notes an interval stays a question about dates.
+
+A row or a note with no value in a field matches no term in that field, and so matches its negation.
+
+**What is an error.** A query that cannot be answered is an error, never an empty result, for §6.8's reason: an empty result says there is nothing, and an error says the question has no answer. The query alone decides the first four:
+
+- a phrase never closed, a phrase with nothing in it, a group never closed, a `)` with no group to close;
+- an operator with no term — `OR` at an end or beside another `OR`, a `-` with nothing after it, `()`;
+- a comparison with no operand, a range with an end missing;
+- a query longer than 500 characters.
+
+What is queried decides the rest, since what a value means is the kind of its field: an interval over a field that is neither a date nor a number, as §6.8 says of an attribute; a range whose ends are inverted, compared as that kind compares them, so `9..10` is a range of numbers and an inverted one of dates; and a field of kind number given a value that is not a number. A table adds one more: a field that names no column of it (§7.15).
+
+A query of nothing but whitespace asks nothing. A search refuses it; a table block reads it as no filter.
+
 ---
 
 ## 7. The reading surface
 
 A **Reader** renders a note for a person. Everything in this section is display: none of it produces an edge, an attribute or an index entry, and none of it changes the bytes of the note.
 
-Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram is a fenced block, an embed is an image whose target happens to be a note. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
+Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram and a table block are fenced blocks, an embed is an image whose target happens to be a note. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
 
-Callouts, marked text, comments, block identifiers and footnotes were established by Obsidian, and math and diagrams by the wider convention both it and GitHub follow (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
+Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, and math and diagrams by the wider convention both it and GitHub follow (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
 
 ### 7.1 Callouts
 
@@ -855,8 +916,14 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `strikethrough-single-tilde` | notice | §4.3 | One tilde on each side strikes nothing, and the tildes stay on the page |
 | `link-pending` | hint | §7.4 | A wikilink no note answers is drawn as pending |
 | `embed-pending` | hint | §7.3 | An embed no note and no kept file answers is drawn as a pending link, not as content; so is an image whose destination names no host and no kept file answers (§5.8), whose description is drawn as pending text |
+| `table-unnamed` | notice | §7.15 | A `table` block whose `table` key is missing, empty or written twice names no table, and says so in place of one |
+| `table-key-unknown` | notice | §7.15 | A line of a `table` block that is not `key: value` with one of its six keys: the block says so in place of the table |
+| `table-key-invalid` | notice | §7.15 | A key of a `table` block written twice, or a value its key cannot read: the block says so in place of the table |
+| `table-column-unknown` | notice | §7.15 | A column the table does not have, named by a key of a `table` block or as a field of its `where`: the block says so in place of the table |
+| `table-filter-invalid` | notice | §7.15 | A `where` that is an error (§6.9): the block says so in place of the table |
+| `table-pending` | hint | §7.15 | A `table` block naming a table the notebook does not keep says so in place of the table, until one of that name exists (§5.9) |
 
-The two pending codes need the notebook: an implementation reports them only when it knows which notes and files exist, and a pending link is a note still to write, which is why it is a hint. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body.
+The pending codes need the notebook: an implementation reports `link-pending` and `embed-pending` only when it knows which notes and files exist, and `table-pending` only when it knows which tables do; a pending link is a note still to write, and a pending table a table still to create, which is why they are hints. What depends on a table's columns — `table-column-unknown`, a `total` over a column that is not a number, and the errors of `where` that §6.9 leaves to the kind of a field — is reported only when the implementation knows them. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body; the lines of a `table` block raise only its own. A notice of a `table` block is placed on the line of the key it is about, and `table-unnamed` on the line that opens the block; a line raises one notice at most, for the first of its mistakes in the order §7.15 lists them, and the columns of a key are checked only once its value can be read.
 
 The table is data too: `spec.json` carries it as `notices`, and the conformance suite says which notices each of its inputs raises (§10).
 
@@ -891,6 +958,48 @@ A **parameter reference** marks where a value goes in a note of a **model**: a n
 A note that already writes `{{` for another purpose — a template of another editor, a sample of a template language — is drawn with a parameter in it. The answer is §3.2's: escape it, or put it in a code span, where documentation of code usually has it already.
 
 A notebook created from a model holds no reference: each one is replaced by its value, and its links, attributes and headings are then ordinary ones. How that is done, and how each type of value is written, belongs to the implementation that creates it.
+
+### 7.15 Table blocks
+
+````markdown
+```table
+table: expenses
+columns: date, description, amount, status
+where: status:pending date:2026-10
+sort: date desc
+page: 20
+total: amount
+```
+````
+
+A fenced code block whose info string is `table` presents a table of the notebook (§5.9) through a query: the rows the query returns, in the order the block asks, a page at a time. **The block holds the question and never the answer**: the rows stay in the table, and the note keeps the same bytes whatever the table comes to hold. The form, a fenced block that draws what a query returns in place of itself, is Obsidian's `query` block (§2); the language of its filter is §6.9.
+
+**The lines.** Each line of the block is `key: value`: the key is what precedes the first `:` and the value what follows it, both trimmed, and blank lines are ignored. The keys are written in English in every notebook, as the reserved keys of the frontmatter are (§6.4), and there are six:
+
+| Key | Value | When absent |
+|---|---|---|
+| `table` | The name of the table (§5.9). Required | The block names no table |
+| `columns` | Column names separated by commas, in the order they are drawn | Every column, in the table's own order |
+| `where` | A query (§6.9) whose fields are columns | Every row |
+| `sort` | Column names separated by commas, each followed by `asc` or `desc`, or by nothing for `asc`; the first decides, and each next one breaks the ties of those before it | The order the rows were added in |
+| `page` | Rows per page, a whole number from 1 to 100, in digits | 25 |
+| `total` | A column of kind `number`, among those drawn, whose sum over every row the filter returns closes the table — not the sum of one page | No total |
+
+A key with an empty value is absent. A column is named as a field of a query is (§6.9), with case and marks folded, so `descricao` names `Descrição`; the header shows each column as the table writes it, whatever the block wrote.
+
+**The order of rows**, whether a key or a reader asks for it: numbers as numbers, dates in ISO 8601, which orders as text, booleans `false` first, and text and lists by their folded text (§6.9). An empty value comes last in either direction, and rows that tie keep the order they were added in.
+
+**A block that cannot be read is drawn as what is wrong with it**, in place of the table, and never as an empty table or as nothing. That is a block whose `table` key is missing, empty or written twice; a line that is not `key: value`, or whose key is not one of the six; another key written twice; a value its key cannot read — a column listed twice in one key, a name that is not one word (§5.9), a direction other than `asc` and `desc`, a `page` outside 1 to 100, a `total` over a column that is not a number or is not drawn; a column the table does not have, in a key or as a field of `where`; a `where` that is an error (§6.9); and a table the notebook does not keep. Each is a notice (§7.13). A block's mistake stays in the block: the rest of the note draws as written.
+
+**Drawing.** A Reader that reaches the notebook's tables MUST draw the block as a table: a header, the rows of one page, a way to the other pages when there are more, and the total, when there is one, under its column. A value is drawn in the reader's locale — a number with the reader's separators, a date in the reader's form, a boolean in the reader's words, a list as its items — and always **as text**: nothing in a row is parsed as Markdown, so a `[[link]]` or a `<b>` a row holds is its characters. That keeps rows out of the graph and raw HTML off the page (§7.9).
+
+**The reader's order.** A Reader MAY let a person sort by a column from its header. That order is the reader's and lasts while they read: it MUST NOT change the bytes of the note, and the note opens again in the order its block declares.
+
+**Printing.** A printed note carries, in place of the block, every row the filter returns, and not one page: in the declared order, with the header repeated on each printed page, the total, and a line naming the table, the filter, how many rows it returned and when they were read. Paper has no control to reach the next page, and a table that printed one would read as the whole of it.
+
+**Where no tables are kept**, the block is a code block. A Reader that does not reach a notebook's tables MUST show it as one, its lines as written, and never hide it: §7.2's rule for a diagram, and what keeps the note legible in any editor.
+
+**The block is the note's; the rows are not.** A tool that returns the note returns the block as written and never its rows, as it returns an embed unexpanded (§7.3). Nothing a table holds produces an edge, an attribute or an index entry: what the block gives an Indexer is the reference of §5.9, and that alone.
 
 ## 8. Notation not described here
 
@@ -933,6 +1042,8 @@ It exists so that a specification and an implementation cannot drift apart in pr
 
 A case MAY also carry the parameters its input references (§7.14): the names a Reader draws as parameters, and an implementation that creates a notebook from a model fills in, compared after NFC.
 
+A case MAY also carry the tables its input references (§5.9), and its notebook MAY keep tables, each a name and its columns with their kinds: what a table reference resolves to, and the notices that depend on a table's columns (§7.15), are claims about them.
+
 A case MAY also carry the notices its input raises (§7.13), and an implementation that reports notices SHOULD produce exactly those. An implementation claiming the Indexer role SHOULD run the suite in its own continuous integration. See [`tests/README.md`](tests/README.md) for the format.
 
 The forms of §3 and §4 carry no cases here, and need none: CommonMark and GFM each ship a suite of their own, and an implementation demonstrates those forms by passing it. What this suite covers is the part nobody else tests, which is the same reason §5 to §7 exist.
@@ -970,7 +1081,7 @@ Every form this document declares, in one table. The last column is the section 
 | Block quote | `> text` | A callout when it opens with `[!type]` | 3.5 |
 | Bullet list | `- item` | — | 3.6 |
 | Ordered list | `1. item` | — | 3.6 |
-| Fenced code block | ` ```lang ` | Suppresses every notation inside | 3.7 |
+| Fenced code block | ` ```lang ` | Suppresses every notation inside, save the keys of a `table` block | 3.7 |
 | Indented code block | four spaces | Suppresses every notation inside | 3.7 |
 | Link reference definition | `[label]: /url` | — | 3.8 |
 | HTML block | `<div>…</div>` | Kept in the bytes, shown as text | 3.9, 7.10 |
@@ -1007,6 +1118,8 @@ Every form this document declares, in one table. The last column is the section 
 | Block identifier | `^article-75` | Names a block; not rendered | 7.7 |
 | Block embed | `![[note#^id]]` | The same edge as a plain wikilink | 7.7 |
 | Math | `$x$`, `$$x$$` | Drawn as mathematics, or shown as source | 7.8 |
+| Table block | ` ```table ` | Draws a table of the notebook through a query, a page at a time, or shows the source; references the table it names, never an edge | 7.15, 5.9 |
+| Query | `status:pending -draft amount:>=100` | One language for a search and for the filter of a table block | 6.9 |
 | Parameter reference | `{{name}}` | Drawn as a parameter until a notebook is created from the model; a wikilink to one is no edge and not pending; a value writing one is not indexed | 7.14, 5.2, 6.3 |
 | External link | `[text](https://…)` | Renders as a link; never an edge | 5.2 |
 | Prose in frontmatter | over 40 characters | Read and discarded | 6.3 |

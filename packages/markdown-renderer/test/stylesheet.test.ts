@@ -158,6 +158,23 @@ describe('the stylesheet', () => {
     expect(source).toContain('--ms-accent: var(--markdown-accent, #0f56d7);');
   });
 
+  it("styles a parameter by its attribute, which a Prism token never carries (#140)", () => {
+    const parameter = selectors(css).filter((selector) => /\.parameter\b/.test(selector));
+    expect(parameter.length).toBeGreaterThan(0);
+    for (const selector of parameter) expect(selector).toMatch(/\.parameter\[data-parameter\]/);
+    // What the page draws for a reference carries it, and what Prism draws for a shell flag does not.
+    expect(html('Ask {{client}}.\n')).toContain('class="parameter" data-parameter="client"');
+    const flag = html('```bash\nset -euo pipefail\n```\n');
+    expect(flag).toContain('token parameter');
+    expect(flag).not.toContain('data-parameter');
+  });
+
+  it('lets a printed table repeat its header on each page, which `display: block` would stop (#139)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(/\.markdown \.data-table-printing table \{([^}]*)\}/.exec(source)?.[1]).toContain('display: table;');
+    expect(/\.markdown \.data-table-printing thead \{([^}]*)\}/.exec(source)?.[1]).toContain('display: table-header-group;');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {

@@ -460,6 +460,133 @@
   background: rgba(var(--callout-color), 0.08);
 }
 
+/* A `table` block drawn as its table (§7.15): the note's table, with a header
+   that sorts for the reader alone, numbers to the end of their cells, the
+   total under its column, and the count and the pages under the table. */
+.markdown .data-table {
+  margin-block: var(--ms-p-spacing);
+}
+.markdown .data-table table {
+  margin-block: 0;
+}
+.markdown .data-table th {
+  padding: 0;
+}
+.markdown .data-table-sort {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: var(--ms-table-cell-padding);
+  cursor: pointer;
+  text-align: inherit;
+}
+.markdown .data-table-sort:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: -2px;
+}
+.markdown .data-table .data-table-number {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.markdown .data-table .data-table-date {
+  white-space: nowrap;
+}
+.markdown .data-table tfoot td {
+  font-weight: 600;
+  border-top: var(--ms-table-header-rule);
+}
+.markdown .data-table-empty {
+  color: var(--ms-text-soft);
+  font-style: italic;
+}
+.markdown .data-table[aria-busy='true'] tbody {
+  opacity: 0.6;
+}
+.markdown .data-table-loading {
+  color: var(--ms-text-soft);
+}
+/* A block that cannot be answered says why, in place of its table. */
+.markdown .data-table-problems {
+  margin-block: var(--ms-p-spacing);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ms-border);
+  border-inline-start: 3px solid var(--ms-pending);
+  border-radius: 6px;
+}
+.markdown .data-table-problems ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.markdown .data-table-problems code {
+  display: block;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+.markdown .data-table-failed > p {
+  margin-block: var(--ms-p-spacing) 0;
+  color: var(--ms-text-soft);
+}
+/* On paper a table is a table: `display: block`, which lets it scroll on a
+   screen, is what would stop the header repeating on each page. */
+.markdown .data-table-printing table {
+  display: table;
+  width: 100%;
+}
+.markdown .data-table-printing thead {
+  display: table-header-group;
+}
+.markdown .data-table-printing tr {
+  break-inside: avoid;
+}
+.markdown .data-table-printed {
+  margin-block: 0.4rem 0;
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+@media print {
+  .markdown .data-table table {
+    display: table;
+    width: 100%;
+  }
+  .markdown .data-table thead {
+    display: table-header-group;
+  }
+  .markdown .data-table-page,
+  .markdown .data-table-sort span {
+    display: none;
+  }
+}
+.markdown .data-table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+.markdown .data-table-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown .data-table-page {
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid var(--ms-border);
+  border-radius: 6px;
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  cursor: pointer;
+}
+.markdown .data-table-page:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
 .markdown hr {
   margin-block: calc(var(--ms-p-spacing) * 2);
   border: 0;
@@ -738,8 +865,10 @@
 
 /* A parameter of a model, `{{name}}` (§7.14): drawn as what it is, a place a
    value goes, and never as broken text. The braces stay, so what is copied is
-   what was typed. A wikilink to one leads nowhere yet, so it is not a link. */
-.markdown .parameter {
+   what was typed. A wikilink to one leads nowhere yet, so it is not a link.
+   Named by its attribute: Prism calls a shell flag `token parameter`, and a
+   flag is code, not a parameter (#140). */
+.markdown .parameter[data-parameter] {
   color: rgb(var(--ms-parameter));
   background: rgba(var(--ms-parameter), 0.12);
   border-radius: 4px;
@@ -754,7 +883,7 @@
 }
 /* Marked, it takes the mark's ink: the parameter's violet on the mark's yellow
    holds no contrast in the dark. Its tint still says what it is. */
-.markdown mark .parameter {
+.markdown mark .parameter[data-parameter] {
   color: inherit;
 }
 

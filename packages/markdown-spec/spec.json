@@ -2,7 +2,7 @@
   "$schema": "./schema/spec.schema.json",
   "spec": "MemorySmith Markdown Specification",
   "variant": "MemorySmith",
-  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.9.0/packages/markdown-spec/SPEC.md",
+  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.10.0/packages/markdown-spec/SPEC.md",
   "sources": [
     {
       "id": "commonmark",
@@ -20,6 +20,11 @@
       "id": "obsidian",
       "name": "Obsidian",
       "url": "https://help.obsidian.md/syntax"
+    },
+    {
+      "id": "memorysmith-search",
+      "name": "MemorySmith's search",
+      "url": "https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts"
     }
   ],
   "notations": [
@@ -100,7 +105,7 @@
       "reader": "reading-surface",
       "syntax": "Three or more backticks or tildes, with an optional info string",
       "example": "````\nHere is how a diagram is written:\n\n```mermaid\ngraph TD\n  Notice --> Proposals\n```\n````\n",
-      "effect": "A code block. Nothing inside is parsed: no emphasis, no links, no wikilinks, no callouts. A fence opens at the start of a line and closes only on a line holding the same character at the same length or longer and nothing else, or at the end of the document, so a fence nests — an outer fence uses more characters than any inside it, or a different character. `mermaid` is the one info string this specification attaches a rendering rule to.",
+      "effect": "A code block. Nothing inside is parsed: no emphasis, no links, no wikilinks, no callouts. A fence opens at the start of a line and closes only on a line holding the same character at the same length or longer and nothing else, or at the end of the document, so a fence nests — an outer fence uses more characters than any inside it, or a different character. `mermaid` and `table` are the two info strings this specification attaches a rule to, and a `table` block is the one whose lines are read, as keys.",
       "spec": "3.7"
     },
     {
@@ -288,6 +293,14 @@
       "spec": "5.8"
     },
     {
+      "id": "table-reference",
+      "reader": "links",
+      "syntax": "```table\ntable: name\n```",
+      "example": "```table\ntable: expenses\nwhere: status:pending\n```\n",
+      "effect": "A `table` block references the table its `table` key names: the value, trimmed and in NFC, compared with case folded against the notebook's tables alone — never a note or an attachment. Several blocks naming one table are one reference. It is never an edge: a table is in no graph and no backlink of a note. A name no table carries is a pending reference, kept and reported, never an error. Nothing else in the block is read, a `[[link]]` in it is no edge, a block with no `table` key or with two references nothing, and a `table` block inside another code block is an example.",
+      "spec": "5.9, 5.6"
+    },
+    {
       "id": "image-dimensions",
       "reader": "reading-surface",
       "syntax": "![alt text|100x145](image.png)  ·  ![alt text|50%](image.png)",
@@ -470,6 +483,14 @@
       "example": "---\nname: \"Assembly of {{condominium}}\"\nmanager: \"{{manager}}\"\n---\n# Assembly of {{condominium}}\n\nChaired by [[{{manager}}]]. The notation itself is written \\{{condominium}}.\n",
       "effect": "Where a value goes in a note of a model, filled in when a notebook is created from it. The name opens with a letter or `_` and goes on in letters, combining marks, digits, `_` and `-`, compared after NFC; a reference is the shortest match, needs two unescaped braces, and anything that does not close as one is text. It is read in text, in a wikilink's target and alias, and in a value of the frontmatter, which a Writer quotes; never in code, a diagram, mathematics, a destination, an autolink or raw HTML. A Reader draws one nobody filled in as a parameter, braces and all. A wikilink whose target writes one is no edge and not pending, an embed of one transcludes nothing, and an attribute a value of which writes one is not indexed.",
       "spec": "7.14, 5.2, 6.3"
+    },
+    {
+      "id": "table-block",
+      "reader": "reading-surface",
+      "syntax": "```table\ntable: name\ncolumns: a, b\nwhere: query\nsort: a desc\npage: 25\ntotal: b\n```",
+      "example": "```table\ntable: expenses\ncolumns: date, description, amount, status\nwhere: status:pending date:2026-10\nsort: date desc\npage: 20\ntotal: amount\n```\n",
+      "effect": "A fenced block whose info string is `table` presents a table of the notebook through a query, drawn as a table a page at a time: `table` names it; `columns` chooses and orders the columns, all of them when absent; `where` filters in the query language — terms that must all match, \"phrases\", -negation, OR, parentheses, column:value, and intervals over a date or a number; `sort` orders by columns, `asc` or `desc`, insertion order when absent; `page` is from 1 to 100 rows, 25 when absent; `total` sums a number column over every row the filter returns. Values are drawn in the reader's locale and as text, never as Markdown; a reader may sort by a column without a byte of the note changing; a printed note carries every filtered row. A missing table, an unknown key or column, a value its key cannot read or a filter that is an error is drawn in place of the table. Where no tables are kept the block is a code block, its lines as written.",
+      "spec": "7.15, 6.9"
     }
   ],
   "notices": [
@@ -580,6 +601,42 @@
       "severity": "hint",
       "spec": "7.3",
       "effect": "An embed no note and no kept file answers is drawn as a pending link, not as content."
+    },
+    {
+      "code": "table-unnamed",
+      "severity": "notice",
+      "spec": "7.15",
+      "effect": "A table block whose table key is missing, empty or written twice names no table, and says so in place of one."
+    },
+    {
+      "code": "table-key-unknown",
+      "severity": "notice",
+      "spec": "7.15",
+      "effect": "A line of a table block that is not key: value with one of its six keys: the block says so in place of the table."
+    },
+    {
+      "code": "table-key-invalid",
+      "severity": "notice",
+      "spec": "7.15",
+      "effect": "A key of a table block written twice, or a value its key cannot read: the block says so in place of the table."
+    },
+    {
+      "code": "table-column-unknown",
+      "severity": "notice",
+      "spec": "7.15",
+      "effect": "A column the table does not have, named by a key of a table block or as a field of its where: the block says so in place of the table."
+    },
+    {
+      "code": "table-filter-invalid",
+      "severity": "notice",
+      "spec": "7.15",
+      "effect": "A where that is an error: the block says so in place of the table."
+    },
+    {
+      "code": "table-pending",
+      "severity": "hint",
+      "spec": "7.15",
+      "effect": "A table block naming a table the notebook does not keep says so in place of the table, until one of that name exists."
     }
   ]
 }

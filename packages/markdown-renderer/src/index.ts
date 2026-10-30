@@ -47,3 +47,14 @@ export {
 export { ordinalAt, taskBoxes, taskCheckedAt, toggleTaskAt } from './tasklist.js';
 export { readProperties, type NoteProperties, type PropertyEntry, type PropertyShape } from './properties.js';
 export { DELEGATED_TO_THE_BASE_PARSER, unclassified } from './delegated.js';
+export {
+  runTableQuery,
+  type TableColumn,
+  type TableColumnKind,
+  type TablePage,
+  type TableRequest,
+  type TableRow,
+  type TableSchema,
+  type TableSortKey,
+  type TableValue,
+} from './table-block.js';

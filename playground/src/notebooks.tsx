@@ -2,8 +2,9 @@
 // reached by name and then by alias, and the host contract that answers from them. The page and
 // the tests build it from the same files.
 
-import type { EmbeddedNote, KeptFile, LinkChoices, NoteHost } from '@memorysmithapp/markdown-renderer';
-import { splitFrontmatter } from '@memorysmithapp/markdown-renderer';
+import type { EmbeddedNote, KeptFile, LinkChoices, NoteHost, TableRow, TableSchema } from '@memorysmithapp/markdown-renderer';
+import { runTableQuery, splitFrontmatter } from '@memorysmithapp/markdown-renderer';
+import SAMPLE_TABLES from '../fixtures/tables.json';
 
 export interface Note {
   readonly notebook: string;
@@ -92,12 +93,24 @@ export function reaching(notebook: Notebook, target: string): { by: 'name' | 'al
   return aliased.length > 0 ? { by: 'alias', notes: aliased } : { by: null, notes: [] };
 }
 
+/** A table a notebook keeps: its columns and its rows, as `fixtures/tables.json` holds them (#138). */
+interface SampleTable extends TableSchema {
+  readonly rows: readonly TableRow[];
+}
+
+/** The tables of a notebook, by name compared after NFC with case folded (`SPEC.md` §5.9). */
+function tablesOf(slug: string): Map<string, SampleTable> {
+  const tables = (SAMPLE_TABLES as unknown as Record<string, readonly SampleTable[]>)[slug] ?? [];
+  return new Map(tables.map((table) => [table.name.normalize('NFC').toLowerCase(), table]));
+}
+
 /** The host contract over one notebook, which is what MemorySmith gives the reading page. */
 export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | null, go: (address: string) => void = () => undefined): NoteHost {
   const one = (name: string): Note | null => {
     const { notes } = reaching(notebook, name);
     return notes.length === 1 ? (notes[0] ?? null) : null;
   };
+  const tables = tablesOf(notebook.slug);
   return {
     resolve: (name) => {
       const note = one(name);
@@ -117,6 +130,11 @@ export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | 
       return note ? { markdown: note.markdown, name: note.name, address: addressOf(note) } : null;
     },
     keeps: (name) => notebook.files.includes(name.normalize('NFC')),
+    // The rows a `table` block asks for, answered from the sample tables as MemorySmith answers from its own (#138).
+    queryTable: async (request) => {
+      const table = tables.get(request.table.normalize('NFC').toLowerCase());
+      return table ? runTableQuery({ schema: table, rows: table.rows }, request) : null;
+    },
     // What the editor suggests after `[[`: names that start with what was typed, then the rest that hold it.
     suggest: (query) => {
       const typed = query.normalize('NFC').toLowerCase();

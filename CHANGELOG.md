@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
+### Added
+
+- The specification declares the `table` block, a fenced block that presents a table of the notebook through a query (#137, `SPEC.md` §7.15): `table` names it, `columns` chooses and orders its columns, `where` filters its rows, `sort` orders them by columns `asc` or `desc`, `page` takes from 1 to 100 rows a page, 25 when absent, and `total` sums a number column over every row the filter returns. Its keys are in English in every notebook; a block that cannot be read is drawn as what is wrong with it, a printed note carries every filtered row, and where no tables are kept the block is a code block. A table is data the notebook keeps beside its notes, with columns of kind `text`, `number`, `date`, `boolean` or `list` named by one word (§5.9): a block references the table it names, compared after NFC with case folded and in a namespace of its own, never an edge, and pending when no table carries the name.
+- The specification declares the query language whole (§6.9), with MemorySmith's search as its source: terms that must all match, phrases, a dash that starts a term, `OR`, groups, `field:value` with case and marks folded, and intervals, which now compare a number as well as a date; §6.7 and §6.8 are its rules for dates. What makes a query an error is listed, and a range is inverted as its field's kind compares it.
+- `spec.json` carries the block as `table-block` and the reference as `table-reference`, and six notices: `table-unnamed`, `table-key-unknown`, `table-key-invalid`, `table-column-unknown`, `table-filter-invalid` and `table-pending`. Thirty-seven conformance cases cover the keys, their defaults and limits, the reference and the pending reference, and filters that read and that do not, under a new field, `tables`, and tables a case's notebook keeps, each with its columns, which the checker and the types know; a resolution may be of kind `table`.
+- The renderer reads a `table` block and its filter (`src/table-block.ts`, a port of MemorySmith's search parser), and `diagnose` reports the six notices on the line of the key each is about, a pending table and a mistake against a table's columns only when the host gives `tables` (#137). The two demonstration notebooks each write one, in context.
+- The renderer draws a `table` block as its table where the host gives `queryTable` (#138): the host runs the filter and answers one page, the row count, the total and the table's columns. The table shows a page at a time with its count and a way between pages, values in the reader's locale and always as text, a number formatted from its digits so a decimal of 38 digits is never rounded, and the total over the whole filter under its column; a header sorts for the reader alone, asking the host again, and never changes the note. Edit mode draws it the same while the author is elsewhere. Without `queryTable`, or when the block cannot be answered, it stays a code block. `runTableQuery` answers a request from rows held in memory, and the playground serves the demonstration notebooks' `outages` and `leituras` through it; new words: `tableRows`, `tablePage`, `tablePrevious`, `tableNext`, `tableTotal`, `tableEmpty` and `tableSortBy`.
+- A `table` block that cannot be answered is drawn as what is wrong with it, in place of the table: a block that names no table, an unknown key, a key written twice or a value that cannot be read, a column the table lacks, a filter that is an error, and a table the notebook does not keep, each in the reader's words (`tableProblem`) with the line that makes it (#139). A host that fails says so (`failed`) above the block as written.
+- With the new `printing` prop, a `table` block asks for every row its filter returns, in its declared order, and is drawn with no control, its header repeated on each printed page, its total, and a line naming the table, the filter, the row count and when the rows were read (`tablePrinted`) (#139). The host sets it and prints once no `aria-busy="true"` is left; the playground shows it at `?print=1`.
+
+### Changed
+
+- A fenced block whose info string is the word `table` is no longer an ordinary code block (#137, #138). A note that already writes one for another purpose raises the table notices in `diagnose`, and is drawn as a table, or as what is wrong with it, under a host that gives `queryTable`; its bytes are unchanged, and any other info string keeps it code.
+
+### Fixed
+
+- A flag of a Bash code block, `-euo` or `-name`, is no longer drawn in violet on a violet tint, as a parameter reference is (#140). The style of a parameter reference, added in v0.9.0, also matched the class Prism gives a shell flag; it is now named by the `data-parameter` attribute that only a parameter carries.
+
 ## [0.9.0] - 2026-10-25
 
 ### Added
@@ -254,7 +274,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.3...v0.8.4

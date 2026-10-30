@@ -592,6 +592,13 @@ function build(state: EditorState): DecorationSet {
           block(from, to, 'diagram', `diagram:${source}`, () => createElement(Snippet, { text: source }));
           break;
         }
+        // A `table` block is drawn as the table it asks for while the author is elsewhere, where the
+        // host reaches the notebook's tables, and edited as its lines (§7.15, #138).
+        const fence = construct.open ? doc.sliceString(construct.open.from, construct.open.to) : '';
+        if (host.queryTable && !open && alone(from, to) && /^\s*(`{3,}|~{3,})\s*table\s*$/.test(fence)) {
+          block(from, to, 'diagram', `table-block:${source}`, () => createElement(Snippet, { text: source }));
+          break;
+        }
         codeLines(construct, out, doc, text);
         // The language, chosen at the block's top right from every grammar Prism carries (#84).
         if (construct.open) {

@@ -21,6 +21,7 @@ import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type 
 import { hasParameterReference } from './parameters.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
+import { checkTableBlock, isTableBlock, readTableBlock, type TableNoticeCode, type TableSchema } from './table-block.js';
 
 /** The codes of §7.13, which `spec.json` declares as `notices`. */
 export type NoticeCode =
@@ -41,7 +42,8 @@ export type NoticeCode =
   | 'raw-html'
   | 'strikethrough-single-tilde'
   | 'link-pending'
-  | 'embed-pending';
+  | 'embed-pending'
+  | TableNoticeCode;
 
 /** `notice`: the page will differ from what was typed. `hint`: nothing is drawn wrong. */
 export type NoticeSeverity = 'notice' | 'hint';
@@ -67,6 +69,12 @@ export interface Notice {
 export interface DiagnoseOptions extends Pick<NoteHost, 'resolve' | 'reaches' | 'keeps'> {
   /** Whether to read each `mermaid` block with Mermaid, which is loaded for it. Defaults to true. */
   readonly diagrams?: boolean;
+  /**
+   * The table of that name the notebook keeps, with its columns, or `null` when it keeps none
+   * (§5.9); the name is compared after NFC with case folded. With no `tables`, nothing is known of
+   * the notebook's tables: no `table` block is pending, and none is checked against its columns.
+   */
+  readonly tables?: (name: string) => TableSchema | null;
 }
 
 /** The table of §7.13, as `spec.json` carries it: a test holds the two equal. */
@@ -89,6 +97,12 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'strikethrough-single-tilde': { severity: 'notice', section: '4.3', message: 'One tilde strikes nothing: the tildes stay on the page. Strikethrough is ~~two~~.' },
   'link-pending': { severity: 'hint', section: '7.4', message: 'No note answers this link yet, so it is drawn as pending.' },
   'embed-pending': { severity: 'hint', section: '7.3', message: 'No note and no kept file answers this embed, or no kept file this image, so it is drawn as pending.' },
+  'table-unnamed': { severity: 'notice', section: '7.15', message: 'This table block names no table: its table key is missing, empty or written twice.' },
+  'table-key-unknown': { severity: 'notice', section: '7.15', message: 'This line is not one of the keys of a table block, so the block says so in place of the table.' },
+  'table-key-invalid': { severity: 'notice', section: '7.15', message: 'This key is written twice, or its value cannot be read, so the block says so in place of the table.' },
+  'table-column-unknown': { severity: 'notice', section: '7.15', message: 'The table has no column of this name, so the block says so in place of the table.' },
+  'table-filter-invalid': { severity: 'notice', section: '7.15', message: 'This filter cannot be answered, so the block says so in place of the table.' },
+  'table-pending': { severity: 'hint', section: '7.15', message: 'The notebook keeps no table of this name yet, so the block says so in its place.' },
 };
 
 interface Point {
@@ -102,6 +116,7 @@ interface Node {
   value?: string;
   depth?: number;
   lang?: string | null;
+  meta?: string | null;
   identifier?: string;
   url?: string;
   children?: Node[];
@@ -178,6 +193,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const referenced = new Set<string>();
   const definitions: Node[] = [];
   const images: { name: string; at: [number, number] }[] = [];
+  const tables: { value: string; at: [number, number] }[] = [];
   walk(tree, (node) => {
     const at = span(node);
     if (!at) return;
@@ -185,6 +201,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
     if (node.type === 'code' && /^\s*(`{3,}|~{3,})/.test(source)) {
       if (!closes(source, /^(`{3,}|~{3,})/)) report('fence-unclosed', at[0], at[1]);
       else if (node.lang === 'mermaid') diagrams.push({ source: node.value ?? '', at });
+      if (isTableBlock(node.lang, node.meta)) tables.push({ value: node.value ?? '', at });
     } else if (node.type === 'math') {
       if (!closes(source, /^(\${2,})/)) report('math-unclosed', at[0], at[1]);
       else if (!typesets(node.value ?? '', true)) report('formula-invalid', at[0], at[1]);
@@ -233,6 +250,18 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   if (options.resolve || options.reaches) {
     const keeps = options.keeps ?? (() => false);
     for (const image of images) if (!keeps(image.name)) report('embed-pending', image.at[0], image.at[1], image.name);
+  }
+
+  // A `table` block raises its own notices, each on the line of its key (§7.13, §7.15).
+  for (const table of tables) {
+    const block = readTableBlock(table.value);
+    const schema = options.tables && block.table !== null ? options.tables(block.table) : undefined;
+    const first = pointOf(table.at[0]).line - 1;
+    for (const problem of checkTableBlock(block, schema)) {
+      const start = lineStarts[first + problem.line] ?? table.at[0];
+      const next = lineStarts[first + problem.line + 1];
+      report(problem.code, start, next === undefined ? text.length : next - 1, problem.detail);
+    }
   }
 
   if (diagrams.length > 0 && options.diagrams !== false) {
@@ -371,3 +400,5 @@ function pending(hidden: HiddenComments, split: number, options: DiagnoseOptions
     report(embed ? 'embed-pending' : 'link-pending', split + hidden.original(match.index), split + hidden.original(end, true), name);
   }
 }
+
+export type { TableColumn, TableColumnKind, TableSchema } from './table-block.js';

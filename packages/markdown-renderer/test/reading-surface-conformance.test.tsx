@@ -203,6 +203,14 @@ const EXPECTED: Record<string, (html: string) => void> = {
     expect(html).not.toContain('wikilink-pending');
     expect(html).toContain('written {{condominium}}.');
   },
+  'table-block': (html) => {
+    // A host that reaches no tables is where no tables are kept: the block is a code block, its
+    // lines as written, and never hidden (§7.15).
+    expect(html).toContain('language-table');
+    expect(html).toContain('table: expenses');
+    expect(html).toContain('where: status:pending date:2026-10');
+    expect(html).not.toContain('<table>');
+  },
 };
 
 const surface = spec.notations.filter(

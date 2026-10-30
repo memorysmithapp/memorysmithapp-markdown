@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
+import type { TablePage, TableRequest } from './table-block.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 
 /**
@@ -44,6 +45,24 @@ export interface NoteHost {
    * before it is reached (#94): a host that loads from the network may cache what it answered.
    */
   readonly loadNote?: (name: string) => Promise<EmbeddedNote | null>;
+  /**
+   * The rows a `table` block asks for (`SPEC.md` §7.15, #138): the table it names, the columns, the
+   * filter as written, the order, the page and its size, and the column to sum. The host runs the
+   * filter and answers the table's columns, the page's rows, the row count of the whole filter, the
+   * total and when the rows were read; `null` says the notebook keeps no table of that name. A block
+   * that cannot be read asks nothing. Without it, a `table` block is a code block, its lines as
+   * written, as it is wherever no tables are kept. The package never fetches; `runTableQuery`
+   * answers a request from rows held in memory.
+   */
+  readonly queryTable?: (request: TableRequest) => Promise<TablePage | null>;
+  /**
+   * Whether the note is being drawn for paper or a PDF (#139). Each `table` block then asks
+   * `queryTable` for every row its filter returns, in its declared order, and is drawn with no
+   * control, closed by the line naming what was read. It is the host that knows: an answer cannot
+   * arrive between the browser's print command and its page, so give it, wait until no
+   * `[aria-busy="true"]` is left under the note, then print. Defaults to `false`.
+   */
+  readonly printing?: boolean;
   /**
    * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
    * its state and none answers a click.
@@ -254,6 +273,8 @@ export const HOST_KEYS = Object.keys({
   targetAddress: 1,
   navigate: 1,
   loadNote: 1,
+  queryTable: 1,
+  printing: 1,
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
@@ -278,6 +299,8 @@ export interface ResolvedHost {
   readonly navigate: (address: string) => void;
   readonly remoteNotice: boolean;
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
+  readonly queryTable: ((request: TableRequest) => Promise<TablePage | null>) | null;
+  readonly printing: boolean;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
@@ -317,6 +340,8 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     navigate: host.navigate ?? ((address) => window.location.assign(address)),
     remoteNotice: host.remoteNotice ?? true,
     loadNote: host.loadNote ?? null,
+    queryTable: host.queryTable ?? null,
+    printing: host.printing ?? false,
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,

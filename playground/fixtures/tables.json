@@ -1,0 +1,298 @@
+{
+  "continuity-engineering": [
+    {
+      "name": "outages",
+      "columns": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "service",
+          "kind": "text"
+        },
+        {
+          "name": "cause",
+          "kind": "text"
+        },
+        {
+          "name": "minutes",
+          "kind": "number"
+        },
+        {
+          "name": "detected_by",
+          "kind": "text"
+        }
+      ],
+      "rows": [
+        {
+          "date": "2026-01-09",
+          "service": "payments",
+          "cause": "Certificate expired on the gateway",
+          "minutes": "22",
+          "detected_by": "Synthetic check"
+        },
+        {
+          "date": "2026-01-21",
+          "service": "search",
+          "cause": "Index rebuild ran out of disk",
+          "minutes": "95",
+          "detected_by": "Customer report"
+        },
+        {
+          "date": "2026-02-03",
+          "service": "payments",
+          "cause": "Planned database upgrade",
+          "minutes": "40",
+          "detected_by": "Change calendar"
+        },
+        {
+          "date": "2026-02-14",
+          "service": "payments",
+          "cause": "Connection pool exhausted",
+          "minutes": "9",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-02-27",
+          "service": "ledger",
+          "cause": "Replication lag past the alarm",
+          "minutes": "31",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-03-04",
+          "service": "payments",
+          "cause": "Region loss exercise",
+          "minutes": "14",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-03-19",
+          "service": "payments",
+          "cause": "DNS change propagated slowly",
+          "minutes": "6",
+          "detected_by": "Synthetic check"
+        },
+        {
+          "date": "2026-04-02",
+          "service": "payments",
+          "cause": "Planned network maintenance",
+          "minutes": "25",
+          "detected_by": "Change calendar"
+        },
+        {
+          "date": "2026-04-11",
+          "service": "payments",
+          "cause": "Bad deploy rolled back",
+          "minutes": "12",
+          "detected_by": "Error budget alert"
+        },
+        {
+          "date": "2026-05-06",
+          "service": "payments",
+          "cause": "Card network timeout",
+          "minutes": "4",
+          "detected_by": "Error budget alert"
+        },
+        {
+          "date": "2026-05-23",
+          "service": "search",
+          "cause": "Cache cluster failover",
+          "minutes": "18",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-06-08",
+          "service": "payments",
+          "cause": "Region loss",
+          "minutes": "27",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-06-30",
+          "service": "payments",
+          "cause": "Queue consumer stuck",
+          "minutes": "11",
+          "detected_by": "Customer report"
+        },
+        {
+          "date": "2026-07-15",
+          "service": "payments",
+          "cause": "Expired API key of a provider",
+          "minutes": "8",
+          "detected_by": "Synthetic check"
+        },
+        {
+          "date": "2026-08-02",
+          "service": "payments",
+          "cause": "Disk full on a primary",
+          "minutes": "16",
+          "detected_by": "Health check"
+        },
+        {
+          "date": "2026-09-12",
+          "service": "payments",
+          "cause": "Retry storm after a provider outage",
+          "minutes": "7",
+          "detected_by": "Error budget alert"
+        },
+        {
+          "date": "2025-12-18",
+          "service": "payments",
+          "cause": "Region loss",
+          "minutes": "33",
+          "detected_by": "Health check"
+        }
+      ]
+    }
+  ],
+  "enologia": [
+    {
+      "name": "leituras",
+      "columns": [
+        {
+          "name": "data",
+          "kind": "date"
+        },
+        {
+          "name": "quadra",
+          "kind": "number"
+        },
+        {
+          "name": "brix",
+          "kind": "number"
+        },
+        {
+          "name": "ipt",
+          "kind": "number"
+        },
+        {
+          "name": "chuva_mm",
+          "kind": "number"
+        }
+      ],
+      "rows": [
+        {
+          "data": "2026-02-03",
+          "quadra": "3",
+          "brix": "19.4",
+          "ipt": "38",
+          "chuva_mm": "4.2"
+        },
+        {
+          "data": "2026-02-03",
+          "quadra": "5",
+          "brix": "19.1",
+          "ipt": "36",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-03",
+          "quadra": "7",
+          "brix": "18.8",
+          "ipt": "34",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-03",
+          "quadra": "9",
+          "brix": "19.6",
+          "ipt": "39",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-10",
+          "quadra": "3",
+          "brix": "21.1",
+          "ipt": "47",
+          "chuva_mm": "0"
+        },
+        {
+          "data": "2026-02-10",
+          "quadra": "5",
+          "brix": "20.8",
+          "ipt": "45",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-10",
+          "quadra": "7",
+          "brix": "20.5",
+          "ipt": "43",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-10",
+          "quadra": "9",
+          "brix": "21.3",
+          "ipt": "48",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-17",
+          "quadra": "3",
+          "brix": "22.0",
+          "ipt": "55",
+          "chuva_mm": "18.6"
+        },
+        {
+          "data": "2026-02-17",
+          "quadra": "5",
+          "brix": "21.7",
+          "ipt": "53",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-17",
+          "quadra": "7",
+          "brix": "21.4",
+          "ipt": "51",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-17",
+          "quadra": "9",
+          "brix": "22.2",
+          "ipt": "56",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-24",
+          "quadra": "3",
+          "brix": "22.3",
+          "ipt": "58",
+          "chuva_mm": "31.4"
+        },
+        {
+          "data": "2026-02-24",
+          "quadra": "5",
+          "brix": "22.0",
+          "ipt": "56",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-24",
+          "quadra": "7",
+          "brix": "21.7",
+          "ipt": "54",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-24",
+          "quadra": "9",
+          "brix": "22.5",
+          "ipt": "59",
+          "chuva_mm": null
+        },
+        {
+          "data": "2026-02-25",
+          "quadra": "7",
+          "brix": "21.9",
+          "ipt": "55",
+          "chuva_mm": "2.0"
+        }
+      ]
+    }
+  ]
+}
