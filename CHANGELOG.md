@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-11-11
+
+### Fixed
+
+- A plain item in a list that holds tasks no longer draws its marker outside the note (#144). A list with a task had its indent cut to 0.4em for the whole list, which left a plain item's bullet no room. A list with tasks now keeps the indent of any list, and a task's box hangs in it where a plain item's marker does, so every item starts its text in one column, a wrapped line included.
+
 ## [0.10.1] - 2026-11-11
 
 ### Fixed
@@ -280,7 +286,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...v0.9.0
