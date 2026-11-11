@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-11
+
 ### Fixed
 
 - A task item is no longer pulled 1.2rem left of its list (#142). Its box started outside the note's text, which a wide page hid and a container with little padding did not: in a card of 14px the boxes crossed the left edge of the text above them and touched the card's border. An item now starts where its list's indent puts it, inside the note.
@@ -278,7 +280,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.5...v0.9.0
 [0.8.5]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.8.4...v0.8.5
