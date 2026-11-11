@@ -175,6 +175,17 @@ describe('the stylesheet', () => {
     expect(/\.markdown \.data-table-printing thead \{([^}]*)\}/.exec(source)?.[1]).toContain('display: table-header-group;');
   });
 
+  it('never pulls a task item out of its list, past the edge of a container with little padding (#142)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, selector]) =>
+      /task-item|task-list-item|contains-task-list/.test(selector!),
+    );
+    expect(rules.length).toBeGreaterThan(0);
+    for (const [, selector, body] of rules) {
+      expect(body, selector!.trim()).not.toMatch(/margin(?:-left|-inline-start|-inline)?\s*:[^;]*-\d/);
+    }
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {

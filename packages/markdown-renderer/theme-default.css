@@ -1186,10 +1186,12 @@
   line-height: 1.5;
 }
 
-/* A task box that can be ticked. Disabled is the default. */
+/* A task box that can be ticked. Disabled is the default. The item starts
+   where its list's indent puts it, as a plain item's marker does, and is never
+   pulled out of it: a pull lands past the edge of a container with little
+   padding (#142). */
 .markdown li.task-item {
   list-style: none;
-  margin-left: -1.2rem;
 }
 .markdown li.task-item input[type='checkbox'] {
   margin-right: 0.5rem;

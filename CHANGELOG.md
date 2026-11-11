@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A task item is no longer pulled 1.2rem left of its list (#142). Its box started outside the note's text, which a wide page hid and a container with little padding did not: in a card of 14px the boxes crossed the left edge of the text above them and touched the card's border. An item now starts where its list's indent puts it, inside the note.
+
 ## [0.10.0] - 2026-10-30
 
 ### Added
