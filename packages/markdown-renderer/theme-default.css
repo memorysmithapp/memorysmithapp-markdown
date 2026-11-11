@@ -283,9 +283,6 @@
 .markdown li[class~='task-list-item'] {
   list-style: none;
 }
-.markdown ul[class~='contains-task-list'] {
-  padding-inline-start: 0.4em;
-}
 .markdown input[type='checkbox'] {
   margin-inline-end: 0.45em;
   accent-color: var(--ms-accent);
@@ -1186,15 +1183,19 @@
   line-height: 1.5;
 }
 
-/* A task box that can be ticked. Disabled is the default. The item starts
-   where its list's indent puts it, as a plain item's marker does, and is never
-   pulled out of it: a pull lands past the edge of a container with little
-   padding (#142). */
+/* A task box that can be ticked. Disabled is the default. A list with tasks
+   keeps the indent of any list, and the box hangs in it where a plain item's
+   marker does, so every item of the list starts its text in one column and
+   nothing is drawn outside the note (#142, #144). The box is taken out of the
+   flow, its end half a rem before the text, whatever its width. */
 .markdown li.task-item {
   list-style: none;
+  position: relative;
 }
-.markdown li.task-item input[type='checkbox'] {
-  margin-right: 0.5rem;
+.markdown li.task-item > input[type='checkbox'] {
+  position: absolute;
+  inset-inline-end: 100%;
+  margin-inline: 0 0.5rem;
   accent-color: var(--ms-accent);
 }
 .markdown li.task-item input[type='checkbox']:not(:disabled) {
@@ -1202,7 +1203,11 @@
 }
 
 /* The lock over an item whose tick is being saved: the item dimmed under a
-   sweep of the accent, and "Updating…" in a pill at its right, breathing. */
+   sweep of the accent, and "Updating…" in a pill at its right, breathing. It
+   reaches back over the indent, where the item's box hangs. */
+.markdown li.task-item > .task-lock {
+  inset-inline-start: calc(-1 * var(--ms-list-indent));
+}
 .markdown .task-lock {
   border-radius: 4px;
   background-color: color-mix(in srgb, var(--ms-bg) 55%, transparent);

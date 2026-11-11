@@ -186,6 +186,21 @@ describe('the stylesheet', () => {
     }
   });
 
+  it("keeps a task list's indent, its boxes hanging in it as markers do, and the lock over them (#144)", () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    // A list with a task may hold plain items, whose marker needs the indent of any list.
+    const narrowing = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(
+      ([, selector, body]) => /contains-task-list/.test(selector!) && /padding/.test(body!),
+    );
+    expect(narrowing).toEqual([]);
+    const box = /\.markdown li\.task-item > input\[type='checkbox'\] \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    expect(box).toContain('position: absolute;');
+    expect(box).toContain('inset-inline-end: 100%;');
+    expect(/\.markdown li\.task-item \{([^}]*)\}/.exec(source)?.[1]).toContain('position: relative;');
+    const lock = /\.markdown li\.task-item > \.task-lock \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    expect(lock).toContain('inset-inline-start: calc(-1 * var(--ms-list-indent));');
+  });
+
   it('gives a dark value to every colour it gives a light one', () => {
     const dark = css.slice(css.indexOf(".markdown[data-theme='dark'] {"));
     for (const property of ['bg', 'surface', 'border', 'text', 'text-soft', 'accent', 'pending', 'code-bg', 'callout-info', 'callout-quote']) {
