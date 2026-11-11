@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A plain item in a list that holds tasks no longer draws its marker outside the note (#144). A list with a task had its indent cut to 0.4em for the whole list, which left a plain item's bullet no room. A list with tasks now keeps the indent of any list, and a task's box hangs in it where a plain item's marker does, so every item starts its text in one column, a wrapped line included.
+
 ## [0.10.1] - 2026-11-11
 
 ### Fixed
