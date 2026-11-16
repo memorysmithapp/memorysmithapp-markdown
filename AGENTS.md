@@ -48,6 +48,7 @@ One line each; the reason lives where the link points.
 - `main` is protected: every change reaches it through a pull request. Never push to `main`; never use `--admin`, *Bypass rules*, `--no-verify` or an equivalent ([SDLC §1](docs/SDLC.md#1-the-life-cycle-of-a-change)).
 - A blocked merge means **stop and report**, never work around it ([SDLC §7](docs/SDLC.md#7-a-blocked-merge)).
 - An issue before implementing. An opinion asked for, or "open the issue", means register and ask; implement only on an explicit go-ahead from the owner, which puts the issue in a milestone ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- A gap is registered in its origin repository, with a sub-issue in each repository it reaches, and reported by its links without asking; the go-ahead stays with the owner ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - Anything the packages publish, and every script and workflow, lands on the `release/vX.Y.Z` of its issue's milestone, never on `main` from a `feat/` or `fix/` branch ([SDLC §3](docs/SDLC.md#3-branches)).
 - Nobody tags by hand: tags and Releases are written by the release workflow ([SDLC §10](docs/SDLC.md#10-release)).
 - A document never describes the future: if it is in a document, it is true now ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
