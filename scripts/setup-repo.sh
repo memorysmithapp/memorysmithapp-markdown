@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Applies to a repository created from memorysmithapp-template what a template does not copy:
-# the description and topics, the merge options, wiki and discussions off, and the ruleset `main`
-# protecting the default branch. Issue labels are left as GitHub's defaults.
+# the description and topics, the merge options, wiki and discussions off, the ruleset `main`
+# protecting the default branch, write on the repository for the organization's team `maintainers`,
+# and the branch protection of the default branch letting only that team push to it and merge into
+# it. Issue labels are left as GitHub's defaults.
 #
-# Run once, right after creating the repository, with gh authenticated as an administrator of it.
+# Run once, right after creating the repository, with gh authenticated as an administrator of it,
+# in an organization that has the team `maintainers`.
 # Idempotent: a second run changes nothing and says so.
 #
 #   scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]
@@ -46,6 +49,16 @@ report() {
 
 info=$(gh api "repos/$repo" 2>/dev/null) || die "cannot read $repo: check that it exists and that gh is authenticated (gh auth status)"
 [ "$(jq -r '.permissions.admin' <<<"$info")" = true ] || die "the authenticated account is not an administrator of $repo"
+
+# Only the team `maintainers` merges to the default branch, so the repository belongs to an
+# organization that has that team, and the default branch exists to be protected.
+org=${repo%%/*}
+team=maintainers
+[ "$(jq -r '.owner.type' <<<"$info")" = Organization ] ||
+  die "$repo is not owned by an organization: only the team $team of an organization merges to its default branch"
+gh api "orgs/$org/teams/$team" >/dev/null 2>&1 || die "the organization $org has no team $team, or gh cannot read it"
+branch=$(jq -r '.default_branch' <<<"$info")
+gh api "repos/$repo/branches/$branch" >/dev/null 2>&1 || die "the default branch $branch of $repo does not exist yet: push a first commit"
 
 echo "Setting up $repo"
 
@@ -142,6 +155,79 @@ else
     gh api -X PUT "repos/$repo/rulesets/$ruleset_id" --input - <<<"$desired_ruleset" >/dev/null ||
       die "could not update the ruleset main (id $ruleset_id)"
     report changed "ruleset main updated (id $ruleset_id)"
+  fi
+fi
+
+# The team `maintainers` needs write on the repository for the branch protection to name it; a
+# higher role is left as it is.
+role=$(gh api -H "Accept: application/vnd.github.v3.repository+json" "orgs/$org/teams/$team/repos/$repo" --jq '.role_name' 2>/dev/null) || role=none
+case $role in
+  write | maintain | admin)
+    report "already in place" "team $team has $role"
+    ;;
+  *)
+    gh api -X PUT "orgs/$org/teams/$team/repos/$repo" -f permission=push >/dev/null ||
+      die "could not give the team $team write on $repo"
+    report changed "team $team given write (was $role)"
+    ;;
+esac
+
+# The branch protection of the default branch: only the team `maintainers` pushes to it, and so
+# only that team merges a pull request into it; administrators included, no force push, no
+# deletion, and no review or status check of its own, which are the ruleset's. For a member of the
+# team a merge is a permission, not a bypass.
+desired_protection=$(jq -cn --arg team "$team" '{
+  required_status_checks: null,
+  enforce_admins: true,
+  required_pull_request_reviews: null,
+  restrictions: {users: [], teams: [$team], apps: []},
+  required_linear_history: false,
+  allow_force_pushes: false,
+  allow_deletions: false,
+  block_creations: true,
+  required_conversation_resolution: false,
+  lock_branch: false,
+  allow_fork_syncing: false
+}')
+
+# GitHub answers each setting as an object, and the restrictions with whole users, teams and apps;
+# both sides are brought to the shape of the request, names sorted, before they compare as text.
+normalize_protection='{
+  required_status_checks: (if .required_status_checks then {strict: .required_status_checks.strict, contexts: (.required_status_checks.contexts | sort)} else null end),
+  enforce_admins: (.enforce_admins | if type == "object" then .enabled else . end),
+  required_pull_request_reviews: (if .required_pull_request_reviews then "set" else null end),
+  restrictions: (if .restrictions then {
+    users: (.restrictions.users | map(if type == "object" then .login else . end) | sort),
+    teams: (.restrictions.teams | map(if type == "object" then .slug else . end) | sort),
+    apps: (.restrictions.apps | map(if type == "object" then .slug else . end) | sort)
+  } else null end),
+  required_linear_history: (.required_linear_history | if type == "object" then .enabled else . end),
+  allow_force_pushes: (.allow_force_pushes | if type == "object" then .enabled else . end),
+  allow_deletions: (.allow_deletions | if type == "object" then .enabled else . end),
+  block_creations: (.block_creations | if type == "object" then .enabled else . end),
+  required_conversation_resolution: (.required_conversation_resolution | if type == "object" then .enabled else . end),
+  lock_branch: (.lock_branch | if type == "object" then .enabled else . end),
+  allow_fork_syncing: (.allow_fork_syncing | if type == "object" then .enabled else . end)
+}'
+want_protection=$(jq -S "$normalize_protection" <<<"$desired_protection")
+
+if protection=$(gh api "repos/$repo/branches/$branch/protection" 2>/dev/null); then
+  have_protection=$(jq -S "$normalize_protection" <<<"$protection")
+elif gh api "repos/$repo/branches/$branch/protection" 2>&1 | grep -q 'HTTP 404'; then
+  have_protection=none
+else
+  die "cannot read the branch protection of $branch on $repo"
+fi
+
+if [ "$have_protection" = "$want_protection" ]; then
+  report "already in place" "branch protection of $branch (only $team merges)"
+else
+  gh api -X PUT "repos/$repo/branches/$branch/protection" --input - <<<"$desired_protection" >/dev/null ||
+    die "could not set the branch protection of $branch on $repo"
+  if [ "$have_protection" = none ]; then
+    report changed "branch protection of $branch created (only $team merges)"
+  else
+    report changed "branch protection of $branch updated (only $team merges)"
   fi
 fi
 

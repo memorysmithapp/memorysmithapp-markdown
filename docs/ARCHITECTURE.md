@@ -18,7 +18,7 @@ The repository is made of:
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
 - **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
 - **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged, and closes its milestone.
-- **GitHub configuration**: the ruleset `main` and the settings the script applies.
+- **GitHub configuration**: the ruleset `main`, the branch protection of `main`, the team `maintainers`'s write, and the settings the script applies.
 
 ### 1.1 The renderer
 
@@ -266,14 +266,20 @@ The version lives in the `version` field of the root `package.json` and nowhere 
 
 ### INV-03 main changes only through a pull request
 
-**Mechanism:** the repository ruleset `main` (*observed*, id `24930653`), active on the default branch, with no bypass actors:
+**Mechanism:** two settings of the repository, the ruleset saying *how* a change reaches `main` and the branch protection saying *who* merges it ([ADR-009](#adr-009-who-merges-to-main-is-the-branch-protections)).
+
+The repository ruleset `main` (*observed*, id `24930653`), active on the default branch, with no bypass actors:
 
 - `deletion`: the branch cannot be deleted;
 - `non_fast_forward`: no force push;
-- `pull_request`: every change through a pull request, with 0 required approvals, merge, squash and rebase allowed;
+- `pull_request`: every change through a pull request, with 0 required approvals and no code owner review, merge, squash and rebase allowed;
 - `required_status_checks`: the check `Quality` passes before a merge.
 
-Nobody can bypass it, administrators included (`current_user_can_bypass: never`, *observed*). A ruleset is a setting of the repository, not a file, so a created repository does not receive it: **`scripts/setup-repo.sh`** creates it there, or brings it back to this definition when it drifted. The script defines the ruleset in its own source and compares, rule by rule, only the parameters it sets, so a parameter GitHub fills in by default does not count as drift. The owner's run on 2026-10-12 created the ruleset above (*observed*); that a second run changes nothing is **To confirm** in this repository.
+Nobody can bypass it, administrators included (`current_user_can_bypass: never`, *observed* on 2026-11-16, #156).
+
+The branch protection of `main` (*observed* on 2026-11-16, #156) restricts who can push to it to the organization's team `maintainers`, which has write on the repository; GitHub applies that restriction to merging a pull request too, so the merge of anyone outside the team is refused. `enforce_admins` is on, force pushes and deletion are off, and it requires no review and no status check of its own: those are the ruleset's. For a member of the team a merge is a permission, not a bypass, so a maintainer's own pull request merges with a green button (*observed* at the merge of #158). The team `contributors` keeps write, and with it branches, pull requests and merges into a `release/vX.Y.Z`.
+
+Both are settings of the repository, not files, so a created repository does not receive them: **`scripts/setup-repo.sh`** creates them there, or brings them back to this definition when they drifted. The script defines them in its own source and compares only what it sets: the ruleset rule by rule, so a parameter GitHub fills in by default does not count as drift, and the branch protection in the shape of its request, the users, teams and apps of the restriction by name. The owner's run on 2026-10-12 created the ruleset above (*observed*). Run against this repository on 2026-11-16, it found the ruleset, the team's write and the branch protection already in place and changed nothing (*observed*, #156).
 
 ### INV-04 Only the release workflow writes a tag
 
@@ -325,7 +331,8 @@ The comparison covers what the default theme draws above the body too: `referenc
 
 **GitHub.**
 
-- *Rulesets and settings:* the ruleset `main` of [INV-03](#inv-03-main-changes-only-through-a-pull-request), and the description, topics, merge options, wiki and discussions, all through the REST API by `scripts/setup-repo.sh` with the `gh` of an administrator.
+- *Rulesets, branch protection and settings:* the ruleset `main` and the branch protection of `main` of [INV-03](#inv-03-main-changes-only-through-a-pull-request), the write of the organization's team `maintainers` on the repository, and the description, topics, merge options, wiki and discussions, all through the REST API by `scripts/setup-repo.sh` with the `gh` of an administrator.
+- *Teams:* the organization's teams `maintainers` (who merges to `main`, today the owner alone) and `contributors` (branches, issues and pull requests), each with write on its repositories (*declared* by the owner in memorysmithapp/memorysmithapp-template#39). The script requires `maintainers` to exist and gives it write; it does not create teams or change their members.
 - *Issues and milestones:* GitHub's blank issue and default labels; a milestone per version, closed by the workflow *Release* once the version is released and published (RN-PUB-003).
 - *Actions:* the workflows *Quality* and *Release* on `ubuntu-latest`, with Node 24 from `actions/setup-node` and the pnpm of `packageManager` through Corepack. Nothing they run installs a system package, so the label is left to follow GitHub's images: when it moved to Ubuntu 26.04 (actions/runner-images#14748), every step of *Quality*, and *Release*'s decision, annotated tag and pack, ran green on `ubuntu-26.04` (*observed* on 2026-10-17, #127); the tag's push, the GitHub Release and the publish to npm had not run there yet.
 
@@ -345,7 +352,7 @@ This repository is that repository. Its two packages are published by the workfl
 
 **Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN`, `id-token: write` for npm trusted publishing, `issues: write`, which GitHub requires to change a milestone, and no stored secret: it pushes the tag with git, as `github-actions[bot]`, reads whether a Release exists and creates it with `gh`, and on a release — or a run again on its tagged commit — builds the packages, publishes them with `scripts/publish.mjs`, and then closes the milestone through the REST API with `gh` in `scripts/close-milestone.mjs`. That step runs only once the publish succeeded, writes what it did to the run summary, and fails only when GitHub cannot be read or written. A tag pushed with that token starts no other workflow.
 
-There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once when a repository is created and again whenever its settings drift, with the permissions of the administrator whose `gh` it uses; it needs no token of its own.
+There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once when a repository is created and again whenever its settings drift, with the permissions of the administrator whose `gh` it uses; it needs no token of its own. It refuses a repository not owned by an organization, an organization without the team `maintainers`, and a repository whose default branch has no commit yet, since a branch protection names an existing branch.
 
 ## 6. Architecture decision records
 
@@ -416,3 +423,11 @@ Each record has an identifier, never reused; its context, decision, rationale an
 - **Rationale:** the page and `diagnose` must agree with the search on what a filter means, and a specification that the renderer and the backend both implement, proved by one suite, is how the two readers of the notation are kept together already (ADR-005). Publishing MemorySmith's parser as a package would bind this repository to the product's backend, which RN-RENDER-002 keeps out.
 - **Consequences:** the grammar has two implementations, MemorySmith's and this one, and the conformance cases of §6.9 are what holds them equal; a change to the language is a change to `SPEC.md`, the suite and both parsers. Where the port departs from `SearchQuery.ts` at `4b67c7e` — a range over a number, an inverted range judged by kind, a quoted `"a:b"` read as text, `""` an error — the departure is recorded on memorysmithapp/memorysmithapp#366.
 - **Date:** 2026-10-29. **Status:** Accepted. **Origin:** decided by the owner in #137.
+
+### ADR-009 Who merges to main is the branch protection's
+
+- **Context:** the team `contributors` has write on the repositories of the organization, and a contributor must not merge to `main` on their own. A `CODEOWNERS` file with a required code owner review was tried for it on 2026-11-13: GitHub never lets the author of a pull request approve it, and the owner opens almost every pull request, so every merge of the owner's own became a bypass by *Organization admin*, and a bypass that is routine stops being noticed (*observed*, memorysmithapp/memorysmithapp-template#39).
+- **Decision:** the ruleset `main` requires no approval and has no bypass actors; the branch protection of `main` restricts pushes, and so merges, to the team `maintainers`; no `CODEOWNERS` file exists. `scripts/setup-repo.sh` applies both.
+- **Rationale:** for a member of the team the merge is a permission, so nothing is bypassed and the button stays green, and the restriction still refuses a contributor. A review requested by a file would be requested of nobody when the owner is the author, and its line would promise an approval that never happens.
+- **Consequences:** a maintainer's merge is the review of a pull request to `main` ([`SDLC.md` §8](SDLC.md#8-tests-and-review)). A created repository needs the organization's team `maintainers` before the script runs. A ruleset rule *Restrict updates* with the team as bypass actor was the alternative, set aside because a member's merge would then be a bypass.
+- **Date:** 2026-11-16. **Status:** Accepted. **Origin:** #156, following memorysmithapp/memorysmithapp-template#39.
