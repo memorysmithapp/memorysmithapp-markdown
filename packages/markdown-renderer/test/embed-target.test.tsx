@@ -9,9 +9,9 @@ import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { diagnose } from '../src/diagnose.js';
 import { NoteEditor } from '../src/edit/index.js';
-import { embedReach } from '../src/embed-target.js';
+import { drawing, drawnNote, embedReach, embedTarget } from '../src/embed-target.js';
 import { resolveHost } from '../src/host.js';
-import { documents, notebook } from './notebook.js';
+import { conformanceHost, documents, notebook } from './notebook.js';
 import { draw, mount, type Mounted } from './render.js';
 
 let mounted: Mounted | null = null;
@@ -67,6 +67,87 @@ describe('a note and a file of one name (#148)', () => {
   });
 });
 
+describe('a note that embeds its own name (#147)', () => {
+  const FOTO = '---\nname: foto.jpg\n---\n\n![[foto.jpg]]\n';
+  const OTHER = '---\nname: foto.jpg\n---\n\nAnother note named foto.jpg.\n';
+  /** The notebook drawing its first note, by the address the host gives it. */
+  const drawingFirst = (notes: string[], files: string[]) => {
+    const host = documents(notes, files);
+    return { ...host, noteAddress: host.notes[0]!.address };
+  };
+  const files = (container: HTMLElement) => container.querySelectorAll('[class^="attachment"]');
+
+  it('draws the file of that name, which nothing else answers', async () => {
+    mounted = await draw(FOTO, drawingFirst([FOTO], ['foto.jpg']));
+    await settle();
+    expect(files(mounted.container)).toHaveLength(1);
+    expect(mounted.container.querySelector('figure.embed, .embed-pending')).toBeNull();
+  });
+
+  it('is pending when the notebook keeps no file of that name', async () => {
+    mounted = await draw(FOTO, drawingFirst([FOTO], []));
+    await settle();
+    expect(mounted.container.querySelector('.embed-pending')?.textContent).toBe('foto.jpg');
+  });
+
+  it('transcludes another note of that name before the file, loaded by its address', async () => {
+    const host = drawingFirst([FOTO, OTHER], ['foto.jpg']);
+    const asked: string[] = [];
+    mounted = await draw(FOTO, { ...host, loadNoteAt: (address) => (asked.push(address), host.loadNoteAt!(address)) });
+    await settle();
+    expect(mounted.container.querySelector('figure.embed .embed-body')?.textContent).toContain('Another note named foto.jpg.');
+    expect(asked).toEqual(['/notes/1']);
+    expect(files(mounted.container)).toHaveLength(0);
+  });
+
+  it('is pending, as an ambiguous embed is, under a host that cannot load by address', async () => {
+    const { loadNoteAt: _, ...host } = drawingFirst([FOTO, OTHER], ['foto.jpg']);
+    mounted = await draw(FOTO, host);
+    await settle();
+    expect(mounted.container.querySelector('.embed-pending')?.textContent).toBe('foto.jpg');
+  });
+
+  it('excludes nothing when the host gives no address: a draft is not a note it counts', async () => {
+    const { noteAddress: _, ...host } = drawingFirst([OTHER], ['foto.jpg']);
+    mounted = await draw(FOTO, host);
+    await settle();
+    expect(mounted.container.querySelector('figure.embed .embed-body')?.textContent).toContain('Another note named foto.jpg.');
+  });
+
+  it('draws the file of its own alias, once the host says nothing else carries it', async () => {
+    const OBRA = '---\nname: Foto da obra\naliases: [obra.jpg]\n---\n\n![[obra.jpg|120]]\n';
+    mounted = await draw(OBRA, drawingFirst([OBRA], ['obra.jpg']));
+    await settle();
+    expect(files(mounted.container)).toHaveLength(1);
+    expect(mounted.container.querySelector('figure.embed, .embed-pending')).toBeNull();
+  });
+
+  it('keeps a link to a section of its own note a link', async () => {
+    const SECTION = '---\nname: x\n---\n\nSee [[x#Below]].\n\n## Below\n';
+    mounted = await draw(SECTION, drawingFirst([SECTION], []));
+    expect(mounted.container.querySelector('a.wikilink')?.textContent).toContain('x#Below');
+    expect(mounted.container.querySelector('.wikilink-pending')).toBeNull();
+  });
+
+  it('is read as the embedded note reads it, inside its content', async () => {
+    // A embeds the note foto.jpg, whose own `![[foto.jpg]]` is, for it, the file of that name.
+    const A = '---\nname: A\n---\n\n![[foto.jpg]]\n';
+    const host = documents([A, FOTO], ['foto.jpg']);
+    mounted = await draw(A, { ...host, noteAddress: host.notes[0]!.address });
+    await settle();
+    const body = mounted.container.querySelector('figure.embed .embed-body')!;
+    expect(files(body as HTMLElement)).toHaveLength(1);
+    expect(body.querySelector('a.wikilink, .wikilink-pending')).toBeNull();
+  });
+
+  it('draws the file in the editor too', async () => {
+    mounted = await mount(<NoteEditor markdown={FOTO} {...drawingFirst([FOTO], ['foto.jpg'])} />);
+    await settle();
+    expect(files(mounted.container.querySelector('.cm-content')!)).toHaveLength(1);
+    expect(mounted.container.querySelector('.cm-content figure.embed')).toBeNull();
+  });
+});
+
 describe('the conformance suite', () => {
   const KIND = { note: 'note', choice: 'note', file: 'attachment', pending: 'pending' } as const;
   const EMBED = /!\[\[([^\]|#]+)/g;
@@ -82,10 +163,12 @@ describe('the conformance suite', () => {
   });
 
   for (const { testCase, outcomes } of embedding) {
-    it(testCase.id, () => {
-      const host = resolveHost(documents(testCase.notebook.notes ?? [], testCase.notebook.attachments ?? []));
+    it(testCase.id, async () => {
+      const given = conformanceHost(testCase.markdown, testCase.notebook);
+      const host = drawing(resolveHost(given), drawnNote(given.noteAddress, testCase.markdown));
       for (const outcome of outcomes) {
-        expect({ target: outcome.target, kind: KIND[embedReach(host, outcome.target)] }).toEqual({ target: outcome.target, kind: outcome.kind });
+        const { kind } = await embedTarget(host, outcome.target);
+        expect({ target: outcome.target, kind: KIND[kind] }).toEqual({ target: outcome.target, kind: outcome.kind });
       }
     });
   }

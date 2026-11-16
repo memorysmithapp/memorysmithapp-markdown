@@ -24,7 +24,9 @@ import { codeRegions, fenceRegions, headingKey, insideCode, insideTable, outside
 const EMBED = /!\[\[([^\]|#]+?)(?:#([^\]|]+?))?(?:\|[^\]]*?)?\]\]/g;
 
 export type BodySegment =
-  { kind: 'text'; text: string } | { kind: 'embed'; target: string; anchor: string | null };
+  | { kind: 'text'; text: string }
+  /** An embed of a note, with what was written, which is drawn as written when it reaches a file after all. */
+  | { kind: 'embed'; target: string; anchor: string | null; source: string };
 
 /**
  * How many embeds one page expands. Past it the rest stay as links: the cost
@@ -85,7 +87,7 @@ export function splitEmbeds(
     // Code is untouched, because `demoteEmbeds` rewrites outside it.
     const before = demoteEmbeds(body.slice(cursor, at), keeps);
     if (before.length > 0) segments.push({ kind: 'text', text: before });
-    segments.push({ kind: 'embed', target, anchor: match[2]?.trim() ?? null });
+    segments.push({ kind: 'embed', target, anchor: match[2]?.trim() ?? null, source: match[0] });
     cursor = at + match[0].length;
     expanded += 1;
   }

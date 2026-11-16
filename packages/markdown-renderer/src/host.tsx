@@ -1,7 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
 import type { TablePage, TableRequest } from './table-block.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
+import { drawing, drawnNote, type DrawnNote } from './embed-target.js';
 
 /**
  * The host contract: everything the renderer needs from the notebook a note lives in, given by
@@ -45,6 +46,21 @@ export interface NoteHost {
    * before it is reached (#94): a host that loads from the network may cache what it answered.
    */
   readonly loadNote?: (name: string) => Promise<EmbeddedNote | null>;
+  /**
+   * The note at an address, as `choose` gave it, for an embed to draw in place. It is asked when a
+   * name alone cannot say which note: an embed of its own name in a note that another note also
+   * carries reaches that other note (§5.2), and only its address tells the two apart. Without it,
+   * such an embed is drawn as an ambiguous one is, pending.
+   */
+  readonly loadNoteAt?: (address: string) => Promise<EmbeddedNote | null>;
+  /**
+   * The address of the note being drawn, as `choose` gives addresses, when it is a note the
+   * notebook keeps. An embed never reaches the note it is written in (§5.2): with it, the renderer
+   * takes the note out of what an embed of its own name or alias reaches, so `![[x]]` in the note
+   * `x` reaches another note `x`, else the file `x`, else nothing. Leave it out for what is not a
+   * kept note — a guidance, a template, a dashboard, a draft never saved — and nothing is excluded.
+   */
+  readonly noteAddress?: string;
   /**
    * The rows a `table` block asks for (`SPEC.md` §7.15, #138): the table it names, the columns, the
    * filter as written, the order, the page and its size, and the column to sum. The host runs the
@@ -276,6 +292,8 @@ export const HOST_KEYS = Object.keys({
   targetAddress: 1,
   navigate: 1,
   loadNote: 1,
+  loadNoteAt: 1,
+  noteAddress: 1,
   queryTable: 1,
   printing: 1,
   writable: 1,
@@ -302,6 +320,12 @@ export interface ResolvedHost {
   readonly navigate: (address: string) => void;
   readonly remoteNotice: boolean;
   readonly loadNote: ((name: string) => Promise<EmbeddedNote | null>) | null;
+  readonly loadNoteAt: ((address: string) => Promise<EmbeddedNote | null>) | null;
+  /**
+   * The note being drawn, when the host gave its address: what an embed of its own name or alias
+   * takes it out of (§5.2). Set by the view that draws a note, never by `resolveHost`.
+   */
+  readonly drawn: DrawnNote | null;
   readonly queryTable: ((request: TableRequest) => Promise<TablePage | null>) | null;
   readonly printing: boolean;
   readonly keeps: (name: string) => boolean;
@@ -343,6 +367,8 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     navigate: host.navigate ?? ((address) => window.location.assign(address)),
     remoteNotice: host.remoteNotice ?? true,
     loadNote: host.loadNote ?? null,
+    loadNoteAt: host.loadNoteAt ?? null,
+    drawn: null,
     queryTable: host.queryTable ?? null,
     printing: host.printing ?? false,
     keeps: host.keeps ?? never,
@@ -364,4 +390,16 @@ export const HostProvider = HostContext.Provider;
 /** The host the note is drawn under, read by every part of the surface. */
 export function useHost(): ResolvedHost {
   return useContext(HostContext);
+}
+
+/**
+ * The host drawing the note at `address` whose text is `markdown` (§5.2, #147): the same object
+ * while the note's address, name and aliases stay what they were, so an edit to its body changes
+ * no host.
+ */
+export function useDrawing(host: ResolvedHost, address: string | undefined, markdown: string): ResolvedHost {
+  const drawn = useMemo(() => drawnNote(address, markdown), [address, markdown]);
+  const key = drawn === null ? '' : JSON.stringify(drawn);
+  // The key is the note's identity; `drawn` is read from the render that made it.
+  return useMemo(() => drawing(host, drawn), [host, key]);
 }

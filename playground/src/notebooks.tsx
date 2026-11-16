@@ -129,6 +129,11 @@ export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | 
       const note = one(name);
       return note ? { markdown: note.markdown, name: note.name, address: addressOf(note) } : null;
     },
+    // The note at an address `choose` gave, for an embed of the drawn note's own name that another note carries (#147).
+    loadNoteAt: async (address): Promise<EmbeddedNote | null> => {
+      const note = notebook.notes.find((each) => addressOf(each) === address);
+      return note ? { markdown: note.markdown, name: note.name, address } : null;
+    },
     keeps: (name) => notebook.files.includes(name.normalize('NFC')),
     // The rows a `table` block asks for, answered from the sample tables as MemorySmith answers from its own (#138).
     queryTable: async (request) => {

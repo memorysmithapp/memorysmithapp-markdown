@@ -186,6 +186,36 @@ describe('check-spec', () => {
     expect(result.output).toMatch(/resolves "expenses" to the kind table and to 1 edges. Only a note produces an edge/);
   });
 
+  it('fails on a notebook whose includesInput is not true or false', () => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({
+        id: 'resolution/invented',
+        notation: 'embed',
+        markdown: '---\nname: x\n---\n![[x]]\n',
+        notebook: { includesInput: 'yes', attachments: ['x'] },
+        resolution: [{ target: 'x', kind: 'attachment', edges: 0 }],
+      });
+    });
+    const result = check(root);
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/has a notebook whose "includesInput" is not true or false/);
+  });
+
+  it('accepts a notebook that holds only the input', () => {
+    const root = copy();
+    editJson(root, 'tests/conformance.json', (suite) => {
+      suite.cases.push({
+        id: 'resolution/invented',
+        notation: 'embed',
+        markdown: '---\nname: x\n---\n![[x]]\n',
+        notebook: { includesInput: true },
+        resolution: [{ target: 'x', kind: 'pending', edges: 0 }],
+      });
+    });
+    expect(check(root).ok).toBe(true);
+  });
+
   it('fails when the table of notices in SPEC.md and spec.json disagree', () => {
     const root = copy();
     editJson(root, 'spec.json', (spec) => {

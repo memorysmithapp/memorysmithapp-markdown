@@ -282,6 +282,9 @@ for (const testCase of cases) {
         `the case "${testCase.id}" has a notebook whose "attachments" is not a list of names`,
       );
     }
+    if ('includesInput' in notebook && typeof notebook.includesInput !== 'boolean') {
+      fail('tests/conformance.json', `the case "${testCase.id}" has a notebook whose "includesInput" is not true or false`);
+    }
     if (!Array.isArray(tables)) {
       fail('tests/conformance.json', `the case "${testCase.id}" has a notebook whose "tables" is not a list`);
     } else {
@@ -305,7 +308,7 @@ for (const testCase of cases) {
         }
       }
     }
-    if (notes.length === 0 && attachments.length === 0 && (Array.isArray(tables) ? tables.length : 0) === 0) {
+    if (notes.length === 0 && attachments.length === 0 && (Array.isArray(tables) ? tables.length : 0) === 0 && notebook.includesInput !== true) {
       fail(
         'tests/conformance.json',
         `the case "${testCase.id}" has an empty notebook, which resolves nothing`,

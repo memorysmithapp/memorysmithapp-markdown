@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react
 import { ICON_EDIT, ICON_VIEW } from './mode-icons.js';
 import { ButtonFace, NoteActions, type NoteButtons } from './NoteActions.js';
 import { drawSlot } from './slots.js';
-import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type ResolvedHost } from './host.js';
+import { HOST_KEYS, HostProvider, resolveHost, useDrawing, useHost, type NoteHost, type ResolvedHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
 import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
@@ -183,11 +183,13 @@ function NoteView({
   buttons = 'icon',
   ...host
 }: NoteHost & { markdown: string; corner?: ReactNode; switched?: boolean; buttons?: NoteButtons }) {
-  const resolved = useMemo(
+  const given = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
     HOST_KEYS.map((key) => (host as NoteHost)[key]),
   );
+  // The note itself, which an embed of its own name does not reach (§5.2, #147).
+  const resolved = useDrawing(given, host.noteAddress, markdown);
   // The frontmatter is drawn apart from the body, as the theme decides, so the
   // runs start after it. Everything below counts task items from there.
   // Each tick the host answers with a promise locks its item until the save settles.
@@ -275,7 +277,7 @@ function NoteView({
         <Properties properties={properties} />
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
-            return <Transclusion key={index} target={segment.target} anchor={segment.anchor} />;
+            return <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;

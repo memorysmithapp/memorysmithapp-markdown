@@ -12,6 +12,7 @@
  * reads a diagram as the page would draw it, loaded only when a note carries one.
  */
 
+import { drawnNote, embedTarget } from './embed-target.js';
 import { keptImageName } from './kept-image.js';
 import katex from 'katex';
 import remarkParse from 'remark-parse';
@@ -66,7 +67,7 @@ export interface Notice {
  * What the notebook answers, as `NoteBody` asks it. With neither `resolve` nor `reaches`, nothing
  * is known about the notebook and no link is reported as pending.
  */
-export interface DiagnoseOptions extends Pick<NoteHost, 'resolve' | 'reaches' | 'keeps'> {
+export interface DiagnoseOptions extends Pick<NoteHost, 'resolve' | 'reaches' | 'keeps' | 'choose' | 'noteAddress'> {
   /** Whether to read each `mermaid` block with Mermaid, which is loaded for it. Defaults to true. */
   readonly diagrams?: boolean;
   /**
@@ -245,7 +246,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
     }
   });
 
-  pending(hidden, split, options, report);
+  await pending(text, hidden, split, options, report);
   // An image whose destination names no host names a kept file, and only a kept file (§5.8, #104).
   if (options.resolve || options.reaches) {
     const keeps = options.keeps ?? (() => false);
@@ -377,15 +378,16 @@ function outline(tree: Node, span: (node: Node) => [number, number] | null, repo
 
 /**
  * The wikilinks and embeds no note answers, when the host says which notes exist: a link reaches
- * a note, and an embed a note or a kept file (§5.2, §5.8). Read on the body outside code, as
- * `resolveWikilinks` reads it.
+ * a note, and an embed a note other than the one it is written in, or a kept file (§5.2, §5.8).
+ * Read on the body outside code, as `resolveWikilinks` reads it.
  */
-function pending(hidden: HiddenComments, split: number, options: DiagnoseOptions, report: Report): void {
+async function pending(markdown: string, hidden: HiddenComments, split: number, options: DiagnoseOptions, report: Report): Promise<void> {
   const body = hidden.text;
   const { resolve, reaches, keeps = () => false } = options;
   if (!resolve && !reaches) return;
-  const answered = (name: string): boolean =>
-    reaches ? reaches(name.normalize('NFC')) > 0 : resolve!(name.normalize('NFC')) !== null;
+  const count = (name: string): number => (reaches ? reaches(name) : resolve!(name) === null ? 0 : 1);
+  const answered = (name: string): boolean => count(name.normalize('NFC')) > 0;
+  const embeds = { reaches: count, keeps, choose: options.choose ?? null, drawn: drawnNote(options.noteAddress, markdown) };
   const code = codeRegions(body);
   for (const match of body.matchAll(WIKILINK)) {
     if (insideCode(code, match.index)) continue;
@@ -395,7 +397,7 @@ function pending(hidden: HiddenComments, split: number, options: DiagnoseOptions
     // A target that writes a parameter is neither a link nor pending (§7.14).
     if (hasParameterReference(name)) continue;
     const embed = match[1] !== undefined;
-    if (answered(name) || (embed && keeps(name))) continue;
+    if (embed ? (await embedTarget(embeds, name)).kind !== 'pending' : answered(name)) continue;
     const end = match.index + match[0].length;
     report(embed ? 'embed-pending' : 'link-pending', split + hidden.original(match.index), split + hidden.original(end, true), name);
   }

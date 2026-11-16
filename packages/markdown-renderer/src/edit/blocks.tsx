@@ -80,7 +80,7 @@ export function Snippet({ text }: { text: string }) {
         segment.kind === 'text' ? (
           <Markdown key={index}>{resolveWikilinks(segment.text, (name) => wikilinkAddress(host, name), file)}</Markdown>
         ) : (
-          <Transclusion key={index} target={segment.target} anchor={segment.anchor} />
+          <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />
         ),
       )}
     </>

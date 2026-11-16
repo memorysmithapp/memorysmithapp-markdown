@@ -1,6 +1,7 @@
 // An in-memory notebook for the tests: notes by name, an address per note, and the host contract
 // that answers from them.
 
+import type { ConformanceNotebook } from '@memorysmithapp/markdown-spec';
 import type { EmbeddedNote, LinkChoices, NoteHost } from '../src/index.js';
 import { readProperties } from '../src/properties.js';
 
@@ -58,5 +59,19 @@ export function documents(markdowns: readonly string[], files: readonly string[]
       const found = matching(name).notes;
       return found.length === 1 ? embedded(found[0]!) : null;
     },
+    loadNoteAt: async (address) => {
+      const found = notes.find((note) => note.address === address);
+      return found ? embedded(found) : null;
+    },
   };
+}
+
+/**
+ * The host of a conformance case's notebook, drawing its input: the input is a note of the notebook,
+ * at the first address, when the notebook `includesInput`, and is then the note being drawn.
+ */
+export function conformanceHost(markdown: string, notebook: ConformanceNotebook): NoteHost {
+  const notes = [...(notebook.includesInput ? [markdown] : []), ...(notebook.notes ?? [])];
+  const host = documents(notes, notebook.attachments ?? []);
+  return notebook.includesInput ? { ...host, noteAddress: host.notes[0]!.address } : host;
 }

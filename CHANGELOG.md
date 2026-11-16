@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The specification says an embed never reaches the note it is written in (#147, `SPEC.md` §5.2, §5.8). Inside a note, `![[target]]` is resolved as any reference is and the note itself is then taken out of what matched; when it was the only match, by its name or by an alias, the embed reaches the attachment of that name, else it is pending. A note named `foto.jpg` that shows `![[foto.jpg]]` shows the file, and another note named `foto.jpg` comes before it. A link, `[[target]]`, still reaches its own note, so `[[x#Section]]` in `x` is a link to its own section. Five conformance cases cover it, and a case's notebook may now hold the input itself, `includesInput: true`, which the checker and the types know.
+- The host contract has `noteAddress`, the address of the note being drawn as `choose` gives addresses, and `loadNoteAt`, which loads a note by that address (#147). With `noteAddress`, the reading page, the editor and `diagnose` take the note out of what an embed of its own name or alias reaches: a name is decided at once from the count, an alias by asking `choose`, and one other note left is loaded by address. Without it nothing is excluded, which is right for a guidance, a template or a draft; without `loadNoteAt`, an embed whose other note only an address tells apart is drawn pending, as an ambiguous one is. In edit mode the note's name is read from the text the host gave, so a rename takes effect once it is saved.
+
 ### Fixed
 
 - An embed reaches a note before a file of the same name, as `SPEC.md` §5.2 and §5.8 order them (#148). The renderer asked the host whether the notebook keeps a file before asking for a note, so `![[x]]` in a notebook holding a note `x` and a file `x` drew the file while an index made the edge to the note. The reading page, the content of an embedded note, the editor's blocks and marks, and the measuring of an embed before it is reached now ask `embedReach`, which counts the notes first; a file is drawn only when no note answers the name. The conformance suite has the case, `resolution/a-note-comes-before-an-attachment-of-its-name`, and the renderer's tests now resolve every embed of the suite's resolution cases.

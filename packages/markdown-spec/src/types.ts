@@ -116,6 +116,11 @@ export interface ConformanceNotebook {
   readonly attachments?: readonly string[];
   /** Tables the notebook keeps (`SPEC.md` §5.9). */
   readonly tables?: readonly ConformanceTable[];
+  /**
+   * Whether the input is itself one of the notebook's notes, besides `notes`: what an embed of its
+   * own name is resolved against (`SPEC.md` §5.2). Absent, it is not.
+   */
+  readonly includesInput?: boolean;
 }
 
 interface CaseBase {
