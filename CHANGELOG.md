@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-16
+
 ### Changed
 
 - `scripts/setup-repo.sh` also gives the organization's team `maintainers` write on the repository and sets the branch protection of the default branch, restricting pushes, and so merges, to that team, administrators included, with no force push, no deletion, and no review or check of its own; idempotent as before, comparing it in the shape of its request. It refuses a repository not owned by an organization, an organization without the team `maintainers`, and a default branch with no commit (#156, memorysmithapp/memorysmithapp-template#39).
@@ -315,7 +317,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...v0.10.1
