@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- `SDLC.md` closes three gaps, as memorysmithapp/memorysmithapp-template#37 decided (#153): the issue of a `docs/` or `chore/` branch closes when its pull request is merged to `main`, never on its branch (§5); such an issue takes the milestone of the next version, whose cut carries its `[Unreleased]` entry (§2); and a fix is a patch version of its own when the released version is wrong in a way a person meets before the open cycle is cut, the owner's call in the go-ahead, and otherwise enters the open cycle, while a patch cut during a cycle is brought into its `release/vX.Y.0` from `main` after its merge (§11).
 - `SDLC.md` says which branch takes what (#149): a change to what the two packages publish, or to a script or workflow of the repository, lands on the `release/vX.Y.Z` of its issue's milestone, committed there or brought by a pull request whose base is that branch, because nothing here stops it on `main` and it would sit there unpublished; a single-purpose branch reaches `main` only when it touches nothing published, and a hotfix is a release of its own. The go-ahead puts the issue in a milestone, "the branch of the cycle" in §5 and §12 names that release branch, and a commit on a `feat/` or `fix/` branch closes no issue. `AGENTS.md` §4 and §7 follow. The text is memorysmithapp/memorysmithapp-template#31's, differing where this repository publishes to npm.
 
 ### Fixed
