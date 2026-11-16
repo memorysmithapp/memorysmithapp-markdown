@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-16
+
 ### Added
 
 - The workflow *Release* closes the milestone `vX.Y.Z` once both packages are on npm at that version, on the release or on a run started again on its tagged commit (#150, RN-PUB-003). A release whose publish failed keeps its milestone open; a milestone that still holds an open issue or pull request stays open and the run summary names each one; a version with no milestone is not an error, and neither fails the release. It runs `scripts/close-milestone.mjs`, memorysmithapp/memorysmithapp-template#32's, with `issues: write` beside `contents: write` and `id-token: write`.
@@ -301,7 +303,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0
