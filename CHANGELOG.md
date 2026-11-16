@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- A run of the workflow *Release* started again on the tagged commit creates the GitHub Release a run before failed to create (#151). `scripts/release.mjs` gave the notes only for a release, and the Release step ran only then, so a run started again published the packages and went green with no Release; it now gives the notes on `tagged` as well, and the step creates the Release only when it does not exist, leaving one that does as it is. The Release still comes before the publish, so a run that cannot create it publishes nothing and closes no milestone.
 - An embed reaches a note before a file of the same name, as `SPEC.md` §5.2 and §5.8 order them (#148). The renderer asked the host whether the notebook keeps a file before asking for a note, so `![[x]]` in a notebook holding a note `x` and a file `x` drew the file while an index made the edge to the note. The reading page, the content of an embedded note, the editor's blocks and marks, and the measuring of an embed before it is reached now ask `embedReach`, which counts the notes first; a file is drawn only when no note answers the name. The conformance suite has the case, `resolution/a-note-comes-before-an-attachment-of-its-name`, and the renderer's tests now resolve every embed of the suite's resolution cases.
 
 ## [0.10.2] - 2026-11-11

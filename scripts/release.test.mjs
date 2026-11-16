@@ -28,8 +28,17 @@ test('releases a version whose section exists and whose tag does not', () => {
   assert.equal(result.notes, '### Added\n\n- The first version.');
 });
 
-test('does nothing when the tag already names this commit', () => {
-  assert.equal(plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD }).action, 'tagged');
+test('tags nothing when the tag already names this commit, and writes the notes of its section all the same', () => {
+  const result = plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD });
+  assert.equal(result.action, 'tagged');
+  // A run started again creates the GitHub Release a run before failed to create (#151).
+  assert.equal(result.notes, '### Added\n\n- The first version.');
+});
+
+test('has no notes for a tagged commit whose version has no released section', () => {
+  const result = plan({ version: '0.2.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD });
+  assert.equal(result.action, 'tagged');
+  assert.equal(result.notes, null);
 });
 
 test('fails when the tag names a commit outside this history', () => {

@@ -47,12 +47,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate --cleanup=verbatim "$TAG" --message "$TAG" --message "$(cat "$RUNNER_TEMP/notes.md")" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG"
+      # Also on a run started again on the tagged commit, which creates a Release a run before failed
+      # to create; one that exists is left as it is. Before the publish, so a version whose Release
+      # cannot be created publishes nothing and closes no milestone.
       - name: Create the GitHub Release
-        if: steps.plan.outputs.action == 'release'
+        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.plan.outputs.tag }}
-        run: gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "The Release $TAG exists already." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+            echo "Created the Release $TAG." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build the packages
         if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
         env:

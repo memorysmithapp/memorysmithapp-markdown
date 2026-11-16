@@ -5,9 +5,11 @@
 //   2. if the links at the foot of CHANGELOG.md do not name this repository, nothing is released:
 //      the changelog is a copy of another repository's, as in a repository just created from
 //      memorysmithapp-template and not adopted yet;
-//   3. if the tag vX.Y.Z exists on this commit, nothing is tagged; if on an earlier commit of this
-//      history, nothing is released, because the version was released before this push; if on a
-//      commit outside this history, fail, because a version names one commit;
+//   3. if the tag vX.Y.Z exists on this commit, nothing is tagged, and the notes of its section are
+//      written all the same, so that a run started again creates a GitHub Release a run before
+//      failed to create; if on an earlier commit of this history, nothing is released, because the
+//      version was released before this push; if on a commit outside this history, fail, because a
+//      version names one commit;
 //   4. if CHANGELOG.md has no released section for the version, nothing is released;
 //   5. otherwise release: write the notes of that section, for the annotated tag and the Release.
 //
@@ -29,7 +31,7 @@ export function plan({ version, changelog, repository, tagCommit, headCommit, ta
     return { action: 'skip', tag, reason: `CHANGELOG.md links to ${linked}, not to ${repository}: it is not this repository's changelog yet` };
   }
   if (tagCommit) {
-    if (tagCommit === headCommit) return { action: 'tagged', tag, reason: `${tag} already names this commit` };
+    if (tagCommit === headCommit) return { action: 'tagged', tag, notes: releaseNotes(parsed, version), reason: `${tag} already names this commit` };
     if (tagIsAncestor) return { action: 'skip', tag, reason: `${tag} names ${tagCommit}, released before this commit: this push is not a release` };
     return { action: 'fail', tag, reason: `${tag} already names ${tagCommit}, not ${headCommit}: a version names one commit` };
   }
@@ -70,7 +72,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   });
   console.error(result.reason);
   if (result.action === 'fail') process.exit(1);
-  if (result.action === 'release') writeFileSync(notesFile, `${result.notes}\n`);
+  if ((result.action === 'release' || result.action === 'tagged') && result.notes !== null) writeFileSync(notesFile, `${result.notes}\n`);
   console.log(`action=${result.action}`);
   console.log(`tag=${result.tag}`);
 }
