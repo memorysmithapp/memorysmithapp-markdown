@@ -80,7 +80,10 @@ export interface NoteHost {
    * but a promise, no lock is drawn.
    */
   readonly onToggleTask?: (ordinal: number) => unknown;
-  /** Whether the notebook keeps a file under that name. Only an embed reaches a file. */
+  /**
+   * Whether the notebook keeps a file under that name. Only an embed reaches a file, and only when no
+   * note answers the name (§5.8): a note comes first.
+   */
   readonly keeps?: (name: string) => boolean;
   /**
    * The names of notes that start with, or contain, what an author typed after `[[` in edit mode,

@@ -14,6 +14,7 @@ import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
+import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
 export interface NoteBodyProps extends NoteHost {
@@ -198,13 +199,15 @@ function NoteView({
 
   // The body is cut into runs of text and the embeds between them; each run
   // is parsed on its own, as on MemorySmith's reading page.
-  const segments = splitEmbeds(body, resolved.keeps).map((segment) =>
+  // A note answers an embed before a file of its name does (§5.8, #148).
+  const file = embedsFile(resolved);
+  const segments = splitEmbeds(body, file).map((segment) =>
     segment.kind === 'text'
       ? {
           ...segment,
           // One resolver for every run: one note is a link, several are the
           // choice, and none is pending and still asks.
-          rendered: resolveWikilinks(segment.text, (name) => wikilinkAddress(resolved, name), resolved.keeps),
+          rendered: resolveWikilinks(segment.text, (name) => wikilinkAddress(resolved, name), file),
         }
       : segment,
   );

@@ -5,6 +5,7 @@ import { drawSlot, useSlot } from './slots.js';
 import { bodyStart, hideComments, resolveWikilinks } from './source.js';
 import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './embeds.js';
 import { wikilinkAddress } from './wikilink-address.js';
+import { embedsFile } from './embed-target.js';
 
 /** The shape of what is coming, in the position it will occupy, while the host answers. */
 function TransclusionSkeleton({ loading }: { loading: string }) {
@@ -104,9 +105,9 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
        */
       <Markdown>
         {resolveWikilinks(
-          demoteEmbeds(cut, host.keeps),
+          demoteEmbeds(cut, embedsFile(host)),
           (each) => wikilinkAddress(host, each),
-          host.keeps,
+          embedsFile(host),
         )}
       </Markdown>
     );

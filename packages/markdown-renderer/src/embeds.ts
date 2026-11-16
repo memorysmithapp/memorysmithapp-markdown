@@ -41,7 +41,8 @@ export const EMBED_LIMIT = 10;
 export function splitEmbeds(
   body: string,
   /**
-   * Whether the notebook keeps a FILE under that name. An embed of one
+   * Whether an embed of that name draws a FILE: no note answers it and the
+   * notebook keeps one (§5.8), which `embedsFile` decides. An embed of one
    * expands nothing here: it stays in the text run, where the wikilink pass
    * turns it into the attachment the page draws by its type.
    */

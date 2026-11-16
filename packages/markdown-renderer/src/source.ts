@@ -357,7 +357,8 @@ export function resolveWikilinks(
   body: string,
   resolve: (name: string) => string | null,
   /**
-   * Whether the notebook keeps a FILE under that name. The extension of a
+   * Whether an embed of that name draws a FILE: no note answers it and the
+   * notebook keeps one, which `embedsFile` decides (§5.8). The extension of a
    * name decides nothing, so what a target is cannot be read off it: it is
    * read off what the notebook holds, which is the host's to answer.
    */

@@ -17,6 +17,7 @@ import { hideComments, resolveWikilinks } from '../source.js';
 import { isTrue, readProperties } from '../properties.js';
 import { Transclusion } from '../Transclusion.js';
 import { splitEmbeds } from '../embeds.js';
+import { embedsFile } from '../embed-target.js';
 import { wikilinkAddress } from '../wikilink-address.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
@@ -72,11 +73,12 @@ function write(view: EditorView, changes: readonly TextChange[] | ChangeSet, eve
 export function Snippet({ text }: { text: string }) {
   const host = useHost();
   const body = hideComments(text).text;
+  const file = embedsFile(host);
   return (
     <>
-      {splitEmbeds(body, host.keeps).map((segment, index) =>
+      {splitEmbeds(body, file).map((segment, index) =>
         segment.kind === 'text' ? (
-          <Markdown key={index}>{resolveWikilinks(segment.text, (name) => wikilinkAddress(host, name), host.keeps)}</Markdown>
+          <Markdown key={index}>{resolveWikilinks(segment.text, (name) => wikilinkAddress(host, name), file)}</Markdown>
         ) : (
           <Transclusion key={index} target={segment.target} anchor={segment.anchor} />
         ),
