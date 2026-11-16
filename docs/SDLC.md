@@ -231,6 +231,8 @@ This repository publishes its two packages, `@memorysmithapp/markdown-spec` and 
 4. when the run is started again on the same commit (the tag exists there), publishes only what is not on npm yet, so a run that failed halfway is finished by running it again;
 5. leaves a package npm has never seen for the owner, and says so, without failing.
 
+**Then it closes the milestone `vX.Y.Z`**, with `scripts/close-milestone.mjs`: a version is done when both packages are on npm at it, beside its tag and Release ([§12](#12-done-criteria)), so the milestone closes after the publish, and a release whose publish failed keeps it open until the run started again on its tag finishes the publish and closes it. A milestone that still holds an open issue or pull request stays open, and the run summary names each one; a version with no milestone is not an error, and the summary says so. Neither fails the release, and a push that releases nothing closes no milestone.
+
 **The first publish of each package is the owner's, once, by hand.** A trusted publisher is configured in the settings of a package on npmjs.com, so the package has to exist first (*declared* by npm's documentation of trusted publishers, read on 2026-10-12). After the merge of the first version, with an npm account that is a member of the `memorysmithapp` organisation and has two-factor authentication turned on — without it npm refuses the publish with `E403`, *Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages* (*observed* on 2026-10-13):
 
 1. `git checkout v0.1.0 && pnpm install --frozen-lockfile && pnpm --filter "./packages/**" build`, at the root of a clone;
@@ -242,7 +244,7 @@ From then on every cut version is published by the workflow, with provenance, an
 
 A trusted publisher that has not published within two days of being created expires and can no longer be used or edited (*declared* by npm's documentation, read on 2026-10-13): after adding one, run the release it is meant for before then. A published version reaches the registry's listing a minute or two after the workflow reports it (*observed* in the release of v0.1.1).
 
-When a cycle is cut, every issue delivered in it is closed already ([§5](#5-when-an-issue-closes)), and the ones left behind move to the milestone of the next version: an accepted issue nobody reassessed is a silent promise.
+When a cycle is cut, every issue delivered in it is closed already ([§5](#5-when-an-issue-closes)), and the ones left behind move to the milestone of the next version: an accepted issue nobody reassessed is a silent promise. Moving them is a person's decision; the workflow only names them and leaves the milestone open until somebody closes it.
 
 ## 11. Rollback
 

@@ -17,7 +17,7 @@ The repository is made of:
 - **Repository files:** `package.json`, the one home of the version and the root of the workspace; `.gitignore`, `.editorconfig` and `LICENSE`.
 - **A setup script**, `scripts/setup-repo.sh`, which applies to a repository the GitHub configuration a copy does not carry, and puts it back when it drifts.
 - **A quality workflow**, `.github/workflows/quality.yml`, which runs `scripts/quality.mjs`, builds and type-checks the packages and runs every test on every pull request and push to `main`; the ruleset requires it.
-- **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged.
+- **A release workflow**, `.github/workflows/release.yml`, which tags and publishes a version once its bump is merged, and closes its milestone.
 - **GitHub configuration**: the ruleset `main` and the settings the script applies.
 
 ### 1.1 The renderer
@@ -228,10 +228,11 @@ Each fact has one home: an invariant is stated in `AGENTS.md` and its mechanism 
 | `scripts/release.mjs` | Decides what the workflow *Release* does on a push to `main`: release, nothing, or fail |
 | `scripts/release.test.mjs` | The tests of that decision |
 | `scripts/publish.mjs`, `scripts/publish.test.mjs` | Decides and does what *Release* publishes to npm, and its tests |
+| `scripts/close-milestone.mjs`, `scripts/close-milestone.test.mjs` | Closes the milestone of a version *Release* released and published, or leaves it open and names what it still holds (RN-PUB-003), and its tests |
 | `scripts/pack-check.mjs` | Compares what each published package packs with what it is meant to ship: the built modules of `src/` and its folders, and the files it names, and fails when two of them differ only in case |
 | `scripts/lib/changelog.mjs` | Reads `CHANGELOG.md`: its sections, categories, link definitions and the notes of a version |
 | `.github/workflows/quality.yml` | The workflow *Quality*, job `Quality` |
-| `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version |
+| `.github/workflows/release.yml` | The workflow *Release*, which writes the tag and the GitHub Release of a merged version, publishes its packages and closes its milestone |
 | `pnpm-lock.yaml` | Written by pnpm; installed with `--frozen-lockfile` in CI |
 | `notebooks/<slug>/` | A demonstration notebook as MemorySmith keeps one: `GUIDANCE.md`, `STRUCTURE.md`, a folder per kind of note with its `TEMPLATE.md`, the notes, and `assets/`, the files it keeps — three fixture images its notes draw as `../assets/<name>` |
 | `playground/compare/` | The comparison with MemorySmith's reading page ([§3, the renderer draws what MemorySmith draws](#the-renderer-draws-what-memorysmith-draws)): `compare.mjs` drives it, and `reference/` is the page that mounts MemorySmith's own component, copied into a checkout of MemorySmith when it runs |
@@ -325,7 +326,7 @@ The comparison covers what the default theme draws above the body too: `referenc
 **GitHub.**
 
 - *Rulesets and settings:* the ruleset `main` of [INV-03](#inv-03-main-changes-only-through-a-pull-request), and the description, topics, merge options, wiki and discussions, all through the REST API by `scripts/setup-repo.sh` with the `gh` of an administrator.
-- *Issues and milestones:* GitHub's blank issue and default labels; a milestone per version.
+- *Issues and milestones:* GitHub's blank issue and default labels; a milestone per version, closed by the workflow *Release* once the version is released and published (RN-PUB-003).
 - *Actions:* the workflows *Quality* and *Release* on `ubuntu-latest`, with Node 24 from `actions/setup-node` and the pnpm of `packageManager` through Corepack. Nothing they run installs a system package, so the label is left to follow GitHub's images: when it moved to Ubuntu 26.04 (actions/runner-images#14748), every step of *Quality*, and *Release*'s decision, annotated tag and pack, ran green on `ubuntu-26.04` (*observed* on 2026-10-17, #127); the tag's push, the GitHub Release and the publish to npm had not run there yet.
 
 **npm.** Any package a repository of the organisation publishes uses the scope `@memorysmithapp`. The npm organisation `memorysmithapp` exists since 2026-10-12, which reserves the scope, and is on the **free plan, which publishes public packages only**; a private package would need the paid Teams plan (*declared* by the owner in #1). No npm token exists (*declared*). Therefore, in the `package.json` of every repository of the organisation:
@@ -342,7 +343,7 @@ This repository is that repository. Its two packages are published by the workfl
 
 **Quality** (`.github/workflows/quality.yml`) runs on every pull request and every push to `main`, with `contents: read` and no secret; it reads the branch from `GITHUB_HEAD_REF` or `GITHUB_REF_NAME` for check 1.
 
-**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN`, `id-token: write` for npm trusted publishing, and no stored secret: it pushes the tag with git, as `github-actions[bot]`, creates the Release with `gh`, and on a release — or a run again on its tagged commit — builds the packages and publishes them with `scripts/publish.mjs`. A tag pushed with that token starts no other workflow.
+**Release** (`.github/workflows/release.yml`) runs on every push to `main`, reads the repository it runs in from `GITHUB_REPOSITORY`, one run at a time (`concurrency: release`), with `contents: write` for the workflow's own `GITHUB_TOKEN`, `id-token: write` for npm trusted publishing, `issues: write`, which GitHub requires to change a milestone, and no stored secret: it pushes the tag with git, as `github-actions[bot]`, creates the Release with `gh`, and on a release — or a run again on its tagged commit — builds the packages, publishes them with `scripts/publish.mjs`, and then closes the milestone through the REST API with `gh` in `scripts/close-milestone.mjs`. That step runs only once the publish succeeded, writes what it did to the run summary, and fails only when GitHub cannot be read or written. A tag pushed with that token starts no other workflow.
 
 There is no deployable. `scripts/setup-repo.sh` runs on a person's machine, once when a repository is created and again whenever its settings drift, with the permissions of the administrator whose `gh` it uses; it needs no token of its own.
 
