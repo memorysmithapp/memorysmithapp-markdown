@@ -37,6 +37,19 @@ export function checkPack(name, packed, expected) {
   ];
 }
 
+/**
+ * The paths `npm pack --dry-run --json` lists for the one package packed. npm 11 answers a list of
+ * one entry, and npm 12 an object keyed by the package's name (#154); both are read, so the check
+ * fails on what a package ships and never on the shape of npm's answer.
+ */
+export function packedFiles(listing) {
+  const entries = Array.isArray(listing) ? listing : listing && typeof listing === 'object' ? Object.values(listing) : [];
+  if (entries.length !== 1 || !Array.isArray(entries[0]?.files)) {
+    throw new Error(`npm pack --dry-run --json answered no single package with its files: ${JSON.stringify(listing).slice(0, 200)}`);
+  }
+  return entries[0].files.map((file) => file.path).sort();
+}
+
 /** Files of one package whose paths differ only in case. Each later path is reported against the first that folds to the same key. */
 export function caseCollisions(name, files) {
   const seen = new Map();
@@ -56,7 +69,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   for (const pkg of publishedPackages(root)) {
     const dir = join(root, pkg.dir);
     const listing = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
-    const packed = listing[0].files.map((file) => file.path).sort();
+    const packed = packedFiles(listing);
     const expected = [...builtModules(readdirSync(join(dir, 'src'), { recursive: true }).map(String)), ...(SHIPPED[pkg.name] ?? [])].sort();
     const found = [...checkPack(pkg.name, packed, expected), ...caseCollisions(pkg.name, packed)];
     problems.push(...found);

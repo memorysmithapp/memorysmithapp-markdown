@@ -73,7 +73,7 @@ Each command with the directory it runs in, what it does, and the date somebody 
 | `pnpm install` | The root | Installs the workspace from `pnpm-lock.yaml` | 2026-10-12 |
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-11-11 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-11-11 |
-| `node scripts/pack-check.mjs` | The root, after the build | Compares what `npm pack --dry-run` packs for each published package with what it is meant to ship, and fails when two packed files differ only in case | 2026-10-19 |
+| `node scripts/pack-check.mjs` | The root, after the build | Compares what `npm pack --dry-run` packs for each published package with what it is meant to ship, and fails when two packed files differ only in case | 2026-11-16, under npm 11.21.2 and npm 12.2.2 |
 | `node scripts/publish.mjs <action> <tag> --dry-run` | The root, after the build | Decides what *Release* would publish to npm for that action and tag, packs it and asks npm for a dry run; sends nothing | 2026-10-12 |
 | `node scripts/close-milestone.mjs <tag>` | The root, with `gh` signed in | What *Release* does to the milestone named `<tag>` once the version is published: closes it, or leaves it open and names the open issues and pull requests it holds, or says no milestone has the name; writes the line to `$GITHUB_STEP_SUMMARY` when set | 2026-11-16, read-only: `v0.10.2` closed already, `v0.11.0` kept open naming its four issues, `v9.9.9` none |
 | `pnpm run quality` | The root | Runs the checks of the workflow *Quality* ([SDLC §8](docs/SDLC.md#8-tests-and-review)); exit 1 and the failing lines when one fails | 2026-11-11 |
