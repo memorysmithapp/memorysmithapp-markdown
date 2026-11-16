@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `SDLC.md` says which branch takes what (#149): a change to what the two packages publish, or to a script or workflow of the repository, lands on the `release/vX.Y.Z` of its issue's milestone, committed there or brought by a pull request whose base is that branch, because nothing here stops it on `main` and it would sit there unpublished; a single-purpose branch reaches `main` only when it touches nothing published, and a hotfix is a release of its own. The go-ahead puts the issue in a milestone, "the branch of the cycle" in §5 and §12 names that release branch, and a commit on a `feat/` or `fix/` branch closes no issue. `AGENTS.md` §4 and §7 follow. The text is memorysmithapp/memorysmithapp-template#31's, differing where this repository publishes to npm.
+
 ### Added
 
 - The specification says an embed never reaches the note it is written in (#147, `SPEC.md` §5.2, §5.8). Inside a note, `![[target]]` is resolved as any reference is and the note itself is then taken out of what matched; when it was the only match, by its name or by an alias, the embed reaches the attachment of that name, else it is pending. A note named `foto.jpg` that shows `![[foto.jpg]]` shows the file, and another note named `foto.jpg` comes before it. A link, `[[target]]`, still reaches its own note, so `[[x#Section]]` in `x` is a link to its own section. Five conformance cases cover it, and a case's notebook may now hold the input itself, `includesInput: true`, which the checker and the types know.
