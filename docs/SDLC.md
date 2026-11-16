@@ -28,11 +28,11 @@ A repository that ships something deployable extends [§10](#10-release) and [§
 | 3 | **Triage** | Comments on the issue | One of three outcomes: accepted into a milestone, kept open without one, or closed as *not planned* with the reason |
 | 4 | **Branch** | The `release/vX.Y.Z` of the issue's milestone, or a single-purpose branch for what [§3](#3-branches) allows | Work starts, and only on an explicit go-ahead from the owner, which puts the issue in a milestone |
 | 5 | **Commits** | The branch | Code, test, document and changelog move together |
-| 6 | **Pull request** | GitHub | The single PR of the branch, reviewed by the owner |
+| 6 | **Pull request** | GitHub | The single PR of the branch, reviewed and merged by a maintainer |
 | 7 | **Merge** | `main` | What is in the documents is true on `main` |
 | 8 | **Release** | A tag and a GitHub Release | Written by the release workflow, never by hand |
 
-`main` is protected: every change reaches it through a pull request, without exception, documentation, maintenance and version bumps included. Nobody pushes to `main`, and nobody uses `--admin`, *Bypass rules*, `--no-verify` or an equivalent. The only writes that reach the repository outside a pull request are the annotated tags the release workflow writes on already merged commits.
+`main` is protected: every change reaches it through a pull request, without exception, documentation, maintenance and version bumps included. Nobody pushes to `main`, and nobody uses `--admin`, *Bypass rules*, `--no-verify` or an equivalent. Only a **maintainer**, a member of the organization's team `maintainers`, merges to `main`: the branch protection of `main` refuses anyone else's merge, and the ruleset `main` requires no approval, so a maintainer's merge, of their own pull request included, is green and bypasses nothing. A contributor keeps write on the repository: branches, pull requests, the workflows they dispatch, and merges into a `release/vX.Y.Z`, never into `main`. The only writes that reach the repository outside a pull request are the annotated tags the release workflow writes on already merged commits.
 
 No stage is skipped out of haste, with one named exception: a **defect that blocks use** goes straight to stage 4, and the issue describing it is written along with the fix, not before it.
 
@@ -171,7 +171,7 @@ The format of the main repository, with its scope indicators and its examples of
 
 ## 7. A blocked merge
 
-**If a merge is blocked, stop and report.** The protection of `main` is not worked around, even with administrative rights to do so: the ruleset is the real layer of guarantee, and going around it silently defeats the reason it exists. Report what blocked it, and let the owner decide.
+**If a merge is blocked, stop and report.** The protection of `main` is not worked around, even with administrative rights to do so: the ruleset and the branch protection are the real layer of guarantee, and going around them silently defeats the reason it exists. Report what blocked it, and let the owner decide.
 
 ## 8. Tests and review
 
@@ -191,7 +191,7 @@ checks 4 and 5 read the Markdown files git tracks or would track, never one `.gi
 
 then it builds and type-checks the packages (`pnpm -r build`, `pnpm -r typecheck`) and runs `pnpm test`: the tests that make each check fail on a deliberate violation, and the tests of every package. All of it runs locally the same way ([`AGENTS.md` §6](../AGENTS.md#6-verified-commands)).
 
-**The owner reviews and merges** the pull request of a cycle; nobody merges their own cycle without that review.
+**A maintainer reviews and merges** every pull request to `main`, and the merge is the review: no approval is required, and no review is requested by a file, since who may merge is the branch protection's ([§1](#1-the-life-cycle-of-a-change)). A contributor's cycle reaches `main` only by a maintainer's merge.
 
 ## 9. Versioning
 
@@ -213,7 +213,7 @@ The bump flow, in this order:
 
 1. On the branch `release/vX.Y.Z`, in **one commit** `chore(release): cut vX.Y.Z`: set `version` in the root `package.json` to `X.Y.Z`, in the `package.json` of every package of the workspace, and in the `url` of `packages/markdown-spec/spec.json`, which names `SPEC.md` at the tag `vX.Y.Z`; in `CHANGELOG.md`, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` with the date of the cut, open a fresh empty `[Unreleased]` above it, and update the compare links in the foot.
 2. Push the branch and open the single pull request of the cycle ([§6](#6-pull-request)).
-3. The owner reviews and merges it. The bump never reaches `main` by a direct push.
+3. A maintainer reviews and merges it. The bump never reaches `main` by a direct push.
 4. The merge is a push to `main`, which runs the workflow **Release** on the merged commit:
    1. it reads the `version` of the root `package.json`;
    2. if the links at the foot of `CHANGELOG.md` do not name this repository, it does nothing: the changelog is still the copy of another repository's, as in a repository just created from `memorysmithapp-template`;
