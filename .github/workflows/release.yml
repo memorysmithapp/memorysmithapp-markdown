@@ -37,6 +37,9 @@ jobs:
           registry-url: https://registry.npmjs.org
       - name: Decide
         id: plan
+        # It reads whether the GitHub Release of a tag on this commit exists.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/release.mjs "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
       - name: Write the annotated tag on the merged commit
         if: steps.plan.outputs.action == 'release'
@@ -47,23 +50,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate --cleanup=verbatim "$TAG" --message "$TAG" --message "$(cat "$RUNNER_TEMP/notes.md")" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG"
-      # Also on a run started again on the tagged commit, which creates a Release a run before failed
-      # to create; one that exists is left as it is. Before the publish, so a version whose Release
-      # cannot be created publishes nothing and closes no milestone.
+      # Also when the tag is in place and the Release is missing, as after a run that failed between
+      # them. Before the publish, so a version whose Release cannot be created publishes nothing and
+      # closes no milestone.
       - name: Create the GitHub Release
-        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
+        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'publish'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.plan.outputs.tag }}
-        run: |
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "The Release $TAG exists already." | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
-            echo "Created the Release $TAG." | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+        run: gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
       - name: Build the packages
-        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
+        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'publish' || steps.plan.outputs.action == 'tagged'
         env:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
         run: |
@@ -71,7 +68,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter "./packages/**" build
       - name: Publish the packages to npm
-        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
+        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'publish' || steps.plan.outputs.action == 'tagged'
         env:
           ACTION: ${{ steps.plan.outputs.action }}
           TAG: ${{ steps.plan.outputs.tag }}
@@ -79,7 +76,7 @@ jobs:
       # After the publish, so a version whose packages did not reach npm keeps its milestone open; also
       # on a run started again on the tagged commit, which finishes the publish and then closes it.
       - name: Close the milestone of the version
-        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'tagged'
+        if: steps.plan.outputs.action == 'release' || steps.plan.outputs.action == 'publish' || steps.plan.outputs.action == 'tagged'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.plan.outputs.tag }}

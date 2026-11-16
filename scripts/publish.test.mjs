@@ -41,6 +41,12 @@ test('finishes a release that failed halfway, run again on its tag', () => {
   assert.deepEqual(result.publish.map((pkg) => pkg.name), ['@memorysmithapp/b']);
 });
 
+test('finishes the publish on a run that first creates a missing Release (#151)', () => {
+  const result = planPublish({ action: 'publish', tag: 'v0.2.0', packages: PACKAGES, published: (name) => name === '@memorysmithapp/a' });
+  assert.equal(result.action, 'publish');
+  assert.deepEqual(result.publish.map((pkg) => pkg.name), ['@memorysmithapp/b']);
+});
+
 test('does nothing when a release run again finds every package published', () => {
   assert.equal(planPublish({ action: 'tagged', tag: 'v0.2.0', packages: PACKAGES, published: () => true }).action, 'skip');
 });
