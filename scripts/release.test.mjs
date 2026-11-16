@@ -28,8 +28,22 @@ test('releases a version whose section exists and whose tag does not', () => {
   assert.equal(result.notes, '### Added\n\n- The first version.');
 });
 
-test('does nothing when the tag already names this commit', () => {
-  assert.equal(plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD }).action, 'tagged');
+test('does nothing when the tag already names this commit and its Release exists', () => {
+  assert.equal(plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD, releaseExists: true }).action, 'tagged');
+});
+
+test('creates the missing Release when the tag already names this commit, as on a run started again (#151)', () => {
+  const result = plan({ version: '0.1.0', changelog: CHANGELOG, repository: REPO, tagCommit: HEAD, headCommit: HEAD, releaseExists: false });
+  assert.equal(result.action, 'publish');
+  assert.equal(result.tag, 'v0.1.0');
+  assert.equal(result.notes, '### Added\n\n- The first version.');
+});
+
+test('fails when the tag names this commit with no Release and no section to write it from', () => {
+  const unreleased = CHANGELOG.replace('## [0.1.0] - 2026-10-12', '## [0.0.9] - 2026-10-01');
+  const result = plan({ version: '0.1.0', changelog: unreleased, repository: REPO, tagCommit: HEAD, headCommit: HEAD, releaseExists: false });
+  assert.equal(result.action, 'fail');
+  assert.match(result.reason, /no section \[0\.1\.0\]/);
 });
 
 test('fails when the tag names a commit outside this history', () => {

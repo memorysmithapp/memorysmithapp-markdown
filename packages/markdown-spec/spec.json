@@ -2,7 +2,7 @@
   "$schema": "./schema/spec.schema.json",
   "spec": "MemorySmith Markdown Specification",
   "variant": "MemorySmith",
-  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.10.2/packages/markdown-spec/SPEC.md",
+  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.11.0/packages/markdown-spec/SPEC.md",
   "sources": [
     {
       "id": "commonmark",
@@ -273,7 +273,7 @@
       "reader": "links",
       "syntax": "![[Target note]]  ·  ![[Target note#Section]]",
       "example": "The rule is stated in full here:\n\n![[Lei 14.133#Article 75]]\n",
-      "effect": "A wikilink prefixed by `!` is an embed: when its target is a note it is exactly the same edge as a plain link for the graph, and for a reader the content of the target is shown in place. When its target is an attachment (§5.8) the file is shown in place and no edge is produced at all. Tools never expand it: a reader of the raw note gets the `![[...]]` that was written.",
+      "effect": "A wikilink prefixed by `!` is an embed: when its target is a note it is exactly the same edge as a plain link for the graph, and for a reader the content of the target is shown in place. When its target is an attachment (§5.8) the file is shown in place and no edge is produced at all. An embed never reaches the note it is written in: when that note is the only one its target matches, the embed reaches the attachment of that name, else it is pending. Tools never expand it: a reader of the raw note gets the `![[...]]` that was written.",
       "spec": "5.7"
     },
     {

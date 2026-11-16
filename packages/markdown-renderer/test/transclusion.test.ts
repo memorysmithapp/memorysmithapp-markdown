@@ -14,13 +14,13 @@ describe('splitting a body into text and embeds', () => {
     const segments = splitEmbeds('Before.\n\n![[Target]]\n\nAfter.');
 
     expect(segments.map((segment) => segment.kind)).toEqual(['text', 'embed', 'text']);
-    expect(segments[1]).toEqual({ kind: 'embed', target: 'Target', anchor: null });
+    expect(segments[1]).toEqual({ kind: 'embed', target: 'Target', anchor: null, source: '![[Target]]' });
   });
 
   it('carries the section along when the embed names one', () => {
     const [embed] = splitEmbeds('![[Norma 4.2#Exceções]]');
 
-    expect(embed).toEqual({ kind: 'embed', target: 'Norma 4.2', anchor: 'Exceções' });
+    expect(embed).toEqual({ kind: 'embed', target: 'Norma 4.2', anchor: 'Exceções', source: '![[Norma 4.2#Exceções]]' });
   });
 
   it('leaves a plain wikilink alone: only the bang form is an embed', () => {

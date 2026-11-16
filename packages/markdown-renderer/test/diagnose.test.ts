@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { cases, spec } from '@memorysmithapp/markdown-spec';
 import { describe, expect, it } from 'vitest';
 import { diagnose, NOTICES, type NoticeCode } from '../src/diagnose.js';
-import { readProperties } from '../src/properties.js';
+import { conformanceHost } from './notebook.js';
 import { tableKey } from '../src/table-block.js';
 
 const ROOT = resolve(__dirname, '..', '..', '..');
@@ -26,22 +26,10 @@ describe('the conformance suite', () => {
   for (const testCase of raising) {
     it(testCase.id, async () => {
       const notebook = testCase.notebook;
-      const names = new Set<string>();
-      for (const note of notebook?.notes ?? []) {
-        const read = readProperties(note);
-        if (read.name) names.add(read.name);
-        for (const alias of read.entries.find((entry) => entry.key === 'aliases')?.values ?? []) names.add(alias);
-      }
       const tables = new Map((notebook?.tables ?? []).map((table) => [tableKey(table.name), table]));
       const notices = await diagnose(
         testCase.markdown,
-        notebook
-          ? {
-              resolve: (name) => (names.has(name) ? `/notes/${name}` : null),
-              keeps: (name) => (notebook.attachments ?? []).includes(name),
-              tables: (name) => tables.get(tableKey(name)) ?? null,
-            }
-          : {},
+        notebook ? { ...conformanceHost(testCase.markdown, notebook), tables: (name) => tables.get(tableKey(name)) ?? null } : {},
       );
       expect(byLine(notices)).toEqual(byLine(testCase.notices ?? []));
     });

@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-16
+
+### Added
+
+- The workflow *Release* closes the milestone `vX.Y.Z` once both packages are on npm at that version, on the release or on a run started again on its tagged commit (#150, RN-PUB-003). A release whose publish failed keeps its milestone open; a milestone that still holds an open issue or pull request stays open and the run summary names each one; a version with no milestone is not an error, and neither fails the release. It runs `scripts/close-milestone.mjs`, memorysmithapp/memorysmithapp-template#32's, with `issues: write` beside `contents: write` and `id-token: write`.
+- The specification says an embed never reaches the note it is written in (#147, `SPEC.md` §5.2, §5.8). Inside a note, `![[target]]` is resolved as any reference is and the note itself is then taken out of what matched; when it was the only match, by its name or by an alias, the embed reaches the attachment of that name, else it is pending. A note named `foto.jpg` that shows `![[foto.jpg]]` shows the file, and another note named `foto.jpg` comes before it. A link, `[[target]]`, still reaches its own note, so `[[x#Section]]` in `x` is a link to its own section. Five conformance cases cover it, and a case's notebook may now hold the input itself, `includesInput: true`, which the checker and the types know.
+- The host contract has `noteAddress`, the address of the note being drawn as `choose` gives addresses, and `loadNoteAt`, which loads a note by that address (#147). With `noteAddress`, the reading page, the editor and `diagnose` take the note out of what an embed of its own name or alias reaches: a name is decided at once from the count, an alias by asking `choose`, and one other note left is loaded by address. Without it nothing is excluded, which is right for a guidance, a template or a draft; without `loadNoteAt`, an embed whose other note only an address tells apart is drawn pending, as an ambiguous one is. In edit mode the note's name is read from the text the host gave, so a rename takes effect once it is saved.
+
+### Changed
+
+- `SDLC.md` §2 registers a gap at its origin: process in `memorysmithapp-template`, notation in this repository, product in `memorysmithapp`, with a sub-issue in each other repository it reaches, opened when it is registered. The agent registers them and reports their links without asking whether to open them, and the go-ahead and the milestone stay with the owner. `AGENTS.md` §4 points at it (#152, the text of memorysmithapp/memorysmithapp-template#36).
+- `SDLC.md` closes the issue of a single-purpose branch when its pull request is merged to `main`, naming the merge commit, instead of on the branch before review; gives such an issue the milestone of the next version, whose cut carries its `[Unreleased]` entry; and says when a fix of a released version is a patch version of its own rather than an entry of the open cycle, and that the open cycle then brings `main` in (#153, the text of memorysmithapp/memorysmithapp-template#37).
+- `SDLC.md` says which branch takes what (#149): a change to what the two packages publish, or to a script or workflow of the repository, lands on the `release/vX.Y.Z` of its issue's milestone, committed there or brought by a pull request whose base is that branch, because nothing here stops it on `main` and it would sit there unpublished; a single-purpose branch reaches `main` only when it touches nothing published, and a hotfix is a release of its own. The go-ahead puts the issue in a milestone, "the branch of the cycle" in §5 and §12 names that release branch, and a commit on a `feat/` or `fix/` branch closes no issue. `AGENTS.md` §4 and §7 follow. The text is memorysmithapp/memorysmithapp-template#31's, differing where this repository publishes to npm.
+
+### Fixed
+
+- `scripts/pack-check.mjs` reads what `npm pack --dry-run --json` lists under npm 12, which answers an object keyed by the package's name where npm 11 answered a list (#154). It threw under npm 12, and would have failed every pull request's *Quality* once the runner's npm moved; `packedFiles` reads both shapes, and fails only when npm names no single package with its files.
+- A run of the workflow *Release* started again on a commit whose tag it pushed but whose GitHub Release it failed to create now creates the missing Release with the notes of the version's section, then publishes the packages and closes the milestone, instead of skipping the Release and reporting green (#151). `scripts/release.mjs` reads whether the Release exists with `gh`, decides `publish` when it is missing, and fails when it cannot tell; `scripts/publish.mjs` takes `publish` as it takes `tagged`. The Release still comes before the publish, so a run that cannot create it publishes nothing and closes no milestone. The decision is memorysmithapp/memorysmithapp-template#35's.
+- An embed reaches a note before a file of the same name, as `SPEC.md` §5.2 and §5.8 order them (#148). The renderer asked the host whether the notebook keeps a file before asking for a note, so `![[x]]` in a notebook holding a note `x` and a file `x` drew the file while an index made the edge to the note. The reading page, the content of an embedded note, the editor's blocks and marks, and the measuring of an embed before it is reached now ask `embedReach`, which counts the notes first; a file is drawn only when no note answers the name. The conformance suite has the case, `resolution/a-note-comes-before-an-attachment-of-its-name`, and the renderer's tests now resolve every embed of the suite's resolution cases.
+
 ## [0.10.2] - 2026-11-11
 
 ### Fixed
@@ -286,7 +306,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.9.0...v0.10.0

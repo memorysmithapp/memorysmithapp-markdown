@@ -7,9 +7,10 @@
 //      and a package whose version is not the tag's fails the run;
 //   3. on a release (`release`), a version that already exists on npm fails the run: the tag was
 //      written just now, so the version on npm is somebody else's, or a hand's;
-//   4. on a run again of a release whose tag exists on this commit (`tagged`), the packages already
-//      on npm at that version are left as they are and the rest are published, which is how a run
-//      that failed halfway is finished;
+//   4. on a run again of a release whose tag exists on this commit (`tagged`, or `publish` when its
+//      GitHub Release was missing and is created first), the packages already on npm at that version
+//      are left as they are and the rest are published, which is how a run that failed halfway is
+//      finished;
 //   5. a package npm has never seen is left for the owner: a trusted publisher is configured on a
 //      package that exists, so its first publish is made by hand, once (docs/SDLC.md §10).
 //
@@ -27,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { workspacePackages } from './quality.mjs';
 
 export function planPublish({ action, tag, packages, published, exists = () => true }) {
-  if (action !== 'release' && action !== 'tagged') {
+  if (action !== 'release' && action !== 'tagged' && action !== 'publish') {
     return { action: 'skip', publish: [], reason: `the release workflow decided "${action}": this push publishes nothing` };
   }
   const version = tag.replace(/^v/, '');

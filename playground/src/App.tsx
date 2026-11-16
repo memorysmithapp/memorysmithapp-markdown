@@ -283,6 +283,8 @@ export function App() {
         key={key}
         markdown={markdown}
         {...(view.unstable ? anew(host) : host)}
+        // The note drawn, which an embed of its own name does not reach (#147).
+        noteAddress={addressOf(view.note)}
         theme={view.theme.theme}
         scheme={view.scheme}
         strings={view.lang === 'pt' ? PORTUGUESE : undefined}

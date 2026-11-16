@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react
 import { ICON_EDIT, ICON_VIEW } from './mode-icons.js';
 import { ButtonFace, NoteActions, type NoteButtons } from './NoteActions.js';
 import { drawSlot } from './slots.js';
-import { HOST_KEYS, HostProvider, resolveHost, useHost, type NoteHost, type ResolvedHost } from './host.js';
+import { HOST_KEYS, HostProvider, resolveHost, useDrawing, useHost, type NoteHost, type ResolvedHost } from './host.js';
 import { planFootnotes } from './footnotes.js';
 import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
@@ -14,6 +14,7 @@ import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
+import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
 export interface NoteBodyProps extends NoteHost {
@@ -182,11 +183,13 @@ function NoteView({
   buttons = 'icon',
   ...host
 }: NoteHost & { markdown: string; corner?: ReactNode; switched?: boolean; buttons?: NoteButtons }) {
-  const resolved = useMemo(
+  const given = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
     HOST_KEYS.map((key) => (host as NoteHost)[key]),
   );
+  // The note itself, which an embed of its own name does not reach (§5.2, #147).
+  const resolved = useDrawing(given, host.noteAddress, markdown);
   // The frontmatter is drawn apart from the body, as the theme decides, so the
   // runs start after it. Everything below counts task items from there.
   // Each tick the host answers with a promise locks its item until the save settles.
@@ -198,13 +201,15 @@ function NoteView({
 
   // The body is cut into runs of text and the embeds between them; each run
   // is parsed on its own, as on MemorySmith's reading page.
-  const segments = splitEmbeds(body, resolved.keeps).map((segment) =>
+  // A note answers an embed before a file of its name does (§5.8, #148).
+  const file = embedsFile(resolved);
+  const segments = splitEmbeds(body, file).map((segment) =>
     segment.kind === 'text'
       ? {
           ...segment,
           // One resolver for every run: one note is a link, several are the
           // choice, and none is pending and still asks.
-          rendered: resolveWikilinks(segment.text, (name) => wikilinkAddress(resolved, name), resolved.keeps),
+          rendered: resolveWikilinks(segment.text, (name) => wikilinkAddress(resolved, name), file),
         }
       : segment,
   );
@@ -272,7 +277,7 @@ function NoteView({
         <Properties properties={properties} />
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
-            return <Transclusion key={index} target={segment.target} anchor={segment.anchor} />;
+            return <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;

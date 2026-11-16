@@ -862,6 +862,141 @@
       ]
     },
     {
+      "id": "resolution/a-note-comes-before-an-attachment-of-its-name",
+      "notation": "attachment",
+      "notebook": {
+        "notes": ["---\nname: x\n---\nThe note named x.\n"],
+        "attachments": ["x"]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n![[x]]\n",
+      "links": [
+        {
+          "name": "x",
+          "anchor": null
+        }
+      ],
+      "notices": [],
+      "resolution": [
+        {
+          "target": "x",
+          "kind": "note",
+          "edges": 1
+        }
+      ]
+    },
+    {
+      "id": "resolution/an-embed-of-its-own-name-reaches-the-attachment",
+      "notation": "embed",
+      "notebook": {
+        "includesInput": true,
+        "attachments": [
+          "foto.jpg"
+        ]
+      },
+      "markdown": "---\nname: foto.jpg\naliases: [foto]\ntags: [example]\n---\n# Foto\n\n![[foto.jpg]]\n",
+      "links": [
+        {
+          "name": "foto.jpg",
+          "anchor": null
+        }
+      ],
+      "notices": [],
+      "resolution": [
+        {
+          "target": "foto.jpg",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "resolution/an-embed-of-its-own-name-with-no-attachment-is-pending",
+      "notation": "embed",
+      "notebook": {
+        "includesInput": true,
+        "attachments": [
+          "outra.jpg"
+        ]
+      },
+      "markdown": "---\nname: foto.jpg\naliases: [foto]\ntags: [example]\n---\n# Foto\n\n![[foto.jpg]]\n",
+      "notices": [
+        {
+          "code": "embed-pending",
+          "line": 8
+        }
+      ],
+      "resolution": [
+        {
+          "target": "foto.jpg",
+          "kind": "pending",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "resolution/an-embed-of-its-own-name-reaches-another-note-of-that-name",
+      "notation": "embed",
+      "notebook": {
+        "includesInput": true,
+        "notes": [
+          "---\nname: foto.jpg\n---\nAnother note named foto.jpg, in another folder.\n"
+        ],
+        "attachments": [
+          "foto.jpg"
+        ]
+      },
+      "markdown": "---\nname: foto.jpg\naliases: [foto]\ntags: [example]\n---\n# Foto\n\n![[foto.jpg]]\n",
+      "notices": [],
+      "resolution": [
+        {
+          "target": "foto.jpg",
+          "kind": "note",
+          "edges": 1
+        }
+      ]
+    },
+    {
+      "id": "resolution/an-embed-of-its-own-alias-reaches-the-attachment",
+      "notation": "embed",
+      "notebook": {
+        "includesInput": true,
+        "attachments": [
+          "obra.jpg"
+        ]
+      },
+      "markdown": "---\nname: Foto da obra\naliases: [obra.jpg]\ntags: [example]\n---\n# Foto\n\n![[obra.jpg]]\n",
+      "notices": [],
+      "resolution": [
+        {
+          "target": "obra.jpg",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
+      "id": "resolution/its-own-name-tries-no-alias",
+      "notation": "embed",
+      "notebook": {
+        "includesInput": true,
+        "notes": [
+          "---\nname: Galeria\naliases: [foto.jpg]\n---\n"
+        ],
+        "attachments": [
+          "foto.jpg"
+        ]
+      },
+      "markdown": "---\nname: foto.jpg\naliases: [foto]\ntags: [example]\n---\n# Foto\n\n![[foto.jpg]]\n",
+      "notices": [],
+      "resolution": [
+        {
+          "target": "foto.jpg",
+          "kind": "attachment",
+          "edges": 0
+        }
+      ]
+    },
+    {
       "id": "resolution/a-link-of-an-attachment-name-is-pending",
       "notation": "attachment",
       "notebook": {

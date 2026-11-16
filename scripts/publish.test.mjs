@@ -41,6 +41,12 @@ test('finishes a release that failed halfway, run again on its tag', () => {
   assert.deepEqual(result.publish.map((pkg) => pkg.name), ['@memorysmithapp/b']);
 });
 
+test('finishes the publish on a run that first creates a missing Release (#151)', () => {
+  const result = planPublish({ action: 'publish', tag: 'v0.2.0', packages: PACKAGES, published: (name) => name === '@memorysmithapp/a' });
+  assert.equal(result.action, 'publish');
+  assert.deepEqual(result.publish.map((pkg) => pkg.name), ['@memorysmithapp/b']);
+});
+
 test('does nothing when a release run again finds every package published', () => {
   assert.equal(planPublish({ action: 'tagged', tag: 'v0.2.0', packages: PACKAGES, published: () => true }).action, 'skip');
 });
@@ -71,4 +77,16 @@ test('a package ships its built modules and the files named for it, and nothing 
   const collided = caseCollisions('p', ['dist/Markdown.js', 'dist/markdown.js', 'dist/Markdown.d.ts', 'dist/markdown.d.ts']);
   assert.match(collided[0], /dist\/Markdown\.js and dist\/markdown\.js differ only in case/);
   assert.match(collided[1], /dist\/Markdown\.d\.ts and dist\/markdown\.d\.ts differ only in case/);
+});
+
+test('reads the files npm packs whatever the shape of its answer, a list or an object by name (#154)', async () => {
+  const { packedFiles } = await import('./pack-check.mjs');
+  const entry = { name: '@memorysmithapp/a', files: [{ path: 'package.json' }, { path: 'dist/index.js' }] };
+  // npm 11
+  assert.deepEqual(packedFiles([entry]), ['dist/index.js', 'package.json']);
+  // npm 12
+  assert.deepEqual(packedFiles({ '@memorysmithapp/a': entry }), ['dist/index.js', 'package.json']);
+  assert.throws(() => packedFiles([]), /no single package with its files/);
+  assert.throws(() => packedFiles({ a: entry, b: entry }), /no single package with its files/);
+  assert.throws(() => packedFiles(null), /no single package with its files/);
 });

@@ -14,7 +14,7 @@ import { markdown, markdownKeymap } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import { EditorView, keymap, type KeyBinding } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
+import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, useDrawing, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
 import {
@@ -420,11 +420,14 @@ function SaveStatus({
 const redoKeys: readonly KeyBinding[] = [{ key: 'Mod-Shift-z', run: redo, preventDefault: true }];
 
 export function NoteEditor({ markdown: given, onChange, editable = true, corner, buttons = 'icon', autoFocus = false, leaving = false, onLeave, ...host }: NoteEditorProps) {
-  const resolved = useMemo(
+  const contract = useMemo(
     () => resolveHost(host),
     // Every member of the contract, so a host that passes the same functions keeps the same host.
     HOST_KEYS.map((key) => (host as NoteHost)[key]),
   );
+  // The note itself, read from what the host gave rather than from the text being typed: the host
+  // counts the note under the name it keeps, so a rename takes effect once it is saved (#147).
+  const resolved = useDrawing(contract, host.noteAddress, given);
   const parent = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [, redraw] = useReducer((count: number) => count + 1, 0);

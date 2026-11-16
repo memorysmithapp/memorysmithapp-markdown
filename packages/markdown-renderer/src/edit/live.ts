@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { followable } from '../address.js';
 import { highlightTree, languageToLoad, loadGrammar } from '../highlight.js';
 import { HostProvider, resolveHost, type ResolvedHost } from '../host.js';
+import { embedReach } from '../embed-target.js';
 import { MarkdownImage } from '../Markdown.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
@@ -575,7 +576,7 @@ function build(state: EditorState): DecorationSet {
       case 'embed':
         if (open) out.push(mark('cm-ms-wikilink').range(from, to));
         // A kept image is sized from the image itself (#98); a note's embed draws no image of its own.
-        else if (host.keeps(construct.target)) block(from, to, 'embed', `embed:${source}`, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })));
+        else if (embedReach(host, construct.target) === 'file') block(from, to, 'embed', `embed:${source}`, (view) => createElement(ImageBlock, { view, source }, createElement(Snippet, { text: source })));
         else block(from, to, 'embed', `embed:${source}`, () => createElement(Snippet, { text: source }));
         break;
       case 'rule':
@@ -675,8 +676,10 @@ function build(state: EditorState): DecorationSet {
           }
           break;
         }
-        const pending = host.reaches(construct.target) === 0 && !host.keeps(construct.target);
-        if (construct.embed && host.keeps(construct.target) && !touches(from, to)) {
+        // A link reaches notes alone; an embed reaches a note before a file of its name (§5.8).
+        const reach = construct.embed ? embedReach(host, construct.target) : null;
+        const pending = construct.embed ? reach === 'pending' : host.reaches(construct.target) === 0 && !host.keeps(construct.target);
+        if (reach === 'file' && !touches(from, to)) {
           const source = text.slice(from, to);
           out.push(
             Decoration.replace({
@@ -1060,7 +1063,7 @@ const embedPremeasure = ViewPlugin.define((view) => {
     const metrics = view.state.field(metricsField);
     const doc = view.state.doc;
     for (const construct of view.state.field(analysisField).constructs) {
-      if (construct.kind !== 'embed' || host.keeps(construct.target) || host.reaches(construct.target) !== 1) continue;
+      if (construct.kind !== 'embed' || embedReach(host, construct.target) !== 'note') continue;
       const end = construct.to > construct.from && doc.sliceString(construct.to - 1, construct.to) === '\n' ? construct.to - 1 : construct.to;
       const source = doc.sliceString(doc.lineAt(construct.from).from, doc.lineAt(end).to);
       const identity = `embed\u0000${source}`;

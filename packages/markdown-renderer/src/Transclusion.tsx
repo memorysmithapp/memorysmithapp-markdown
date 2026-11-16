@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useHost, type EmbeddedNote } from './host.js';
+import { useEffect, useMemo, useState } from 'react';
+import { useHost, type EmbeddedNote, type ResolvedHost } from './host.js';
 import { Markdown } from './Markdown.js';
 import { drawSlot, useSlot } from './slots.js';
 import { bodyStart, hideComments, resolveWikilinks } from './source.js';
 import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './embeds.js';
 import { wikilinkAddress } from './wikilink-address.js';
+import { drawing, drawnNote, embedsFile, embedTarget, type EmbedTarget } from './embed-target.js';
 
 /** The shape of what is coming, in the position it will occupy, while the host answers. */
 function TransclusionSkeleton({ loading }: { loading: string }) {
@@ -29,40 +30,72 @@ function TransclusionSkeleton({ loading }: { loading: string }) {
 type Loaded = { state: 'loading' } | { state: 'missing' } | { state: 'ready'; note: EmbeddedNote };
 
 /**
+ * What an embed reaches, or `null` while the host's `choose` is asked. Decided at once in every case
+ * but one, so a server's render draws the pending marker of a target nothing answers.
+ */
+function useDecision(host: ResolvedHost, name: string): EmbedTarget | null {
+  const answer = useMemo(() => embedTarget(host, name), [host, name]);
+  const [settled, setSettled] = useState<{ answer: Promise<EmbedTarget>; target: EmbedTarget } | null>(null);
+  useEffect(() => {
+    if (!(answer instanceof Promise)) return;
+    let alive = true;
+    answer.then(
+      (target) => alive && setSettled({ answer, target }),
+      () => alive && setSettled({ answer, target: { kind: 'pending' } }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [answer]);
+  if (!(answer instanceof Promise)) return answer;
+  return settled?.answer === answer ? settled.target : null;
+}
+
+/**
  * One transcluded block: the content of another note, shown in place.
  *
  * It always says where it came from. A passage pasted without provenance is
  * indistinguishable from what the author wrote, and a notebook rests on
  * knowing who asserted what.
  */
-export function Transclusion({ target, anchor }: { target: string; anchor: string | null }) {
+export function Transclusion({ target, anchor, source }: { target: string; anchor: string | null; source?: string }) {
   const host = useHost();
   const { strings } = host;
   const name = target.normalize('NFC');
   // A transclusion expands ONE note, so it expands what a wikilink would
   // navigate to: an ambiguous target is a choice a reader makes and not a
-  // passage the page can inline on their behalf.
-  const one = host.loadNote !== null && host.reaches(name) === 1;
+  // passage the page can inline on their behalf. What it reaches is decided
+  // at once, unless the note being drawn carries the name and only the host's
+  // `choose` can say which other note is left (§5.2, #147).
+  const decided = useDecision(host, name);
+  const load = decided?.kind === 'note' ? decided.load : null;
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const slot = useSlot('embed');
 
   useEffect(() => {
-    if (!one || !host.loadNote) return;
+    if (!load) return;
     let alive = true;
     setLoaded({ state: 'loading' });
-    host.loadNote(name).then(
+    load().then(
       (note) => alive && setLoaded(note ? { state: 'ready', note } : { state: 'missing' }),
       () => alive && setLoaded({ state: 'missing' }),
     );
     return () => {
       alive = false;
     };
-  }, [one, host, name]);
+  }, [load]);
+
+  // The note itself was the only note its own name matched, and the notebook
+  // keeps a file of that name: the embed is the file's, drawn as written.
+  if (decided?.kind === 'file') {
+    const written = source ?? `![[${target}${anchor ? `#${anchor}` : ''}]]`;
+    return <Markdown>{resolveWikilinks(written, (each) => wikilinkAddress(host, each), () => true)}</Markdown>;
+  }
 
   // The same pending marker a wikilink uses. A notebook is read most while it
   // is still being written, so a target that does not exist yet is an
   // expected state and never an error that stops the page.
-  if (!one || loaded.state === 'missing') {
+  if ((decided !== null && !load) || loaded.state === 'missing') {
     const marker = (
       <p className="embed-pending">
         <span className="wikilink-pending" title={strings.pendingLink}>
@@ -90,6 +123,8 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
   const caption = anchor ? `${sourceLabel} › ${anchor}` : sourceLabel;
   const named = note.address === null ? caption : host.renderLink({ href: note.address, children: caption });
 
+  // Inside the embedded note, an embed of ITS name is read as that note reads it.
+  const inner = drawing(host, drawnNote(note.address, note.markdown));
   const content =
     cut === null ? (
       <p className="embed-missing">{strings.embedSectionMissing(anchor ?? '')}</p>
@@ -104,9 +139,9 @@ export function Transclusion({ target, anchor }: { target: string; anchor: strin
        */
       <Markdown>
         {resolveWikilinks(
-          demoteEmbeds(cut, host.keeps),
+          demoteEmbeds(cut, embedsFile(inner)),
           (each) => wikilinkAddress(host, each),
-          host.keeps,
+          embedsFile(inner),
         )}
       </Markdown>
     );

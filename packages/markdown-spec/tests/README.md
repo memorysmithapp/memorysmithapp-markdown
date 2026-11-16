@@ -23,7 +23,7 @@ The executable half. A specification is a claim; this is the part that can be ch
 | `name` | The name the note carries, which is the key a link resolves against (`SPEC.md` §5.3). `null` says the note has no name. Absent means the case makes no claim about it |
 | `links` | The edges a conforming Indexer produces, in any order, each as the `name` it addresses and its `anchor`. Absent means the case makes no claim about links |
 | `facets` | The attributes a conforming Indexer produces, as `name → { kind, values }`. Absent means the case makes no claim about attributes |
-| `notebook` | The notes, attachments and tables that exist while this case runs: `notes` is a list of whole Markdown documents, `attachments` a list of names, and `tables` a list of tables, each a `name` and its `columns`, each column a `name` and a `kind` (`text`, `number`, `date`, `boolean` or `list`, `SPEC.md` §5.9). A table carries no rows: what a case claims about one depends on its name and its columns alone. Absent means the case makes no claim that depends on a notebook |
+| `notebook` | The notes, attachments and tables that exist while this case runs: `notes` is a list of whole Markdown documents, `attachments` a list of names, and `tables` a list of tables, each a `name` and its `columns`, each column a `name` and a `kind` (`text`, `number`, `date`, `boolean` or `list`, `SPEC.md` §5.9). A table carries no rows: what a case claims about one depends on its name and its columns alone. `includesInput: true` says the input is itself one of the notebook's notes, besides `notes`, which is what an embed of its own name is resolved against (`SPEC.md` §5.2); absent, the input is not in the notebook. Absent means the case makes no claim that depends on a notebook |
 | `resolution` | What each target resolves to once the notebook is there: `target`, `kind` (`note`, `attachment`, `table` or `pending`) and `edges`. Requires `notebook`, and `notebook` requires it |
 | `parameters` | The parameters the input references (`SPEC.md` §7.14), in its body and its frontmatter: each name once, normalised to NFC, in any order. A reference inside code, mathematics, a destination, an autolink or raw HTML, or one escaped, is not listed. Absent means the case makes no claim about parameters |
 | `tables` | The tables the input references (`SPEC.md` §5.9): the `table` key of each `table` block, trimmed and normalised to NFC, each table once. A block inside another code block, or one with no `table` key or two, is not listed. Absent means the case makes no claim about tables |
@@ -46,7 +46,9 @@ Rules a runner has to follow:
   the input, and reading it is the rule under test. A fixture whose document only opens with
   a heading has no name, and that is under test too.
 - **`resolution` is not `links`.** `links` is what one note *extracts*, and holds with no notebook
-  at all; `resolution` is what those targets *become* once other notes and attachments exist.
+  at all; `resolution` is what those targets *become* once other notes and attachments exist, and
+  the input itself when the notebook `includesInput`: it is counted for a link, and taken out of
+  what an embed matches, because an embed never reaches the note it is written in (§5.2).
   Only a note produces an edge, one per note that matches — by name, or, when no name
   matched the target, by alias (§5.2, step 8). An attachment produces none, nor does a table, which
   only a `table` block reaches (§5.9), and a target that matches nothing is `pending` and produces

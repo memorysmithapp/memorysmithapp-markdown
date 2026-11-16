@@ -47,7 +47,9 @@ One line each; the reason lives where the link points.
 
 - `main` is protected: every change reaches it through a pull request. Never push to `main`; never use `--admin`, *Bypass rules*, `--no-verify` or an equivalent ([SDLC §1](docs/SDLC.md#1-the-life-cycle-of-a-change)).
 - A blocked merge means **stop and report**, never work around it ([SDLC §7](docs/SDLC.md#7-a-blocked-merge)).
-- An issue before implementing. An opinion asked for, or "open the issue", means register and ask; implement only on an explicit go-ahead from the owner ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- An issue before implementing. An opinion asked for, or "open the issue", means register and ask; implement only on an explicit go-ahead from the owner, which puts the issue in a milestone ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- A gap that reaches other repositories of the organization is registered at its origin, with a sub-issue in each repository it reaches, without asking whether to open them ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- Anything the packages publish, and every script and workflow, lands on the `release/vX.Y.Z` of its issue's milestone, never on `main` from a `feat/` or `fix/` branch ([SDLC §3](docs/SDLC.md#3-branches)).
 - Nobody tags by hand: tags and Releases are written by the release workflow ([SDLC §10](docs/SDLC.md#10-release)).
 - A document never describes the future: if it is in a document, it is true now ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - No version notes, revision dates or "internal document" footers inside documents; history lives in `CHANGELOG.md` and git ([SDLC §4](docs/SDLC.md#4-commits)).
@@ -72,8 +74,9 @@ Each command with the directory it runs in, what it does, and the date somebody 
 | `pnpm install` | The root | Installs the workspace from `pnpm-lock.yaml` | 2026-10-12 |
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-11-11 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-11-11 |
-| `node scripts/pack-check.mjs` | The root, after the build | Compares what `npm pack --dry-run` packs for each published package with what it is meant to ship, and fails when two packed files differ only in case | 2026-10-19 |
+| `node scripts/pack-check.mjs` | The root, after the build | Compares what `npm pack --dry-run` packs for each published package with what it is meant to ship, and fails when two packed files differ only in case | 2026-11-16, under npm 11.21.2 and npm 12.2.2 |
 | `node scripts/publish.mjs <action> <tag> --dry-run` | The root, after the build | Decides what *Release* would publish to npm for that action and tag, packs it and asks npm for a dry run; sends nothing | 2026-10-12 |
+| `node scripts/close-milestone.mjs <tag>` | The root, with `gh` signed in | What *Release* does to the milestone named `<tag>` once the version is published: closes it, or leaves it open and names the open issues and pull requests it holds, or says no milestone has the name; writes the line to `$GITHUB_STEP_SUMMARY` when set | 2026-11-16, read-only: `v0.10.2` closed already, `v0.11.0` kept open naming its four issues, `v9.9.9` none |
 | `pnpm run quality` | The root | Runs the checks of the workflow *Quality* ([SDLC §8](docs/SDLC.md#8-tests-and-review)); exit 1 and the failing lines when one fails | 2026-11-11 |
 | `pnpm test` | The root | Runs the tests of the checks, each against a deliberate violation, then builds the packages and runs every package's tests | 2026-11-11 |
 | `pnpm --filter <package> test` | The root | Runs one package's tests | 2026-10-12 |
@@ -88,5 +91,5 @@ Each command with the directory it runs in, what it does, and the date somebody 
 - [ ] `CHANGELOG.md` has the entry under `[Unreleased]`, in the same commit as the change.
 - [ ] Every document the change touches is updated in the same commit ([SDLC §4.1](docs/SDLC.md#41-when-a-commit-touches-each-document)).
 - [ ] `.gitignore` was assessed for every file or directory created, moved or deleted; no sensitive file is left untracked without an entry.
-- [ ] The commit is pushed, and the CI of the branch is green.
-- [ ] The issue is closed as `completed`, with a comment naming the commit ([SDLC §5](docs/SDLC.md#5-when-an-issue-closes)).
+- [ ] The commit is on the branch of the cycle ([SDLC §3](docs/SDLC.md#3-branches)), pushed, and the CI of the branch is green.
+- [ ] The issue, in its milestone, is closed as `completed`, with a comment naming the commit ([SDLC §5](docs/SDLC.md#5-when-an-issue-closes)).
