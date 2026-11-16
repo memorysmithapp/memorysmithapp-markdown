@@ -4,13 +4,14 @@
  * notices.
  */
 
+import { cases } from '@memorysmithapp/markdown-spec';
 import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { diagnose } from '../src/diagnose.js';
 import { NoteEditor } from '../src/edit/index.js';
 import { embedReach } from '../src/embed-target.js';
 import { resolveHost } from '../src/host.js';
-import { notebook } from './notebook.js';
+import { documents, notebook } from './notebook.js';
 import { draw, mount, type Mounted } from './render.js';
 
 let mounted: Mounted | null = null;
@@ -64,4 +65,28 @@ describe('a note and a file of one name (#148)', () => {
     const codes = (await diagnose('![[x]]\n', host)).map(({ code }) => code);
     expect(codes).not.toContain('embed-pending');
   });
+});
+
+describe('the conformance suite', () => {
+  const KIND = { note: 'note', choice: 'note', file: 'attachment', pending: 'pending' } as const;
+  const EMBED = /!\[\[([^\]|#]+)/g;
+  const embedding = cases.flatMap((testCase) => {
+    if (!testCase.notebook) return [];
+    const embedded = new Set([...testCase.markdown.matchAll(EMBED)].map((match) => match[1]!.trim()));
+    const outcomes = testCase.resolution.filter((outcome) => embedded.has(outcome.target));
+    return outcomes.length > 0 ? [{ testCase, outcomes }] : [];
+  });
+
+  it('has embeds to resolve', () => {
+    expect(embedding.length).toBeGreaterThan(0);
+  });
+
+  for (const { testCase, outcomes } of embedding) {
+    it(testCase.id, () => {
+      const host = resolveHost(documents(testCase.notebook.notes ?? [], testCase.notebook.attachments ?? []));
+      for (const outcome of outcomes) {
+        expect({ target: outcome.target, kind: KIND[embedReach(host, outcome.target)] }).toEqual({ target: outcome.target, kind: outcome.kind });
+      }
+    });
+  }
 });

@@ -862,6 +862,29 @@
       ]
     },
     {
+      "id": "resolution/a-note-comes-before-an-attachment-of-its-name",
+      "notation": "attachment",
+      "notebook": {
+        "notes": ["---\nname: x\n---\nThe note named x.\n"],
+        "attachments": ["x"]
+      },
+      "markdown": "---\nname: Note\naliases: [note]\ntags: [example]\n---\n# Title\n\n![[x]]\n",
+      "links": [
+        {
+          "name": "x",
+          "anchor": null
+        }
+      ],
+      "notices": [],
+      "resolution": [
+        {
+          "target": "x",
+          "kind": "note",
+          "edges": 1
+        }
+      ]
+    },
+    {
       "id": "resolution/a-link-of-an-attachment-name-is-pending",
       "notation": "attachment",
       "notebook": {
