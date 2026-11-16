@@ -68,13 +68,13 @@ No stage is skipped out of haste, with one named exception: a **defect that bloc
 | `feat/` | One feature, worked apart from the rest of its cycle | The `release/vX.Y.Z` of its milestone, never `main` | `feat/setup-labels` |
 | `fix/` | One fix, worked apart from the rest of its cycle | The `release/vX.Y.Z` of its milestone, never `main` | `fix/quality-anchor-slug` |
 | `docs/` | Documentation and repository governance | `main` | `docs/sdlc-rollback` |
-| `chore/` | Maintenance of what is not published: the repository's configuration | `main` | `chore/codeowners` |
+| `chore/` | Maintenance of what is not published: the repository's configuration | `main` | `chore/bump-pnpm` |
 
 `release/` carries no Conventional Commits type on purpose: a cycle holds many types at once. The commits inside it keep their types.
 
 **Which branch takes what.** A change to what the two packages publish — the specification, its data and its conformance suite, the renderer, their tests and dependencies — or to a script or workflow that builds, checks, releases or publishes them, always lands on the `release/vX.Y.Z` of its issue's milestone: committed there, or brought there by a pull request whose base is that branch. It never reaches `main` any other way. The scripts and workflows of this repository are part of what it delivers, the checks of its CI included: none of them reaches `main` by a single-purpose branch. Here nothing would stop such a change on `main`: the workflow **Release** does nothing when the version's tag sits on an earlier commit, and `scripts/publish.mjs` publishes nothing on a push that is not a release ([§10](#10-release)), so `main` would hold code that no published version carries, until a later release took it under a changelog that might not say so.
 
-A single-purpose branch reaches `main` with a pull request of its own only when it touches nothing published: documents outside the packages, the repository's configuration (`CODEOWNERS`, `.editorconfig`, `.gitignore`). Its `CHANGELOG.md` entry waits in `[Unreleased]` for the next cut ([§9](#9-versioning)). A **hotfix** is not an exception: it is a release of its own, the `release/vX.Y.Z` of the patch version, holding the fix and its cut ([§11](#11-rollback)).
+A single-purpose branch reaches `main` with a pull request of its own only when it touches nothing published: documents outside the packages, the repository's configuration (`.editorconfig`, `.gitignore`). Its `CHANGELOG.md` entry waits in `[Unreleased]` for the next cut ([§9](#9-versioning)). A **hotfix** is not an exception: it is a release of its own, the `release/vX.Y.Z` of the patch version, holding the fix and its cut ([§11](#11-rollback)).
 
 A cycle has **one** branch and **one** pull request to `main` at its end. No pull request to `main` is opened per issue: it would need a branch per issue and leave a merge button available with the version half done. A `feat/` or `fix/` branch opens its pull request against the release branch of its milestone.
 

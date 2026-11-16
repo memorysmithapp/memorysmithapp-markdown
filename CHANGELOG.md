@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Removed
+
+- `.github/CODEOWNERS`, which asked for the owner's approval of every change (#157). The ruleset `main` requires no approval and no code owner review, and only the team `maintainers` merges to `main` through its branch protection (#156, memorysmithapp/memorysmithapp-template#39), so the file only requested a review, never from the pull request's author, and said what no longer held. `docs/SDLC.md` §3 no longer names it.
+
 ## [0.11.0] - 2026-11-16
 
 ### Added
