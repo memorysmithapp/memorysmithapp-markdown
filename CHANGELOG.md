@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/SDLC.md` answers four questions its branch rules left to a guess, with the text memorysmithapp/memorysmithapp-template#44 decided: while a release is open, a `docs/` or `chore/` issue takes that release's milestone (§2); `release/`, `docs/` and `chore/` branches start from `main`, `feat/` and `fix/` from the release branch they land on (§3); the open cycle brings `main` in with a merge committed on the release branch, without a pull request, the released sections of `CHANGELOG.md` kept as `main` has them and `[Unreleased]` holding both sides' entries (§3, §11); and after a merge into the release branch the closing comment names that merge commit (§5) (#160).
+
 ## [0.11.1] - 2026-11-16
 
 ### Changed
