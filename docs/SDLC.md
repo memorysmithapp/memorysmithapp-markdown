@@ -42,7 +42,7 @@ No stage is skipped out of haste, with one named exception: a **defect that bloc
 
 **An issue before implementing.** When the owner asks for an opinion, or says "open the issue", the answer is to register the issue and ask; implementation starts only on an explicit go-ahead.
 
-**The go-ahead puts the issue in a milestone**, the version that will carry it, and work starts on the branch [§3](#3-branches) assigns it: for anything published, that milestone's `release/vX.Y.Z`, created from `main` if it does not exist yet. An issue whose change reaches `main` by a single-purpose branch takes the milestone of the next version, the one whose cut carries its `[Unreleased]` entry.
+**The go-ahead puts the issue in a milestone**, the version that will carry it, and work starts on the branch [§3](#3-branches) assigns it: for anything published, that milestone's `release/vX.Y.Z`, created from `main` if it does not exist yet. An issue whose change reaches `main` by a single-purpose branch takes the milestone of the next version, the one whose cut carries its `[Unreleased]` entry: while a `release/vX.Y.Z` is open, that release's, since its branch brings `main` in before its cut ([§3](#3-branches)); otherwise the version after the last released one.
 
 **A gap is registered at its origin.** The repositories of the organization share a process and a notation, so a gap found in one of them is checked against the others it could reach. Each kind of change has an origin repository: the process (`AGENTS.md`, `docs/SDLC.md`, the repository files, the workflows and scripts that check and release a repository) in `memorysmithapp-template`; the notation, its specification and its renderer in `memorysmithapp-markdown`, this repository; the product in `memorysmithapp`. The gap is registered as an issue in its origin repository, carrying the origin's own change, with a **sub-issue** in each other repository it reaches, holding that repository's adaptation and its own "Done when". A change that needs work in another repository opens that repository's sub-issue when it is registered, never in a closing comment. Registering is not implementing: the agent registers the issue and its sub-issues and reports their links without asking whether to open them, and the go-ahead and the milestone stay with the owner, in each repository. Each issue closes by its own repository's rule ([§5](#5-when-an-issue-closes)), and the parent shows through its sub-issues how far the others are. Otherwise the same finding reaches the owner several times, by several paths, and what applies elsewhere lives in a comment until somebody remembers it.
 
@@ -78,6 +78,10 @@ A single-purpose branch reaches `main` with a pull request of its own only when 
 
 A cycle has **one** branch and **one** pull request to `main` at its end. No pull request to `main` is opened per issue: it would need a branch per issue and leave a merge button available with the version half done. A `feat/` or `fix/` branch opens its pull request against the release branch of its milestone.
 
+**Where a branch starts.** A `release/vX.Y.Z`, a `docs/` and a `chore/` branch are created from `main`, the branch they reach; a `feat/` or `fix/` branch is created from the release branch it lands on.
+
+**The open cycle brings `main` in** whenever `main` gained a commit the release branch does not have — a `docs/` or `chore/` pull request, or a patch version ([§11](#11-rollback)) — and at the latest before its cut: a merge of `main` committed on the release branch itself, which is not `main` and takes no pull request. In `CHANGELOG.md` the sections already released stay as `main` has them, and `[Unreleased]` holds the entries of both: the cycle's and those `main` gained.
+
 ## 4. Commits
 
 **Conventional Commits, imperative mood:** `feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`, with a scope when it helps (`docs(sdlc): …`). The body says why, and references the issue by `#N`.
@@ -105,7 +109,7 @@ On `main`, documents and code never diverge. Inside a branch they move in step: 
 
 ## 5. When an issue closes
 
-The issue of a delivery closes **when its commit lands on the branch of the cycle**, the `release/vX.Y.Z` of its milestone, not when that branch reaches `main`: committed there, or merged there from a `feat/` or `fix/` branch. A commit on a `feat/` or `fix/` branch closes nothing. The issue of a change that reaches `main` by a single-purpose branch ([§3](#3-branches)) closes instead when its pull request is merged to `main`, and its comment names the merge commit: until then the owner has not accepted the change, and it may never reach `main`. The issue stays in its milestone and closes as `completed`, with a comment naming the commit. A refused issue closes as *not planned*, with the reason.
+The issue of a delivery closes **when its commit lands on the branch of the cycle**, the `release/vX.Y.Z` of its milestone, not when that branch reaches `main`: committed there, or merged there from a `feat/` or `fix/` branch, when the comment names the merge commit on the release branch, where the change landed. A commit on a `feat/` or `fix/` branch closes nothing. The issue of a change that reaches `main` by a single-purpose branch ([§3](#3-branches)) closes instead when its pull request is merged to `main`, and its comment names the merge commit: until then the owner has not accepted the change, and it may never reach `main`. The issue stays in its milestone and closes as `completed`, with a comment naming the commit. A refused issue closes as *not planned*, with the reason.
 
 The consequence is counterintuitive and accepted: during the cycle there are closed issues whose work is not on `main` yet. What declares the scope of the version is the **milestone**; what takes everything to `main` is the single pull request of the cycle.
 
@@ -254,7 +258,7 @@ A released version that turns out wrong is **never undone by moving or deleting 
 
 For a repository that ships no deployable, as this one, the correction is a **new patch version**: the fix enters `[Unreleased]` under `Fixed` on the `release/vX.Y.Z` of that patch version, committed there or brought there from a `fix/` branch ([§3](#3-branches)), and is cut and released by the flow of [§10](#10-release). A repository that deploys extends this section with how it returns production to the previous version while the fix travels.
 
-**A fix of a released version while a cycle is open** becomes a patch version of its own when the released version is wrong in a way a person meets before the open cycle is cut; otherwise it enters the open cycle under `Fixed`. The criterion is the owner's, and the go-ahead says which. The patch is the `release/vX.Y.Z` of that patch version, created from `main`; once it is merged, the open cycle's branch brings `main` in, so that its `package.json` and `CHANGELOG.md` keep the released patch.
+**A fix of a released version while a cycle is open** becomes a patch version of its own when the released version is wrong in a way a person meets before the open cycle is cut; otherwise it enters the open cycle under `Fixed`. The criterion is the owner's, and the go-ahead says which. The patch is the `release/vX.Y.Z` of that patch version, created from `main`; once it is merged, the open cycle's branch brings `main` in ([§3](#3-branches)), so that its `package.json` and `CHANGELOG.md` keep the released patch.
 
 ## 12. Done criteria
 
