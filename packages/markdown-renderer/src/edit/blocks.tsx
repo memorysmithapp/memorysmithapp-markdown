@@ -18,6 +18,7 @@ import { isTrue, readProperties } from '../properties.js';
 import { Transclusion } from '../Transclusion.js';
 import { splitEmbeds } from '../embeds.js';
 import { embedsFile } from '../embed-target.js';
+import { STYLE_KEYS, type NoteStyle } from '../note-style.js';
 import { wikilinkAddress } from '../wikilink-address.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
@@ -67,6 +68,41 @@ function write(view: EditorView, changes: readonly TextChange[] | ChangeSet, eve
   } finally {
     writing = false;
   }
+}
+
+/**
+ * The opening of a style block while the author is elsewhere (`SPEC.md` §7.16, #166): what it sets,
+ * as the form says it, in place of its fence and options. A click shows them as written; the
+ * toolbar's Style changes them.
+ */
+export function StyleSummary({ style }: { style: NoteStyle }) {
+  const words = useHost().strings.editor;
+  const label = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables };
+  const value: Record<string, string> = {
+    sans: words.styleSans,
+    serif: words.styleSerif,
+    left: words.styleLeft,
+    center: words.styleCenter,
+    right: words.styleRight,
+    justify: words.styleJustify,
+  };
+  const set = STYLE_KEYS.filter((key) => style[key]);
+  return (
+    <div className="edit-style-summary">
+      <span className="edit-style-summary-title">
+        {ICONS.style} {words.style}
+      </span>
+      {set.length === 0 ? (
+        <span className="edit-style-summary-item">{words.styleNotebook}</span>
+      ) : (
+        set.map((key) => (
+          <span key={key} className="edit-style-summary-item">
+            {label[key]}: {value[style[key]!]}
+          </span>
+        ))
+      )}
+    </div>
+  );
 }
 
 /** A run of notation drawn as the reading surface draws it: comments out, wikilinks resolved, embeds expanded. */
@@ -1453,6 +1489,7 @@ export const ICONS = {
   math: icon('M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2'),
   diagram: icon('M5 3h4v4H5z', 'M15 17h4v4h-4z', 'M7 7v4a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v2'),
   rule: icon('M5 12h14'),
+  style: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16'),
   footnote: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16', 'M19 13v6', 'M17 15l2-2'),
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
   caret: icon('m6 9 6 6 6-6'),

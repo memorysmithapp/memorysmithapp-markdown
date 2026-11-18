@@ -1981,7 +1981,7 @@
 /* The text: the line height of a run, and the caret in the accent. */
 .markdown .markdown-editor .cm-content {
   padding: 0;
-  font-family: var(--ms-font-sans);
+  font-family: var(--ms-face, var(--ms-font-sans));
   line-height: var(--ms-line-height-normal);
   caret-color: var(--ms-accent);
 }
@@ -2001,8 +2001,46 @@
   font-weight: normal;
   font-style: normal;
 }
+/* A line or a drawn block a style block holds carries its style (#166): its
+   face is declared again where the block's own custom property reaches it. */
+.markdown .markdown-editor .cm-line.cm-ms-styled:not(.cm-ms-heading, .cm-ms-code-line),
+.markdown .markdown-editor .cm-ms-block {
+  font-family: var(--ms-face, var(--ms-font-sans));
+}
+/* A style block's opening while the author is elsewhere: what it sets, small
+   and soft, over a rule that its closing fence draws again at its end. */
+.markdown .edit-style-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.15rem 0 0.25rem;
+  border-bottom: 1px dashed var(--ms-border);
+  font-family: var(--ms-font-display);
+  font-size: 0.8rem;
+  color: var(--ms-text-soft);
+  cursor: pointer;
+}
+.markdown .edit-style-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+.markdown .edit-style-summary svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+.markdown .cm-ms-style-end {
+  height: 0;
+  margin: 0.25rem 0;
+  border-top: 1px dashed var(--ms-border);
+}
+.markdown .cm-ms-style-source {
+  color: var(--ms-text-soft);
+}
 .markdown .cm-ms-heading {
-  font-family: var(--ms-font-heading);
+  font-family: var(--ms-face-heading, var(--ms-font-heading));
   font-weight: var(--ms-heading-weight);
   color: var(--ms-heading-color);
   line-height: var(--ms-line-height-tight);

@@ -18,6 +18,8 @@ import remarkParse from 'remark-parse';
 import { unified, type Processor } from 'unified';
 import { codeRegions, commentRegions, insideCode } from '../source.js';
 import { justifyColumns } from '../justified.js';
+import { findStyleBlocks, type StyleBlocks } from '../style-block.js';
+import type { NoteStyle } from '../note-style.js';
 import { CALLOUT_MARKER } from '../remark-callouts.js';
 import { breaksDollarRule } from '../remark-ring.js';
 import { hasParameterReference, parameterReferences } from '../parameters.js';
@@ -101,7 +103,42 @@ export type Construct =
   | { readonly kind: 'comment'; readonly from: number; readonly to: number }
   | { readonly kind: 'blockId'; readonly from: number; readonly to: number; readonly id: string }
   | { readonly kind: 'html'; readonly from: number; readonly to: number }
-  | { readonly kind: 'definition'; readonly from: number; readonly to: number };
+  | { readonly kind: 'definition'; readonly from: number; readonly to: number }
+  | ({ readonly kind: 'styleBlock' } & StyleBlockSpan);
+
+/** A style block of the note (`SPEC.md` §7.16, #166), by the offsets of its parts. */
+export interface StyleBlockSpan extends Span {
+  /** The opening fence's line, without its line break. */
+  readonly open: Span;
+  /** The options, from the first `---` to the end of the last, or `null` when it has none. */
+  readonly options: Span | null;
+  /** The closing fence's line, or `null` for a block that runs to the end of the note. */
+  readonly close: Span | null;
+  /** What it holds, from the line after its options to the line before its closing fence. */
+  readonly content: Span;
+  readonly style: NoteStyle;
+  readonly depth: number;
+}
+
+/** The style blocks `findStyleBlocks` found in a text, by offsets into it. */
+export function styleSpans(text: string, found: StyleBlocks = findStyleBlocks(text)): StyleBlockSpan[] {
+  const starts = [0];
+  for (let index = 0; index < text.length; index++) if (text[index] === '\n') starts.push(index + 1);
+  const lineSpan = (line: number): Span => {
+    const from = starts[line - 1] ?? text.length;
+    const next = starts[line];
+    return { from, to: next === undefined ? text.length : next - 1 };
+  };
+  return found.blocks.map((block) => {
+    const open = lineSpan(block.open);
+    const close = block.close === null ? null : lineSpan(block.close);
+    // With options, the content starts two lines past their first `---` at least.
+    const options = block.from > block.open + 1 ? { from: lineSpan(block.open + 1).from, to: lineSpan(block.from - 1).to } : null;
+    const contentFrom = Math.min((options ?? open).to + 1, text.length);
+    const contentTo = close ? Math.max(contentFrom, close.from - 1) : text.length;
+    return { from: open.from, to: close ? close.to : text.length, open, options, close, content: { from: contentFrom, to: contentTo }, style: block.style, depth: block.depth };
+  });
+}
 
 export type ConstructKind = Construct['kind'];
 
@@ -165,8 +202,12 @@ export function analyze(text: string): Analysis {
   if (front) found.push({ kind: 'frontmatter', ...front });
 
   // The body is parsed alone, padded so that every offset is an offset of the note.
-  // A justified column is read as the reading surface reads it, every offset kept (§4.1).
-  const tree = parse(justifyColumns('\n'.repeat(bodyFrom) + text.slice(bodyFrom)).text);
+  // A style block's fences and options leave the text, and a justified column is read as the reading
+  // surface reads it, every offset kept (§7.16, §4.1).
+  const padded = '\n'.repeat(bodyFrom) + text.slice(bodyFrom);
+  const styled = findStyleBlocks(padded);
+  for (const block of styleSpans(padded, styled)) found.push({ kind: 'styleBlock', ...block });
+  const tree = parse(justifyColumns(styled.text).text);
 
   const comments = commentRegions(text).filter(([from]) => from >= bodyFrom);
   for (const [from, to] of comments) found.push({ kind: 'comment', from, to });

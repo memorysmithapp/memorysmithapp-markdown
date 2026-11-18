@@ -283,6 +283,14 @@
 .markdown .edit-attach .edit-source-frame {
   height: min(34rem, calc(100vh - 4rem));
 }
+/* The form of a style block is as tall as its four fields, and narrow (#166). */
+.markdown .edit-source.edit-style {
+  max-width: min(28rem, calc(100vw - 2rem));
+}
+.markdown .edit-style .edit-source-frame {
+  height: auto;
+  max-height: calc(100vh - 4rem);
+}
 .markdown .edit-attach-ways {
   display: flex;
   flex: none;
@@ -620,4 +628,14 @@
 .markdown .data-table-dialog dd {
   text-align: var(--ms-align-tables, start);
   hyphens: var(--ms-hyphens-tables, manual);
+}
+/* In edit mode the text is lines of the editor, not paragraphs and headings:
+   each takes the alignment its style sets, notation and code left as written
+   (#166). */
+.markdown .markdown-editor .cm-line:not(.cm-ms-heading, .cm-ms-code-line, .cm-ms-yaml, .cm-ms-table-source, .cm-ms-callout-source, .cm-ms-style-source) {
+  text-align: var(--ms-align-text, start);
+  hyphens: var(--ms-hyphens-text, manual);
+}
+.markdown .markdown-editor .cm-line.cm-ms-heading {
+  text-align: var(--ms-align-headings, start);
 }

@@ -135,6 +135,25 @@ export interface EditorWords {
   readonly math: string;
   readonly diagram: string;
   readonly rule: string;
+  /**
+   * A `:::{style}` block (`SPEC.md` §7.16, #166): the control and the title of its form, the form's
+   * four keys, what each value reads as, the choice that writes no key, and its two verbs — one that
+   * wraps the passage in a new block, one that changes the block the cursor is in.
+   */
+  readonly style: string;
+  readonly styleFont: string;
+  readonly styleHeadings: string;
+  readonly styleText: string;
+  readonly styleTables: string;
+  readonly styleNotebook: string;
+  readonly styleSans: string;
+  readonly styleSerif: string;
+  readonly styleLeft: string;
+  readonly styleCenter: string;
+  readonly styleRight: string;
+  readonly styleJustify: string;
+  readonly styleInsert: string;
+  readonly styleApply: string;
   readonly footnote: string;
   readonly comment: string;
   /** The toolbar's button that attaches a file, and what it says while the host keeps it or failed (#75). */
@@ -386,6 +405,20 @@ export const ENGLISH: NoteStrings = {
     math: 'Formula',
     diagram: 'Diagram',
     rule: 'Divider',
+    style: 'Style',
+    styleFont: 'Font',
+    styleHeadings: 'Headings',
+    styleText: 'Text',
+    styleTables: 'Tables',
+    styleNotebook: "The notebook's",
+    styleSans: 'Sans serif',
+    styleSerif: 'Serif',
+    styleLeft: 'Left',
+    styleCenter: 'Centered',
+    styleRight: 'Right',
+    styleJustify: 'Justified',
+    styleInsert: 'Set apart',
+    styleApply: 'Apply',
     footnote: 'Footnote',
     comment: 'Comment',
     attach: 'Attach a file',

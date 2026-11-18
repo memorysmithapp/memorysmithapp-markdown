@@ -20,7 +20,8 @@ import { MarkdownImage } from '../Markdown.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
-import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, TableBlock } from './blocks.js';
+import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, StyleSummary, TableBlock } from './blocks.js';
+import { justifies, styleProperties, type NoteStyle } from '../note-style.js';
 import { caretAt, sourceOffsetOf } from './click-source.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
@@ -230,6 +231,8 @@ interface BlockOptions {
   readonly kind?: BlockKind;
   /** The editor's metrics when it was made. */
   readonly metrics?: BlockMetrics;
+  /** The style of the style block it stands in (#166): custom properties, and a language to hyphenate in. */
+  readonly style?: { readonly properties: Readonly<Record<string, string>>; readonly lang: string | null };
 }
 
 /** A block drawn with React in place of lines of the note. */
@@ -278,6 +281,9 @@ class BlockWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const element: HTMLElement = document.createElement(this.inline ? 'span' : 'div');
     element.className = this.inline ? 'cm-ms-inline-block' : 'cm-ms-block';
+    // A block a style block holds is drawn in its style, as its lines are (#166).
+    for (const [name, value] of Object.entries(this.options.style?.properties ?? {})) element.style.setProperty(name, value);
+    if (this.options.style?.lang) element.lang = this.options.style.lang;
     drawing.set(element, this);
     const metrics = view.state.field(metricsField);
     const held = this.inline ? undefined : measuredHeight(this.identity, metrics);
@@ -423,6 +429,22 @@ const RULE_HEIGHT = 33;
 const MATH_ROW = 32;
 const MATH_MARGINS = 32;
 
+/** The closing fence of a style block, drawn as the end of what it holds (#166). */
+class StyleEndWidget extends WidgetType {
+  override eq(): boolean {
+    return true;
+  }
+  toDOM(): HTMLElement {
+    const end = document.createElement('div');
+    end.className = 'cm-ms-style-end';
+    end.setAttribute('aria-hidden', 'true');
+    return end;
+  }
+  override get estimatedHeight(): number {
+    return 8;
+  }
+}
+
 class RuleWidget extends WidgetType {
   override eq(): boolean {
     return true;
@@ -522,10 +544,30 @@ function build(state: EditorState): DecorationSet {
     const lines = linesOf(from, to);
     for (let at = doc.lineAt(lines.from).number; at <= doc.lineAt(lines.to).number; at++) out.push(line(className).range(doc.line(at).from));
   };
+  // The style blocks of the note (§7.16, #166): what each line they hold is set as, the innermost
+  // block winning, written on the line, and on a block drawn in place of lines.
+  const styleBlocks = constructs.flatMap((construct) => (construct.kind === 'styleBlock' ? [construct] : []));
+  const styleOfLine = new Map<number, { readonly properties: Record<string, string>; readonly lang: string | null; readonly css: string }>();
+  if (styleBlocks.length > 0) {
+    const merged = new Map<number, NoteStyle>();
+    for (const styleBlock of [...styleBlocks].sort((a, b) => a.depth - b.depth)) {
+      if (styleBlock.content.from > styleBlock.content.to || styleBlock.content.from >= doc.length) continue;
+      const first = doc.lineAt(styleBlock.content.from).number;
+      const last = doc.lineAt(Math.min(styleBlock.content.to, doc.length)).number;
+      for (let at = first; at <= last; at++) merged.set(at, { ...(merged.get(at) ?? {}), ...styleBlock.style });
+    }
+    for (const [at, style] of merged) {
+      const properties = styleProperties(style);
+      styleOfLine.set(at, { properties, lang: justifies(style) ? host.strings.locale : null, css: Object.entries(properties).map(([name, value]) => `${name}:${value}`).join(';') });
+    }
+  }
   const block = (from: number, to: number, kind: BlockKind, key: string, draw: (view: EditorView) => ReactNode, revealsOnClick = true) => {
     const lines = linesOf(from, to);
     const source = text.slice(lines.from, lines.to);
-    out.push(Decoration.replace({ widget: new BlockWidget(key, host, draw, revealsOnClick, { source, kind, metrics }), block: true }).range(lines.from, lines.to));
+    const style = styleOfLine.get(doc.lineAt(lines.from).number);
+    out.push(
+      Decoration.replace({ widget: new BlockWidget(style ? `${key}\u0000${style.css}` : key, host, draw, revealsOnClick, { source, kind, metrics, ...(style ? { style } : {}) }), block: true }).range(lines.from, lines.to),
+    );
     covered.push(lines);
   };
   const after = (to: number, key: string, draw: (view: EditorView) => ReactNode, source: string) => {
@@ -535,6 +577,30 @@ function build(state: EditorState): DecorationSet {
 
   if (bodyFrom === 0) {
     out.push(Decoration.widget({ widget: new BlockWidget('add-properties', host, (view) => createElement(AddProperties, { view }), false, { kind: 'add-properties', metrics }), block: true, side: -1 }).range(0));
+  }
+
+  // A style block's fences and options are drawn as what it sets while the author is elsewhere, and
+  // as their lines when the author is on them (§7.16, #166).
+  for (const styleBlock of styleBlocks) {
+    const notation = { from: styleBlock.open.from, to: styleBlock.options?.to ?? styleBlock.open.to };
+    const open = touches(notation.from, notation.to) || (styleBlock.close !== null && touches(styleBlock.close.from, styleBlock.close.to));
+    if (open) {
+      eachLine(notation.from, notation.to, 'cm-ms-style-source');
+      if (styleBlock.close) eachLine(styleBlock.close.from, styleBlock.close.to, 'cm-ms-style-source');
+      continue;
+    }
+    const source = text.slice(notation.from, notation.to);
+    const style = styleBlock.style;
+    out.push(Decoration.replace({ widget: new BlockWidget(`style:${notation.from}:${source}`, host, () => createElement(StyleSummary, { style }), true, { source, kind: 'style', metrics }), block: true }).range(notation.from, notation.to));
+    covered.push(notation);
+    if (styleBlock.close) {
+      out.push(Decoration.replace({ widget: new StyleEndWidget(), block: true }).range(styleBlock.close.from, styleBlock.close.to));
+      covered.push({ from: styleBlock.close.from, to: styleBlock.close.to });
+    }
+  }
+  for (const [at, style] of styleOfLine) {
+    if (at > doc.lines) continue;
+    out.push(Decoration.line({ attributes: { class: 'cm-ms-styled', style: style.css, ...(style.lang ? { lang: style.lang } : {}) } }).range(doc.line(at).from));
   }
 
   // Blocks first: what a drawn block covers is not decorated again.

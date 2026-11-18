@@ -37,6 +37,9 @@ import { analysisField, editorEnvironment, livePage } from './live.js';
 import { measureMetrics } from './heights.js';
 import { NoteActions, type NoteButtons } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
+import { StyleDialog } from './StyleDialog.js';
+import { setStyleOptions, styleBlockAt, wrapInStyle } from './style.js';
+import type { NoteStyle } from '../note-style.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
 import { chooseLanguageAt } from './LanguageControl.js';
 import { useEditSaves, type EditSaves } from './saves.js';
@@ -201,6 +204,7 @@ function Toolbar({
   end,
   opened,
   onAttach,
+  onStyle,
   attaching,
   attachButton,
 }: {
@@ -212,6 +216,8 @@ function Toolbar({
   opened: string;
   /** Opens the attach dialog (#75, #78). */
   onAttach: () => void;
+  /** Opens the form of a style block: a new one, or the one the cursor is in (#166). */
+  onStyle: () => void;
   attaching: Attaching;
   attachButton: RefObject<HTMLButtonElement | null>;
 }) {
@@ -326,6 +332,18 @@ function Toolbar({
           {block('math')}
           {block('diagram')}
           {block('rule')}
+          <button
+            type="button"
+            className="edit-control"
+            title={words.style}
+            aria-label={words.style}
+            aria-haspopup="dialog"
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onStyle}
+          >
+            {ICONS.style}
+          </button>
         </span>
       </div>
       {end}
@@ -507,6 +525,29 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
   };
   const attachButton = useRef<HTMLButtonElement>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+  /** The form of a style block, open over what it sets now and whether it changes a block (#166). */
+  const [styling, setStyling] = useState<{ initial: NoteStyle; editing: boolean } | null>(null);
+  const openStyle = (): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const block = styleBlockAt(current.state.doc.toString(), current.state.selection.main.head);
+    setStyling({ initial: block?.style ?? {}, editing: block !== null });
+  };
+  /** Writes the form's style: the options of the block the cursor is in, or a new block around the passage. */
+  const applyStyle = (style: NoteStyle): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const text = current.state.doc.toString();
+    const selection = current.state.selection.main;
+    const block = styleBlockAt(text, selection.head);
+    if (block) {
+      current.dispatch({ changes: setStyleOptions(block, style), userEvent: 'input.style', scrollIntoView: true });
+      return;
+    }
+    // The cursor at the start of the content: past the opening fence and options, which come first.
+    const wrapped = wrapInStyle(text, selection.from, selection.to, style);
+    current.dispatch({ changes: wrapped.changes, selection: { anchor: wrapped.cursor }, userEvent: 'input.style', scrollIntoView: true });
+  };
   /** Where the editing menu is open, in the window's coordinates (#81). */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const openMenu = useRef((x: number, y: number) => setMenu({ x, y }));
@@ -552,6 +593,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         block('math'),
         block('diagram'),
         block('rule'),
+        { name: 'style', label: words.style, icon: ICONS.style, run: openStyle },
         item('footnote', command(insertFootnote)),
         item('comment', command(toggleComment), 'Mod-/'),
         { name: 'attach', label: words.attach, icon: ICONS.attach, run: () => setAttachOpen(true) },
@@ -792,6 +834,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
               } else setRefusal(null);
               setAttachOpen(true);
             }}
+            onStyle={openStyle}
             attaching={attaching}
             attachButton={attachButton}
             end={
@@ -837,6 +880,15 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             onAttach={(files) => attachFiles.current(files)}
             onEmbed={(name) => insertLine(`![[${name}]]`)}
             onLink={(name, address) => insertLine(webImage(name, address))}
+          />
+        )}
+        {styling && (
+          <StyleDialog
+            initial={styling.initial}
+            editing={styling.editing}
+            onApply={applyStyle}
+            onClose={() => setStyling(null)}
+            onClosed={() => editorView.current?.focus()}
           />
         )}
         {lineBreak === null && <p className="edit-unavailable">{resolved.strings.editUnavailable}</p>}
