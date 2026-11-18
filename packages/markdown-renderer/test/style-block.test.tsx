@@ -84,6 +84,13 @@ describe('a style block, drawn', () => {
     expect(html(':::{style}\n---\ntables: justify\n---\n| a | b |\n|---|---:|\n| 1 | 2 |\n:::\n')).toContain('<td style="text-align:right">2</td>');
   });
 
+  it('keeps a justified column justified where the block sets its tables otherwise', () => {
+    const drawn = html(':::{style}\n---\ntables: right\n---\n| a | b |\n|---|;---;|\n| 1 | 2 |\n:::\n');
+    expect(drawn).toContain('--ms-align-tables:right');
+    expect(drawn).toContain('<td style="text-align:justify">2</td>');
+    expect(drawn).toContain('<td>1</td>');
+  });
+
   it('draws a block with no options as written, in an element that sets nothing', () => {
     expect(html(':::{style}\nJust text.\n:::\n')).toContain('<div class="style-block"><p>Just text.</p></div>');
   });
