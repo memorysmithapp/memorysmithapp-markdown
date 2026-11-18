@@ -16,6 +16,7 @@ import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
 import { appendixId, planAppendices } from './appendices.js';
+import { findStyleBlocks, rangesFor, styleAt, blockAttributes, type StyleRange } from './style-block.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
@@ -205,7 +206,11 @@ function NoteView({
   // is parsed on its own, as on MemorySmith's reading page.
   // A note answers an embed before a file of its name does (§5.8, #148).
   const file = embedsFile(resolved);
-  const segments = splitEmbeds(body, file).map((segment) =>
+  // The note's `:::{style}` blocks (§7.16), read on the whole body because one may hold an embed
+  // and so reach across runs: their fences and options leave the text, every line kept, and each
+  // run is told which of its lines a block holds.
+  const styled = useMemo(() => findStyleBlocks(body), [body]);
+  const segments = splitEmbeds(styled.text, file).map((segment) =>
     segment.kind === 'text'
       ? {
           ...segment,
@@ -273,6 +278,15 @@ function NoteView({
     [appendixRuns, blocks, runs.join('\u0000')],
   );
   let run = 0;
+  // The line of the body each segment starts on: a run keeps every line of its text, and an embed
+  // stands within one. Where that does not add up, no block is drawn rather than a wrong one.
+  const startLines: number[] = [];
+  let line = 1;
+  for (const segment of segments) {
+    startLines.push(line);
+    if ('rendered' in segment) line += segment.text.split('\n').length - 1;
+  }
+  const lined = styled.blocks.length > 0 && line === styled.text.split('\n').length;
 
   return (
     <HostProvider value={resolved}>
@@ -290,7 +304,18 @@ function NoteView({
         <Properties properties={properties} />
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
-            return <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
+            const embed = <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
+            // An embed a style block holds is drawn in that block's style.
+            const style = lined ? styleAt(styled.blocks, startLines[index]!) : {};
+            if (Object.keys(style).length === 0) return embed;
+            const { className, style: css, ...attributes } = blockAttributes(style, resolved.strings.locale) as { className: string[]; style?: string };
+            // The attributes as the page writes them: `dataText` is `data-text`.
+            const written = Object.fromEntries(Object.entries(attributes).map(([name, value]) => [name.replace(/^data([A-Z])/, (_, first: string) => `data-${first.toLowerCase()}`), value]));
+            return (
+              <div key={index} className={className.join(' ')} style={cssObject(css)} {...written}>
+                {embed}
+              </div>
+            );
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
@@ -310,6 +335,7 @@ function NoteView({
               writable={writable && mappable}
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
               {...(appendices && first !== undefined ? { appendices: { first, appendices: appendices.appendices } } : {})}
+              styles={lined ? rangesFor(styled.blocks, startLines[index]!, startLines[index]! + segment.text.split('\n').length - 1) : NO_STYLES}
             >
               {planned?.text ?? segment.rendered}
             </Markdown>
@@ -338,4 +364,13 @@ function NoteView({
       </div>
     </HostProvider>
   );
+}
+
+/** A run with no style block: given, so it does not look for one in text whose fences are gone. */
+const NO_STYLES: readonly StyleRange[] = [];
+
+/** A block's custom properties, as the `style` of a React element. */
+function cssObject(css: string | undefined): Record<string, string> | undefined {
+  if (!css) return undefined;
+  return Object.fromEntries(css.split(';').map((pair) => [pair.slice(0, pair.indexOf(':')), pair.slice(pair.indexOf(':') + 1)]));
 }

@@ -60,6 +60,14 @@ const EXPECTED: Record<string, (html: string) => void> = {
     // The delimiter row is structure and never a row of its own.
     expect(html).not.toContain('---');
   },
+  // A style block (§7.16): its content in an element carrying what it sets, its fences and options gone.
+  'style-block': (html) => {
+    expect(html).toMatch(/<div class="style-block" style="[^"]*--ms-align-text:justify[^"]*--ms-align-headings:center|<div class="style-block" style="[^"]*--ms-align-headings:center[^"]*--ms-align-text:justify/);
+    expect(html).toContain('<h1>Ata da assembleia</h1>');
+    expect(html).not.toContain(':::');
+    expect(html).not.toContain('text: justify');
+    expect(html).not.toContain('<hr');
+  },
   // This specification's own delimiter cell (§4.1): a table, its column justified.
   'table-justified': (html) => {
     expect(html).toContain('<table>');

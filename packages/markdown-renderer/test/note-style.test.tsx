@@ -78,5 +78,7 @@ describe('the stylesheet', () => {
     expect(theme).toContain('font-family: var(--ms-face-heading, var(--ms-font-heading));');
     expect(theme).toContain('font-family: var(--ms-face-heading, var(--ms-title-font));');
     expect(theme).toContain("--ms-font-serif: var(--markdown-font-serif, Georgia, 'Times New Roman', serif);");
+    // A style block's face is declared again on the block, where its own custom property reaches it.
+    expect(/\.markdown \.style-block \{([^}]*)\}/.exec(theme)?.[1]).toContain('font-family: var(--ms-face, var(--ms-font-sans));');
   });
 });

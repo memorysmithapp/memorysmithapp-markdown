@@ -53,6 +53,7 @@ Every form this specification declares was taken from somewhere, and the places 
 | [GFM 0.29-gfm](https://github.github.com/gfm/) | Tables, task list items, strikethrough, extended autolinks, disallowed raw HTML | §4 |
 | [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template; the `query` block that draws what a query returns in place of itself | §5, §7 |
 | [MemorySmith's search](https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts) | The query language: terms, phrases, negation, `OR`, groups, fields and the intervals over a date | §6 |
+| [MyST Markdown](https://mystmd.org/guide/syntax-overview#directives) | The directive: a colon fence, `:::{name}`, that holds blocks, with its options in a `---` block at its start | §7.16 |
 | This specification | The justified column of a table, `;---;` in the delimiter row | §4.1 |
 
 Obsidian is a source and not an authority. It publishes documentation rather than a versioned specification, so it carries no version above, and where it and this document differ **this document governs** — the opposite of the precedence CommonMark and GFM hold in §2.1. This specification is not *Obsidian compatible* and does not undertake to follow it; Obsidian is where a form was established and where its established meaning can be checked.
@@ -138,7 +139,7 @@ Level two
 
 Headings are what an anchor points at: `[[Target note#Section]]` names a heading of the target, and §5.2 keeps it for display without letting it change which note is resolved. **A heading never names a note**, at any level: a note is named by the `name:` of its frontmatter and by nothing else (§5.3).
 
-**The headings of a body form an outline, and it SHOULD be whole**: the first heading of the body is level one, and a heading goes down at most one level from the heading before it — `#` then `###` with no `##` between skips a level. Going back up any number of levels ends sections and is never a skip. Only the headings at the top level of the body count, outside code: a heading inside a quote, a callout or a list is part of that block, and an embedded note has an outline of its own. The name of a note is not a level of it — it names the artifact, and how a Reader presents it is the Reader's choice — so the body's `#` is the first level whatever is drawn above it. An outline that breaks this is a notice (§7.13), never an error: the note opens and draws as written.
+**The headings of a body form an outline, and it SHOULD be whole**: the first heading of the body is level one, and a heading goes down at most one level from the heading before it — `#` then `###` with no `##` between skips a level. Going back up any number of levels ends sections and is never a skip. Only the headings at the top level of the body count, outside code: a heading inside a quote, a callout or a list is part of that block, and an embedded note has an outline of its own. A style block (§7.16) is no such block: it sets how a passage looks, and the headings it holds count as if it were not there, so a block around the whole body keeps the note's outline. The name of a note is not a level of it — it names the artifact, and how a Reader presents it is the Reader's choice — so the body's `#` is the first level whatever is drawn above it. An outline that breaks this is a notice (§7.13), never an error: the note opens and draws as written.
 
 A `#` that is not opening a heading is not a subject either: `#procurement` in the middle of a line is plain text, because nothing in this document describes it (§8).
 
@@ -152,7 +153,7 @@ Three or more `*`, `-` or `_` alone on a line, spaces between them allowed.
 ___
 ```
 
-`---` is context-dependent, and all three readings are correct in their place: on the **first line of the file** it opens frontmatter (§6.1), **directly under a paragraph** it is a level-two setext heading (§3.3), and **anywhere else** it is a thematic break. One blank line is what separates the second reading from the third:
+`---` is context-dependent, and all four readings are correct in their place: on the **first line of the file** it opens frontmatter (§6.1), on the **line right after a `:::{style}` fence** it opens that block's options (§7.16), **directly under a paragraph** it is a level-two setext heading (§3.3), and **anywhere else** it is a thematic break. The options of a style block are read as frontmatter is, so their last line, above the `---` that closes them, is never a heading. One blank line is what separates the second reading from the third:
 
 ```markdown
 The general rule ends here
@@ -565,7 +566,7 @@ Frontmatter is a block at the top of the file delimited by `---`, written in a Y
 
 ### 6.1 The block
 
-The block MUST begin on the first line of the document with `---` and end at the next line consisting of `---`. Everything between the delimiters is frontmatter; everything after them is the body.
+The block MUST begin on the first line of the document with `---` and end at the next line consisting of `---`. Everything between the delimiters is frontmatter; everything after them is the body. A note whose first line is anything else has no frontmatter, a `:::{style}` fence included: the `---` after that fence opens the options of the block (§7.16), whose `name:` or `tags:` set nothing, so a style block goes after the frontmatter, never above it.
 
 The frontmatter MUST NOT take part in the searchable text of the body. Keeping it there would make every note match its own metadata.
 
@@ -732,9 +733,9 @@ A query of nothing but whitespace asks nothing. A search refuses it; a table blo
 
 A **Reader** renders a note for a person. Everything in this section is display: none of it produces an edge, an attribute or an index entry, and none of it changes the bytes of the note.
 
-Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram and a table block are fenced blocks, an embed is an image whose target happens to be a note. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
+Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram and a table block are fenced blocks, an embed is an image whose target happens to be a note, and a style block is its content between two lines of colons. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
 
-Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, and math and diagrams by the wider convention both it and GitHub follow (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
+Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, math and diagrams by the wider convention both it and GitHub follow, and the directive a style block is written as by MyST (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
 
 ### 7.1 Callouts
 
@@ -937,6 +938,9 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `table-column-unknown` | notice | §7.15 | A column the table does not have, named by a key of a `table` block or as a field of its `where`: the block says so in place of the table |
 | `table-filter-invalid` | notice | §7.15 | A `where` that is an error (§6.9): the block says so in place of the table |
 | `table-pending` | hint | §7.15 | A `table` block naming a table the notebook does not keep says so in place of the table, until one of that name exists (§5.9) |
+| `style-key-unknown` | notice | §7.16 | A line of a style block's options that is not `key: value` with one of its four keys, or a key written twice, sets nothing |
+| `style-value-invalid` | notice | §7.16 | A value of a style block's options that its key does not take sets nothing |
+| `style-unclosed` | notice | §7.16 | A style block never closed runs to the end of the note |
 
 The pending codes need the notebook: an implementation reports `link-pending` and `embed-pending` only when it knows which notes and files exist, and `table-pending` only when it knows which tables do; a pending link is a note still to write, and a pending table a table still to create, which is why they are hints. What depends on a table's columns — `table-column-unknown`, a `total` over a column that is not a number, and the errors of `where` that §6.9 leaves to the kind of a field — is reported only when the implementation knows them. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body; the lines of a `table` block raise only its own. A notice of a `table` block is placed on the line of the key it is about, and `table-unnamed` on the line that opens the block; a line raises one notice at most, for the first of its mistakes in the order §7.15 lists them, and the columns of a key are checked only once its value can be read.
 
@@ -1015,6 +1019,44 @@ A key with an empty value is absent. A column is named as a field of a query is 
 **Where no tables are kept**, the block is a code block. A Reader that does not reach a notebook's tables MUST show it as one, its lines as written, and never hide it: §7.2's rule for a diagram, and what keeps the note legible in any editor.
 
 **The block is the note's; the rows are not.** A tool that returns the note returns the block as written and never its rows, as it returns an embed unexpanded (§7.3). Nothing a table holds produces an edge, an attribute or an index entry: what the block gives an Indexer is the reference of §5.9, and that alone.
+
+### 7.16 Style blocks
+
+A passage of a note can be set apart from the style of its notebook: its face, and the alignment of its headings, its text and its tables. The notebook keeps a style for every note it holds, which is where the default belongs; a note says only where a passage differs from it.
+
+```markdown
+:::{style}
+---
+text: justify
+headings: center
+tables: justify
+---
+# Ata da assembleia
+
+O condomínio deliberou, por maioria, ...
+
+| Item | Observação |
+|------|------------|
+| ...  | ...        |
+:::
+```
+
+**The form is MyST's directive** (§2): a line of three or more colons and `{style}`, at the margin or up to three spaces in, opens the block; a line of colons alone, at least as many, closes it. A `---` on the line right after the opening fence opens the block's **options**, which run to the next `---` and are read as frontmatter is (§6.2): one `key: value` per line, no nesting. With no `---` there, the block has no options and draws what it holds as written. Anything Markdown goes inside, a callout or a `table` block included, and another style block too, closed by its own fence first. A block never closed runs to the end of the note, as a fence does (§3.7). A colon fence inside code is an example and is never read, and a line of colons that closes no block is text.
+
+| Option | Values | Sets |
+|---|---|---|
+| `font` | `sans`, `serif` | The face of the text and of the headings |
+| `headings` | `left`, `center`, `right`, `justify` | The alignment of headings |
+| `text` | `left`, `center`, `right`, `justify` | The alignment of paragraphs and list items |
+| `tables` | `left`, `center`, `right`, `justify` | The alignment of a table's cells whose column declares none, and of a `table` block's text columns |
+
+Keys and values are compared with case folded. **What wins**, nearest first: a column's own delimiter (`:---:`, `;---;`, §4.1) over `tables`; an inner block over an outer one; a block over the notebook's style; the notebook's style over the drawing a Reader has with none. Justified text SHOULD hyphenate, in the language of whoever reads it. Printing honours all of it.
+
+**A key or a value the block cannot take is ignored, never an error**: it sets nothing, and it is a notice (§7.13, `style-key-unknown`, `style-value-invalid`), as a block never closed is (`style-unclosed`). A line of options that is not `key: value`, and a key written twice, are unknown keys.
+
+**A style block changes nothing an Indexer reads.** A link inside it is an edge as anywhere else (§5), a `^identifier` still names its block (§7.7), and an option becomes no attribute of the note (§6): `name:` or `tags:` written among the options set nothing, which is why a style block goes after the frontmatter, never above it (§6.1). The fences and the options are no content: the line above the `---` that closes the options is no heading (§3.4), and the headings the block holds are the note's own (§3.3).
+
+**Outside MemorySmith** a reader that does not know the directive draws the fence lines as text, the first `---` as a rule and the last line of options as a heading (setext, §3.3). The content is all there, unstyled.
 
 ## 8. Notation not described here
 
@@ -1135,6 +1177,7 @@ Every form this document declares, in one table. The last column is the section 
 | Block embed | `![[note#^id]]` | The same edge as a plain wikilink | 7.7 |
 | Math | `$x$`, `$$x$$` | Drawn as mathematics, or shown as source | 7.8 |
 | Table block | ` ```table ` | Draws a table of the notebook through a query, a page at a time, or shows the source; references the table it names, never an edge | 7.15, 5.9 |
+| Style block | `:::{style}` over a `---` block of options, closed by `:::` | Draws a passage in its own face and alignment; changes nothing an Indexer reads | 7.16 |
 | Query | `status:pending -draft amount:>=100` | One language for a search and for the filter of a table block | 6.9 |
 | Parameter reference | `{{name}}` | Drawn as a parameter until a notebook is created from the model; a wikilink to one is no edge and not pending; a value writing one is not indexed | 7.14, 5.2, 6.3 |
 | External link | `[text](https://…)` | Renders as a link; never an edge | 5.2 |

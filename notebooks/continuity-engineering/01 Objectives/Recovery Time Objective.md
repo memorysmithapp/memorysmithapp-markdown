@@ -21,9 +21,18 @@ The **Recovery Time Objective** is how long a service may stay down before the l
 
 # How it is stated
 
+The definition is the one the contract quotes, so it is set the way the contract sets it:
+
+:::{style}
+---
+font: serif
+text: justify
+---
 Always in wall-clock minutes, from the moment of detection and not from the moment of decision. The gap between those two is where most of the budget goes, which is why [[Exercise 2026-03 · Region loss#Timeline]] measures it separately.
 
 The paired figure is [[Recovery Point Objective|the RPO]], and the two are set together: an aggressive RTO with a loose RPO restores a service quickly to a state nobody wants. ^rto-and-rpo
+
+:::
 
 # What it costs
 

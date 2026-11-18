@@ -237,6 +237,11 @@
   overflow-wrap: break-word;
 }
 
+/* A style block sets the face of its passage (#164): declared again where the
+   block's own custom property can reach it. */
+.markdown .style-block {
+  font-family: var(--ms-face, var(--ms-font-sans));
+}
 .markdown :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--ms-face-heading, var(--ms-font-heading));
   font-weight: var(--ms-heading-weight);
