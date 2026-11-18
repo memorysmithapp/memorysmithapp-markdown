@@ -26,6 +26,7 @@ import 'katex/dist/katex.min.css';
   loadNoteAt={(address) => fetchTheNoteAt(address)} // …or another note of that name, told apart by address
   queryTable={(request) => queryYourTable(request)} // the rows a ```table block asks for: one page, the count, the total
   openTableRow={(view) => showInYourDialog(view)}  // a row clicked, whole: its columns and each value as drawn
+  noteStyle={{ font: 'serif', text: 'justify' }}   // the notebook's style: face, and alignment of headings, text and tables
   writable
   onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"

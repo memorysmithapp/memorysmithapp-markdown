@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteButtons, type NoteHost, type SaveNotice } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteButtons, type NoteHost, type NoteStyle, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -63,6 +63,8 @@ interface View {
   readonly printing: boolean;
   /** The note drawn for paper with its tables as appendices at its end (`?print=appendices`, #165). */
   readonly appendices: boolean;
+  /** The notebook's style (`?font=serif&headings=center&text=justify&tables=justify`, #164), which the renderer cleans of what it cannot take. */
+  readonly noteStyle: NoteStyle;
 }
 
 /** The host with each of its functions wrapped anew, the same meaning under another identity. */
@@ -139,6 +141,7 @@ function readView(): View {
     unstable: query.get('host') === 'unstable',
     printing: query.get('print') === '1' || query.get('print') === 'appendices',
     appendices: query.get('print') === 'appendices',
+    noteStyle: Object.fromEntries(['font', 'headings', 'text', 'tables'].flatMap((key) => (query.get(key) ? [[key, query.get(key)]] : []))) as NoteStyle,
   };
 }
 
@@ -295,6 +298,7 @@ export function App() {
         buttons={view.button}
         printing={view.printing}
         tablesAsAppendices={view.appendices}
+        noteStyle={view.noteStyle}
         // The comparison screenshots the note alone, as MemorySmith's own component draws it.
         actions={!view.bare}
         onChange={(next) => saveEdit(key, next)}

@@ -15,6 +15,7 @@ import { Annotation, Compartment, EditorState, type Extension, type TransactionS
 import { EditorView, keymap, type KeyBinding } from '@codemirror/view';
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { HOST_KEYS, HostProvider, isAttachRefusal, resolveHost, useDrawing, type AttachProgress, type NoteHost, type ResolvedHost } from '../host.js';
+import { justifies } from '../note-style.js';
 import { rootStyle } from '../theme.js';
 import { ICONS } from './blocks.js';
 import {
@@ -774,7 +775,9 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
       <div
         className={`markdown markdown-theme-${resolved.theme.name} markdown-editing`}
         data-theme={resolved.scheme}
-        style={rootStyle(resolved.theme, resolved.scheme)}
+        style={rootStyle(resolved.theme, resolved.scheme, resolved.noteStyle)}
+        // Justified text hyphenates in the reader's language, which the browser has to be told (#164).
+        lang={justifies(resolved.noteStyle) ? resolved.strings.locale : undefined}
       >
         <div ref={bar} className={`edit-bar${buttons === 'responsive' ? ' has-responsive-buttons' : ''}`} data-leaving={folding ? '' : undefined}>
           <Toolbar

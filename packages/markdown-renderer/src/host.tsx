@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
 import type { TablePage, TableRequest, TableRowView } from './table-block.js';
+import { cleanStyle, type NoteStyle } from './note-style.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 import { drawing, drawnNote, type DrawnNote } from './embed-target.js';
 
@@ -96,6 +97,15 @@ export interface NoteHost {
    * tables only: an embedded note draws its tables in place. Nothing changes on the screen.
    */
   readonly tablesAsAppendices?: boolean;
+  /**
+   * How the note is set, as its notebook's style says (#164, memorysmithapp/memorysmithapp#493): the
+   * face, `sans` or `serif`, and the alignment of headings, of text — paragraphs and list items —
+   * and of tables — the cells of a column whose delimiter declares none, and a `table` block's text
+   * columns — each `left`, `center`, `right` or `justify`. Justified text hyphenates in the language
+   * of `strings.locale`. A key left out, or a value none of those, is what the renderer draws with no
+   * style; a `:::{style}` block of the note wins over it in its passage.
+   */
+  readonly noteStyle?: NoteStyle;
   /**
    * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
    * its state and none answers a click.
@@ -315,6 +325,7 @@ export const HOST_KEYS = Object.keys({
   openTableRow: 1,
   printing: 1,
   tablesAsAppendices: 1,
+  noteStyle: 1,
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
@@ -349,6 +360,7 @@ export interface ResolvedHost {
   readonly openTableRow: ((view: TableRowView) => void) | null;
   readonly printing: boolean;
   readonly tablesAsAppendices: boolean;
+  readonly noteStyle: NoteStyle;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
@@ -394,6 +406,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     openTableRow: host.openTableRow ?? null,
     printing: host.printing ?? false,
     tablesAsAppendices: host.tablesAsAppendices ?? false,
+    noteStyle: cleanStyle(host.noteStyle),
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,

@@ -602,3 +602,22 @@
     break-before: page;
   }
 }
+/* How a note is set, as its style says (#164): the alignment of its headings,
+   its text and its tables, from the custom properties `noteStyle` writes on the
+   root and a `:::{style}` block on itself, the nearer one winning by
+   inheritance. Unset, each is the start of the line, as before. A column's own
+   delimiter is its cell's `style`, which wins over this; a `table` block's
+   numbers keep the end of their cells. Justified text hyphenates where its
+   element carries a language. */
+.markdown :is(p, li) {
+  text-align: var(--ms-align-text, start);
+  hyphens: var(--ms-hyphens-text, manual);
+}
+.markdown :is(h1, h2, h3, h4, h5, h6) {
+  text-align: var(--ms-align-headings, start);
+}
+.markdown :is(th, td),
+.markdown .data-table-dialog dd {
+  text-align: var(--ms-align-tables, start);
+  hyphens: var(--ms-hyphens-tables, manual);
+}

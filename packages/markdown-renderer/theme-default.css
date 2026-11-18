@@ -72,6 +72,8 @@
   --ms-font-sans: var(--markdown-font-sans, 'Inter', 'Segoe UI', system-ui, sans-serif);
   --ms-font-display: var(--markdown-font-display, 'Space Grotesk', 'Segoe UI', system-ui, sans-serif);
   --ms-font-mono: var(--markdown-font-mono, ui-monospace, 'Cascadia Code', Consolas, monospace);
+  /* The face of a note, or a passage, whose style is serif (#164). */
+  --ms-font-serif: var(--markdown-font-serif, Georgia, 'Times New Roman', serif);
   --ms-radius: var(--markdown-radius, 8px);
   --ms-radius-large: var(--markdown-radius-large, 12px);
 
@@ -165,7 +167,8 @@
      draws it. */
   background: var(--ms-bg);
   color: var(--ms-text);
-  font-family: var(--ms-font-sans);
+  /* The face a style chooses (#164), else the text face. */
+  font-family: var(--ms-face, var(--ms-font-sans));
 }
 
 /* Dark: brand "Fundo escuro" #0B1220, Papel as text. */
@@ -235,7 +238,7 @@
 }
 
 .markdown :is(h1, h2, h3, h4, h5, h6) {
-  font-family: var(--ms-font-heading);
+  font-family: var(--ms-face-heading, var(--ms-font-heading));
   font-weight: var(--ms-heading-weight);
   color: var(--ms-heading-color);
   line-height: var(--ms-line-height-tight);
@@ -438,7 +441,6 @@
 .markdown :is(th, td) {
   border: 1px solid var(--ms-table-border);
   padding: var(--ms-table-cell-padding);
-  text-align: start;
 }
 /* The header is told apart by the type and by a heavier rule, and not by a
    fill; the only tint a table has is the row under the pointer. */
@@ -629,7 +631,7 @@
   border-radius: var(--ms-radius-large);
   background: var(--ms-surface);
   color: var(--ms-text);
-  font-family: var(--ms-font-sans);
+  font-family: var(--ms-face, var(--ms-font-sans));
   line-height: var(--ms-line-height);
 }
 .markdown .data-table-dialog::backdrop {
@@ -672,7 +674,7 @@
    would read as a link. */
 .markdown .note-title {
   margin: 0 0 0.6rem;
-  font-family: var(--ms-title-font);
+  font-family: var(--ms-face-heading, var(--ms-title-font));
   font-size: var(--ms-title-size);
   font-weight: var(--ms-title-weight);
   line-height: var(--ms-line-height-tight);

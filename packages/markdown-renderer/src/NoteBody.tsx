@@ -11,6 +11,7 @@ import { readProperties } from './properties.js';
 import { Properties } from './PropertiesBlock.js';
 import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
+import { justifies } from './note-style.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
@@ -280,7 +281,9 @@ function NoteView({
       <div
         className={`markdown markdown-theme-${resolved.theme.name}${corner ? ' has-note-corner' : ''}${switched ? ' has-mode-switch' : ''}${corner && buttons === 'responsive' ? ' has-responsive-buttons' : ''}`}
         data-theme={resolved.scheme}
-        style={rootStyle(resolved.theme, resolved.scheme)}
+        style={rootStyle(resolved.theme, resolved.scheme, resolved.noteStyle)}
+        // Justified text hyphenates in the reader's language, which the browser has to be told (#164).
+        lang={justifies(resolved.noteStyle) ? resolved.strings.locale : undefined}
       >
         {corner}
         {/* The frontmatter is content: read here, drawn as the theme decides. */}

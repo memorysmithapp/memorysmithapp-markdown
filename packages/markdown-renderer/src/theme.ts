@@ -21,6 +21,7 @@
  * is read by the default theme's rules.
  */
 
+import { styleProperties, type NoteStyle } from './note-style.js';
 import type { ReactNode } from 'react';
 import type { FileShape } from './file-types.js';
 import type { KeptFile } from './host.js';
@@ -89,6 +90,8 @@ export interface ThemeProperties {
   readonly fontSans?: string;
   readonly fontDisplay?: string;
   readonly fontMono?: string;
+  /** The face of a note, or of a passage, whose style is `serif` (#164). */
+  readonly fontSerif?: string;
   readonly fontHeading?: string;
   // Shape.
   readonly radius?: string;
@@ -166,7 +169,7 @@ export const THEME_PROPERTIES = Object.keys({
   calloutTitleLinkDecoration: 1, calloutTitleLinkOffset: 1,
   iconNote: 1, iconInfo: 1, iconSummary: 1, iconTip: 1, iconSuccess: 1, iconQuestion: 1, iconWarning: 1,
   iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1, iconChevron: 1,
-  fontSans: 1, fontDisplay: 1, fontMono: 1, fontHeading: 1,
+  fontSans: 1, fontDisplay: 1, fontMono: 1, fontSerif: 1, fontHeading: 1,
   radius: 1, radiusLarge: 1,
   fontSize: 1, lineHeight: 1, lineHeightTight: 1, rootLineHeight: 1, paragraphSpacing: 1, headingSpacing: 1,
   listIndent: 1, listSpacing: 1,
@@ -458,14 +461,14 @@ export function schemeOf(theme: Theme, asked: Scheme): Scheme {
 }
 
 /** The custom properties the root of a note carries for a theme in a scheme. */
-export function rootStyle(theme: Theme, scheme: Scheme): Record<string, string> {
+export function rootStyle(theme: Theme, scheme: Scheme, style: NoteStyle = {}): Record<string, string> {
   const properties = theme.properties;
-  if (!properties) return {};
+  if (!properties) return styleProperties(style);
   const values = isPerScheme(properties) ? (properties[scheme] ?? {}) : properties;
-  const style: Record<string, string> = {};
+  const css: Record<string, string> = {};
   for (const name of THEME_PROPERTIES) {
     const value = values[name];
-    if (value !== undefined) style[customPropertyOf(name)] = value;
+    if (value !== undefined) css[customPropertyOf(name)] = value;
   }
-  return style;
+  return { ...css, ...styleProperties(style) };
 }
