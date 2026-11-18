@@ -208,6 +208,7 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     alignLeft: 'Alinhar à esquerda',
     alignCenter: 'Centralizar',
     alignRight: 'Alinhar à direita',
+    alignJustify: 'Justificar',
     showMarkdown: 'Mostrar Markdown',
     copyMarkdown: 'Copiar Markdown',
     sourceTitle: 'A nota em Markdown',

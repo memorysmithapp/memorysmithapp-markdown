@@ -224,6 +224,8 @@ export interface EditorWords {
   readonly alignLeft: string;
   readonly alignCenter: string;
   readonly alignRight: string;
+  /** Justifies the column of the cell the author is in, `;---;` (`SPEC.md` §4.1, #166). */
+  readonly alignJustify: string;
   /** The buttons beside the switch that show the note's Markdown and copy it, and the dialog (#63, #76). */
   readonly showMarkdown: string;
   readonly copyMarkdown: string;
@@ -455,6 +457,7 @@ export const ENGLISH: NoteStrings = {
     alignLeft: 'Align left',
     alignCenter: 'Center',
     alignRight: 'Align right',
+    alignJustify: 'Justify',
     showMarkdown: 'Show Markdown',
     copyMarkdown: 'Copy Markdown',
     sourceTitle: 'The note in Markdown',

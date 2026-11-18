@@ -974,6 +974,9 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
         <Control label={words.alignRight} pressed={table.align[focus.column] === 'right'} onClick={() => align(table.align[focus.column] === 'right' ? null : 'right')}>
           {ICONS.alignRight}
         </Control>
+        <Control label={words.alignJustify} pressed={table.align[focus.column] === 'justify'} onClick={() => align(table.align[focus.column] === 'justify' ? null : 'justify')}>
+          {ICONS.alignJustify}
+        </Control>
         <Control
           label={words.source}
           onClick={() => {
@@ -1430,6 +1433,7 @@ export const ICONS = {
   alignLeft: icon('M21 6H3', 'M15 12H3', 'M17 18H3'),
   alignCenter: icon('M21 6H3', 'M17 12H7', 'M19 18H5'),
   alignRight: icon('M21 6H3', 'M21 12H9', 'M21 18H7'),
+  alignJustify: icon('M3 6h18', 'M3 12h18', 'M3 18h18'),
   undo: icon('M9 14 4 9l5-5', 'M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11'),
   redo: icon('m15 14 5-5-5-5', 'M20 9H9.5A5.5 5.5 0 0 0 4 14.5 5.5 5.5 0 0 0 9.5 20H13'),
   bold: icon('M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8'),

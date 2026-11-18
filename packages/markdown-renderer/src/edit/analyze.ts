@@ -17,6 +17,7 @@ import remarkMath from 'remark-math';
 import remarkParse from 'remark-parse';
 import { unified, type Processor } from 'unified';
 import { codeRegions, commentRegions, insideCode } from '../source.js';
+import { justifyColumns } from '../justified.js';
 import { CALLOUT_MARKER } from '../remark-callouts.js';
 import { breaksDollarRule } from '../remark-ring.js';
 import { hasParameterReference, parameterReferences } from '../parameters.js';
@@ -164,7 +165,8 @@ export function analyze(text: string): Analysis {
   if (front) found.push({ kind: 'frontmatter', ...front });
 
   // The body is parsed alone, padded so that every offset is an offset of the note.
-  const tree = parse('\n'.repeat(bodyFrom) + text.slice(bodyFrom));
+  // A justified column is read as the reading surface reads it, every offset kept (§4.1).
+  const tree = parse(justifyColumns('\n'.repeat(bodyFrom) + text.slice(bodyFrom)).text);
 
   const comments = commentRegions(text).filter(([from]) => from >= bodyFrom);
   for (const [from, to] of comments) found.push({ kind: 'comment', from, to });

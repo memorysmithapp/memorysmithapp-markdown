@@ -297,4 +297,22 @@ describe('a table', () => {
     await settle();
     expect(changes.at(-1)).toContain('| ---: | :-: |');
   });
+
+  it('justifies a column from its controls, and takes it back to undeclared (#166)', async () => {
+    const changes = await open(NOTE);
+    const justify = (): HTMLButtonElement => $<HTMLButtonElement>('.edit-table button[aria-label="Justify"]')!;
+    await act(async () => justify().click());
+    await settle();
+    expect(changes.at(-1)).toContain('| ;---; | :-: |');
+    expect(justify().getAttribute('aria-pressed')).toBe('true');
+    await act(async () => justify().click());
+    await settle();
+    expect(changes.at(-1)).toContain('| --- | :-: |');
+  });
+
+  it('draws a table whose column is justified as a table, the column justified (#166)', async () => {
+    await open('Text.\n\n| a | b |\n| --- | ;---; |\n| 1 | 2 |\n\nAfter.\n');
+    expect($<HTMLElement>('.edit-table')).not.toBeNull();
+    expect($<HTMLElement>('.edit-table td:nth-child(2)')?.style.textAlign).toBe('justify');
+  });
 });
