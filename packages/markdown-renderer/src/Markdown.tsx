@@ -27,6 +27,7 @@ import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './source.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { readingPlugins } from './reading.js';
+import { remarkTableReferences, type TableAppendix } from './appendices.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import type { TaskSave } from './task-saves.js';
@@ -59,6 +60,11 @@ export interface MarkdownProps {
    * `'section'` for the pass that draws the note's one section.
    */
   readonly footnotes?: { readonly refs: readonly FootnoteRef[] } | 'section';
+  /**
+   * The tables of this run printed as appendices (#165, `appendices.ts`): the number its first
+   * table takes, and the note's appendices, whose references take the tables' places.
+   */
+  readonly appendices?: { readonly first: number; readonly appendices: readonly TableAppendix[] };
 }
 
 type LiProps = HTMLAttributes<HTMLLIElement> & { node?: unknown };
@@ -566,9 +572,9 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes }: MarkdownProps) {
+export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes, appendices }: MarkdownProps) {
   const text = toUnixNewlines(children);
-  const { strings } = useHost();
+  const { strings, queryTable } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
 
@@ -577,7 +583,14 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
     // so its section keeps the space a section takes at the end of a note.
     <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
-        remarkPlugins={readingPlugins(calloutTitle, strings.parameter)}
+        remarkPlugins={
+          appendices
+            ? [
+                ...readingPlugins(calloutTitle, strings.parameter),
+                [remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }],
+              ]
+            : readingPlugins(calloutTitle, strings.parameter)
+        }
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a

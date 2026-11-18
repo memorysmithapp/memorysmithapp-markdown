@@ -595,3 +595,10 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* A table printed as an appendix opens a page of its own (#165); a host lays
+   `.table-appendix` on a named page of its own to choose its orientation. */
+@media print {
+  .markdown .table-appendix {
+    break-before: page;
+  }
+}

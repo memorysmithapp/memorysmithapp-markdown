@@ -513,6 +513,17 @@
 .markdown .data-table-loading {
   color: var(--ms-text-soft);
 }
+/* A printed note's tables as appendices (#165): in place of each, the line
+   that sends the reader to it, and at the end of the note each under its
+   title. */
+.markdown .table-reference {
+  font-style: italic;
+  color: var(--ms-text-soft);
+}
+.markdown .table-appendix-title {
+  margin-block: 0 var(--ms-p-spacing);
+  font-size: var(--ms-h3-size);
+}
 /* A block that cannot be answered says why, in place of its table. */
 .markdown .data-table-problems {
   margin-block: var(--ms-p-spacing);

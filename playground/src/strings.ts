@@ -68,6 +68,8 @@ export const PORTUGUESE: Partial<NoteStrings> = {
   },
   tablePrinted: ({ table, filter, count, readAt }) =>
     `Tabela ${table}${filter === null ? '' : `, filtrada por ${filter}`}: ${count === 1 ? '1 linha' : `${count.toLocaleString('pt-BR')} linhas`}, lidas em ${readAt}.`,
+  tableAppendix: ({ number, table, markdownTable }) => `Anexo ${number} — ${table ?? `Tabela ${markdownTable}`}`,
+  tableAppendixReference: ({ number, table, markdownTable }) => `Ver anexo ${number}, ${table ?? `tabela ${markdownTable}`}.`,
   attachmentMissing: 'Este caderno não guarda nenhum arquivo com esse nome.',
   attachmentOpen: 'Abrir',
   attachmentDownload: 'Baixar',

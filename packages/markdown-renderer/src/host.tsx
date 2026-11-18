@@ -88,6 +88,15 @@ export interface NoteHost {
    */
   readonly printing?: boolean;
   /**
+   * With `printing`, prints each table of the note as an appendix at its end (#165): a Markdown
+   * table and a `table` block alike, in the order they appear, numbered in one sequence, each under
+   * `strings.tableAppendix` in a `section.table-appendix` the host may lay on a page of its own
+   * (`page:`), and a reference in `strings.tableAppendixReference` in its place, linked to the
+   * appendix's id, so the host's pagination can number its page (`target-counter()`). The note's own
+   * tables only: an embedded note draws its tables in place. Nothing changes on the screen.
+   */
+  readonly tablesAsAppendices?: boolean;
+  /**
    * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
    * its state and none answers a click.
    */
@@ -305,6 +314,7 @@ export const HOST_KEYS = Object.keys({
   queryTable: 1,
   openTableRow: 1,
   printing: 1,
+  tablesAsAppendices: 1,
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
@@ -338,6 +348,7 @@ export interface ResolvedHost {
   readonly queryTable: ((request: TableRequest) => Promise<TablePage | null>) | null;
   readonly openTableRow: ((view: TableRowView) => void) | null;
   readonly printing: boolean;
+  readonly tablesAsAppendices: boolean;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
@@ -382,6 +393,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     queryTable: host.queryTable ?? null,
     openTableRow: host.openTableRow ?? null,
     printing: host.printing ?? false,
+    tablesAsAppendices: host.tablesAsAppendices ?? false,
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,

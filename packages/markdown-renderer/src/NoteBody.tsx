@@ -14,6 +14,7 @@ import { taskBoxes } from './tasklist.js';
 import { rootStyle } from './theme.js';
 import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
+import { appendixId, planAppendices } from './appendices.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
@@ -261,6 +262,15 @@ function NoteView({
     // The runs and whether an embed cut them are the whole input.
     [runs.join('\u0000'), runs.length < segments.length],
   );
+  // The tables printed as appendices at the end of the note (#165): planned over every run, as
+  // the footnotes are, so their numbers run across the embeds that cut the note.
+  const appendixRuns = resolved.printing && resolved.tablesAsAppendices;
+  const blocks = resolved.queryTable !== null;
+  const appendices = useMemo(
+    () => (appendixRuns ? planAppendices(runs, blocks) : null),
+    // The runs and whether a `table` block is a table are the whole input.
+    [appendixRuns, blocks, runs.join('\u0000')],
+  );
   let run = 0;
 
   return (
@@ -281,6 +291,7 @@ function NoteView({
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
+          const first = appendices?.first[run];
           const planned = footnotes?.runs[run++];
           return (
             <Markdown
@@ -295,6 +306,7 @@ function NoteView({
               taskSave={(ordinal) => saves.stateOf(base + ordinal)}
               writable={writable && mappable}
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
+              {...(appendices && first !== undefined ? { appendices: { first, appendices: appendices.appendices } } : {})}
             >
               {planned?.text ?? segment.rendered}
             </Markdown>
@@ -303,6 +315,16 @@ function NoteView({
         {/* Its boxes, if a footnote holds any, are drawn read-only: they are
             not where the ordinals of the runs count them. */}
         {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
+        {appendices && appendices.appendices.length > 0 && (
+          <div className="table-appendices">
+            {appendices.appendices.map((appendix) => (
+              <section key={appendix.number} id={appendixId(appendix.number)} className="table-appendix" data-table-kind={appendix.table === null ? 'markdown' : 'block'}>
+                <h2 className="table-appendix-title">{resolved.strings.tableAppendix(appendix)}</h2>
+                <Markdown>{appendix.source}</Markdown>
+              </section>
+            ))}
+          </div>
+        )}
         {hosts.length > 0 && <p className="remote-notice">{resolved.strings.remoteImages(hosts)}</p>}
         {/* Where a save is said to whoever hears the page: once, politely, never by the item itself. */}
         {writable && onToggleTask && (

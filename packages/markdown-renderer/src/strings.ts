@@ -1,3 +1,4 @@
+import type { TableAppendix } from './appendices.js';
 import type { TableNoticeCode } from './table-block.js';
 
 /**
@@ -47,6 +48,14 @@ export interface NoteStrings {
   readonly tableProblem: (code: TableNoticeCode, table: string | null) => string;
   /** The line that closes a printed `table` block: the table, its filter or `null`, how many rows and when they were read. */
   readonly tablePrinted: (read: { readonly table: string; readonly filter: string | null; readonly count: number; readonly readAt: string }) => string;
+  /**
+   * The title of a table printed as an appendix at the end of the note (#165): its number among the
+   * appendices, and the table a `table` block names, or for a Markdown table, which has none, its
+   * number among the note's Markdown tables.
+   */
+  readonly tableAppendix: (appendix: TableAppendix) => string;
+  /** What stands in a printed note in place of a table printed as an appendix, linked to it (#165). */
+  readonly tableAppendixReference: (appendix: TableAppendix) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -300,6 +309,8 @@ export const ENGLISH: NoteStrings = {
   },
   tablePrinted: ({ table, filter, count, readAt }) =>
     `Table ${table}${filter === null ? '' : `, filtered by ${filter}`}: ${count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`}, read on ${readAt}.`,
+  tableAppendix: ({ number, table, markdownTable }) => `Appendix ${number} — ${table ?? `Table ${markdownTable}`}`,
+  tableAppendixReference: ({ number, table, markdownTable }) => `See appendix ${number}, ${table ?? `table ${markdownTable}`}.`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',
