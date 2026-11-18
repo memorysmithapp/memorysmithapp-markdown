@@ -18,6 +18,7 @@
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
+import { justifyColumns } from './justified.js';
 import { isTableBlock, readTableBlock } from './table-block.js';
 
 /** A table printed as an appendix, as the host's words receive it. */
@@ -82,7 +83,8 @@ export function planAppendices(runs: readonly string[], blocks: boolean): Append
   let markdownTables = 0;
   for (const text of runs) {
     first.push(appendices.length + 1);
-    for (const { node } of tablesOf(parser.parse(text) as Node, blocks)) {
+    // Read as the run reads it, a justified column among them (§4.1).
+    for (const { node } of tablesOf(parser.parse(justifyColumns(text).text) as Node, blocks)) {
       const number = appendices.length + 1;
       if (node.type === 'code') {
         appendices.push({ number, table: readTableBlock(node.value ?? '').table, markdownTable: null, source: fenced(node.value ?? '') });

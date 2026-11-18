@@ -25,6 +25,11 @@
       "id": "memorysmith-search",
       "name": "MemorySmith's search",
       "url": "https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts"
+    },
+    {
+      "id": "memorysmith-markdown",
+      "name": "The MemorySmith Markdown Specification",
+      "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/packages/markdown-spec/SPEC.md"
     }
   ],
   "notations": [
@@ -202,6 +207,14 @@
       "syntax": "| a | b | over a delimiter row of --- with optional :",
       "example": "| Rule | Where |\n|---|:---:|\n| The general one | [[Lei 14.133]] |\n| The exception | [[Lei 14.133\\|article 75]] |\n",
       "effect": "A table. The header row fixes the number of columns and a cell holds inlines, never blocks. A cell is a place text lives and not a boundary an Indexer stops at: a wikilink inside one is a link like any other, a literal pipe is written `\\|`, and an embed of a note is drawn as a link because no block fits in a cell.",
+      "spec": "4.1"
+    },
+    {
+      "id": "table-justified",
+      "reader": "reading-surface",
+      "syntax": "|;---;| in the delimiter row of a table",
+      "example": "| Item | Note |\n|:---|;---;|\n| Chairs | Bought in two instalments, the second after the [[Treasurer]] approved the budget |\n",
+      "effect": "A justified column: the text of each of its cells fills the width of the column, line by line. A `;`, one or more `-` and a `;`, with optional spaces around it. A `;` on one side only, or beside a colon, is no delimiter cell, so the lines are no table. This specification's own form, which GFM does not have: every other reader draws the whole table as text. A link in a justified cell is an edge as anywhere else.",
       "spec": "4.1"
     },
     {

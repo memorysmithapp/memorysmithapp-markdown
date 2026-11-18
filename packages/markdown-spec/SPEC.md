@@ -8,7 +8,7 @@ A specification of the Markdown a knowledge notebook is written in: plain `.md` 
 
 ### 1.1 What this document is
 
-This specification defines **which notation a conforming implementation reads, and what it does with it**. It declares no syntax of its own: it profiles CommonMark, GitHub Flavored Markdown and the tools that established the rest — chiefly Obsidian, and MemorySmith's own search for the language of a query — and every form specified here was taken from one of them. Nothing is invented, and §2 names each source.
+This specification defines **which notation a conforming implementation reads, and what it does with it**. It profiles CommonMark, GitHub Flavored Markdown and the tools that established the rest — chiefly Obsidian, and MemorySmith's own search for the language of a query — and every form specified here was taken from one of them but one: the justified column of a table, which GFM has no form for and §4.1 declares as this specification's own. §2 names each source, this specification included for that one form.
 
 It is also **self-contained**. §3 and §4 state every block and every inline the specification accepts, with the form as it is typed and what it produces, so that writing a note, or implementing one, does not mean reading three specifications side by side with a finger in each. Where this document and the source a form was taken from disagree, the source governs (§2.1).
 
@@ -45,7 +45,7 @@ An implementation MUST state which roles it claims. An implementation that claim
 
 ## 2. Reference sources
 
-Nothing here is invented. Every form this specification declares was taken from somewhere, and the places it was taken from are named once here and cited again on each form that came from them.
+Every form this specification declares was taken from somewhere, and the places it was taken from are named once here and cited again on each form that came from them. One form was taken from nowhere, because no source has it, and this specification is its source: the row for it says so, and §4.1 states it as what it is, an extension of GFM's delimiter row.
 
 | Source | What it established | Declared in |
 |---|---|---|
@@ -53,6 +53,7 @@ Nothing here is invented. Every form this specification declares was taken from 
 | [GFM 0.29-gfm](https://github.github.com/gfm/) | Tables, task list items, strikethrough, extended autolinks, disallowed raw HTML | §4 |
 | [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template; the `query` block that draws what a query returns in place of itself | §5, §7 |
 | [MemorySmith's search](https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts) | The query language: terms, phrases, negation, `OR`, groups, fields and the intervals over a date | §6 |
+| This specification | The justified column of a table, `;---;` in the delimiter row | §4.1 |
 
 Obsidian is a source and not an authority. It publishes documentation rather than a versioned specification, so it carries no version above, and where it and this document differ **this document governs** — the opposite of the precedence CommonMark and GFM hold in §2.1. This specification is not *Obsidian compatible* and does not undertake to follow it; Obsidian is where a form was established and where its established meaning can be checked.
 
@@ -66,7 +67,7 @@ Where this document and the source a form came from disagree on what a sequence 
 
 This document does not reproduce a source. It does not carry the flanking rules for emphasis, the seven kinds of HTML block or the tables of Unicode punctuation: it says what an author types and what comes out, and points at the source for the rest. An implementation is written against the source; a note is written against this.
 
-What no source can give is the place where a form meets the rest of this specification, and that is what §3 and §4 add. A fenced code block is CommonMark, and that a `[[link]]` inside one produces no edge is §5.6. A block quote is CommonMark, and that one beginning `[!warning]` is a callout is §7.1. CommonMark admits raw HTML, and that a Reader here MUST NOT render it is §7.9 — a security boundary, and the one place this specification narrows a source rather than following it. Each crossing is stated where an author meets it, and again in the section that governs it.
+What no source can give is the place where a form meets the rest of this specification, and that is what §3 and §4 add. A fenced code block is CommonMark, and that a `[[link]]` inside one produces no edge is §5.6. A block quote is CommonMark, and that one beginning `[!warning]` is a callout is §7.1. CommonMark admits raw HTML, and that a Reader here MUST NOT render it is §7.9 — a security boundary, and the one place this specification narrows a source rather than following it. GFM's delimiter row admits colons and dashes, and that `;---;` is one more delimiter cell, of a justified column, is §4.1 — the one place this specification extends a source rather than following it. Each crossing is stated where an author meets it, and again in the section that governs it.
 
 From §5 onward no source stands above this document. That is where implementations of Markdown usually diverge in silence, and every form there is stated with a syntax, an example and an effect, with a machine-readable counterpart in [`spec.json`](spec.json) and at least one case in the [conformance suite](tests/).
 
@@ -362,7 +363,15 @@ Five more forms, established by [GFM 0.29-gfm](https://github.github.com/gfm/), 
 
 ### 4.1 Tables
 
-A header row, a delimiter row, and zero or more body rows. Colons in the delimiter row set the alignment of a column: left, centre, right.
+A header row, a delimiter row, and zero or more body rows. The delimiter row sets the alignment of each column:
+
+| Delimiter | Column |
+|---|---|
+| `---` | Not declared: drawn at the start, unless a style says otherwise |
+| `:---` | Left |
+| `:---:` | Centre |
+| `---:` | Right |
+| `;---;` | Justified: the text of each cell fills its width, line by line |
 
 ```markdown
 | Key | Shape | Indexed |
@@ -370,6 +379,10 @@ A header row, a delimiter row, and zero or more body rows. Colons in the delimit
 | `tags` | list | yes |
 | `created` | date | yes |
 ```
+
+The first four are GFM's. **The fifth is this specification's own** (§2): GFM has no justified column, and `;---;` extends its delimiter row by one cell. A delimiter cell is a `;`, one or more `-` and a `;`, with optional spaces around it and none inside, as GFM writes a colon against its dashes: `| ;---; |` is one, `; --- ;` is not. A `;` on one side only (`;---`), or mixed with a colon (`;---:`), is no delimiter cell, so the row is no delimiter row and there is no table, as GFM decides for a row holding any other character: the lines are a paragraph. A justified column shows where its cells wrap — on paper, and wherever a cell is drawn whole — and a cell of one line is drawn as if at the start.
+
+**Outside MemorySmith the table is lost as a table.** GitHub, Obsidian and every other GFM reader read a delimiter row holding `;---;` as text, so the whole table is drawn as lines of pipes; a note exported and opened elsewhere shows it that way. Nothing else is lost: the cells are text either way, and a link in one is the same edge (§5).
 
 The header row fixes the number of columns: a body row with fewer cells is padded, one with more is truncated. A cell holds inlines and never blocks — no lists, no fenced code, no paragraphs — and a literal pipe inside a cell is written `\|`. The table ends at the first blank line, or at the first line that is not a row.
 
@@ -1098,6 +1111,7 @@ Every form this document declares, in one table. The last column is the section 
 | Raw inline HTML | `<abbr>…</abbr>` | Kept in the bytes, shown as text | 3.16, 7.10 |
 | Hard line break | trailing `\` | — | 3.17 |
 | Table | `\| a \| b \|` | Cells hold links like any other text; an embed is drawn as a link | 4.1 |
+| Justified column | `\|;---;\|` in the delimiter row | The column's cells are justified; this specification's own form, which other readers draw as text | 4.1 |
 | Task list item | `- [ ]`, `- [x]` | A toggle writes back one character | 4.2, 7.10 |
 | Strikethrough | `~~struck~~` | — | 4.3 |
 | Extended autolink | `www.example.org` | Never an edge | 4.4, 5.2 |

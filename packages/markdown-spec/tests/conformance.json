@@ -57,6 +57,23 @@
       ]
     },
     {
+      "id": "table/justified-column-links",
+      "notation": "table-justified",
+      "markdown": "| Item | Note |\n|:---|;---;|\n| Chairs | Approved by [[Treasurer]] and filed under [[Lei 14.133\\|the law]] |\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null },
+        { "name": "Lei 14.133", "anchor": null }
+      ]
+    },
+    {
+      "id": "table/justified-one-sided-is-no-table",
+      "notation": "table-justified",
+      "markdown": "| Item | Note |\n|:---|;---|\n| Chairs | Approved by [[Treasurer]] |\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null }
+      ]
+    },
+    {
       "id": "wikilink/anchor-is-kept-and-not-resolved",
       "notation": "wikilink-anchor",
       "markdown": "See [[Lei 14.133#Article 75]] for the exception.",

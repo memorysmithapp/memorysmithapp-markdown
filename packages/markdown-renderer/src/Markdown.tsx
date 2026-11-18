@@ -26,8 +26,10 @@ import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from '
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './source.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
+import type { Pluggable } from 'unified';
 import { readingPlugins } from './reading.js';
 import { remarkTableReferences, type TableAppendix } from './appendices.js';
+import { justifyColumns, remarkJustifiedColumns } from './justified.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import type { TaskSave } from './task-saves.js';
@@ -577,20 +579,19 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
   const { strings, queryTable } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
+  // A justified column, `;---;`, is read as a centred one and turned justified once parsed (§4.1).
+  const justified = useMemo(() => justifyColumns(text), [text]);
 
   return (
     // The pass that draws a cut note's footnotes continues the note rather than opening a run,
     // so its section keeps the space a section takes at the end of a note.
     <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
-        remarkPlugins={
-          appendices
-            ? [
-                ...readingPlugins(calloutTitle, strings.parameter),
-                [remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }],
-              ]
-            : readingPlugins(calloutTitle, strings.parameter)
-        }
+        remarkPlugins={[
+          ...readingPlugins(calloutTitle, strings.parameter),
+          [remarkJustifiedColumns, { columns: justified.columns }],
+          ...(appendices ? [[remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }] as Pluggable] : []),
+        ]}
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a
@@ -639,7 +640,7 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           ),
         }}
       >
-        {text}
+        {justified.text}
       </ReactMarkdown>
     </div>
   );

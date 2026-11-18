@@ -48,7 +48,7 @@ export const DELIBERATE = {
   'enologia/01 Castas/Índice de Polifenóis Totais.md':
     'Its footnote is referenced above an embed and defined below it: MemorySmith draws the reference as text and no notes, the renderer draws the footnote (RN-RENDER-013).',
   'continuity-engineering/01 Objectives/Failure domain.md':
-    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42). Its picture is written `![…](../assets/…)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins (#104).',
+    'A callout title holding inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42). Its picture is written `![…](../assets/…)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins (#104). Its table justifies a column with `;---;`, a delimiter of the specification alone, which MemorySmith at this commit reads as text, so the whole table is lines of pipes there (#164).',
   'continuity-engineering/02 Runbooks/Failing over the payments database.md':
     'It embeds Failure domain, whose callout title holds inline code: MemorySmith lays each run of the title out as a column of its own, the renderer draws the title as one sentence beside its icon (#42), and whose picture is written `![…](../assets/…)`, which the renderer draws as the kept file it names (#104). Its task list keeps the indent of any list, its boxes hanging in it, where MemorySmith cuts the indent and pulls each item 1.2rem left of it (#142, #144).',
   'continuity-engineering/03 Reviews/Exercise 2026-03 · Region loss.md':
@@ -70,7 +70,7 @@ export const DELIBERATE = {
   'enologia/03 Safras/Safra 2026 · Serra Gaúcha.md':
     'It writes a `table` block: MemorySmith at this commit draws it as a code block, the renderer as the table it asks for, from the sample tables (#138).',
   'enologia/03 Safras/Índice.md':
-    'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104).',
+    'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104). Its table justifies a column with `;---;`, which MemorySmith at this commit reads as text, so the whole table is lines of pipes there (#164).',
 };
 
 const REFERENCE_PORT = 5301;

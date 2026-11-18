@@ -60,6 +60,13 @@ const EXPECTED: Record<string, (html: string) => void> = {
     // The delimiter row is structure and never a row of its own.
     expect(html).not.toContain('---');
   },
+  // This specification's own delimiter cell (§4.1): a table, its column justified.
+  'table-justified': (html) => {
+    expect(html).toContain('<table>');
+    expect(html).toContain('<th style="text-align:justify">');
+    expect(html).toContain('<td style="text-align:justify">');
+    expect(html).not.toContain(';---;');
+  },
   strikethrough: (html) => {
     // Two tildes and only two: `~~revoked~~` is struck and `H~2~O` is not. A
     // renderer accepting the single tilde would strike the middle of the

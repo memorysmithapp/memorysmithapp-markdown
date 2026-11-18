@@ -246,9 +246,10 @@ export function insideCode(regions: Array<[number, number]>, at: number): boolea
  * and it runs to the first blank line. The outer pipes are optional, which is
  * why the delimiter row is what identifies the block. A shape this misses
  * costs nothing new — it is the behaviour of before — so the pattern is
- * deliberately the conservative one.
+ * deliberately the conservative one. A cell of the delimiter row is GFM's,
+ * colons and dashes, or the justified column's `;---;` (§4.1).
  */
-const DELIMITER_ROW = /^ {0,3}\|?[ \t]*:?-{1,}:?[ \t]*(\|[ \t]*:?-{1,}:?[ \t]*)*\|?[ \t]*$/;
+const DELIMITER_ROW = /^ {0,3}\|?[ \t]*(?::?-{1,}:?|;-{1,};)[ \t]*(\|[ \t]*(?::?-{1,}:?|;-{1,};)[ \t]*)*\|?[ \t]*$/;
 
 export function tableRegions(body: string): Array<[number, number]> {
   const regions: Array<[number, number]> = [];
