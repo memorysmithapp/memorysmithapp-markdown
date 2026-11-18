@@ -532,3 +532,66 @@
     min-width: 0;
   }
 }
+
+/* A `table` block on the screen (#163): its columns at the width of the
+   block, each fixed by `DataTable` on a `col` from the first answer, so no
+   page and no order moves them; a cell of one line, a longer value ending in
+   an ellipsis, which its row shows whole; rows that fill a shorter last page,
+   so the footer stays where it was; and the block scrolling sideways below the
+   least width its columns take. Paper wraps every value of every row (§7.15),
+   so none of this reaches it. The block is a container, so its Previous and
+   Next show their words only from `--markdown-pager-words-from` on, through
+   the same switch as a responsive button's word (#96). */
+@media screen {
+  .markdown .data-table {
+    container-type: inline-size;
+  }
+  .markdown .data-table-scroll {
+    overflow-x: auto;
+  }
+  .markdown .data-table:not(.data-table-printing) table {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+  }
+  .markdown .data-table:not(.data-table-printing) :is(th, td),
+  .markdown .data-table:not(.data-table-printing) .data-table-sort {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .markdown .data-table-row {
+    cursor: pointer;
+  }
+  .markdown .data-table-filler {
+    visibility: hidden;
+  }
+}
+@media print {
+  .markdown .data-table-filler {
+    display: none;
+  }
+}
+.markdown .data-table-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.markdown .data-table-page-word {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: calc(clamp(0px, (100cqi - var(--markdown-pager-words-from, 420px)) * 1000, 1px) * 10000);
+  margin-inline: min(calc(clamp(0px, (100cqi - var(--markdown-pager-words-from, 420px)) * 1000, 1px) * 10000), 0.3em);
+}
+/* A row shown whole, where the host shows none (#163): the dialog scrolls,
+   and a value wraps as long as it needs. */
+.markdown .data-table-dialog {
+  max-width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  overflow: auto;
+}
+.markdown .data-table-dialog dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

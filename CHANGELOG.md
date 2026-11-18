@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- A row of a `table` block opens whole on the screen (#163): a click on it, unless it selected text, or Enter on it hands the host's new `openTableRow` a `TableRowView` — the table, the drawn columns, the row and each value as the table draws it — for the host's own dialog, and without it the block opens a native `<dialog>` of each column's name and value, closed by its button, Escape or a click outside it. A printed block opens nothing.
+- The `--markdown-pager-*` properties (`bg`, `color`, `border`, `radius`, `padding`, `font`, `hover-bg`, and `words-from`) and their `ThemeProperties`, which style Previous and Next of a `table` block and the button that closes a row shown whole as the host's own buttons, and set the narrowest block on which they show their words (#163).
+
+### Changed
+
+- A `table` block keeps its rows one height and its footer in place on the screen (#163, memorysmithapp/memorysmithapp#491). A cell holds one line, a longer value ending in an ellipsis; the table is laid out at the width of the block, a date, a number and a yes or no as wide as the values of the first answer need and the text columns sharing the rest, so turning a page or sorting moves no column, and a narrow block scrolls sideways; a shorter last page keeps the height of a full one. Printing is unchanged: every row whole, every value wrapping.
+- The footer of a `table` block draws which rows it shows of how many on the left, through the new `strings.tableShowing(first, last, total)`, and Previous and Next on the right, each an arrow and the host's word, the arrows alone on a narrow block (#163). `strings.tableRows` and `strings.tablePage` are removed, and the English `tablePrevious` and `tableNext` are now *Previous* and *Next*, the words beside the arrows.
+
 ## [0.11.2] - 2026-11-17
 
 ### Changed

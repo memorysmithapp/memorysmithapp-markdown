@@ -54,6 +54,7 @@ export {
   type TablePage,
   type TableRequest,
   type TableRow,
+  type TableRowView,
   type TableSchema,
   type TableSortKey,
   type TableValue,

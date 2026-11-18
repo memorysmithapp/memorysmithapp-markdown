@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
-import type { TablePage, TableRequest } from './table-block.js';
+import type { TablePage, TableRequest, TableRowView } from './table-block.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 import { drawing, drawnNote, type DrawnNote } from './embed-target.js';
 
@@ -71,6 +71,14 @@ export interface NoteHost {
    * answers a request from rows held in memory.
    */
   readonly queryTable?: (request: TableRequest) => Promise<TablePage | null>;
+  /**
+   * Shows a row of a `table` block whole (#163). On the screen a cell holds one line and a longer
+   * value ends in an ellipsis; a click on a row, or Enter on it, hands the host the row with its
+   * columns and each value as the table draws it, for the host's own dialog. Without it, the block
+   * opens a native `<dialog>` with each column's name and value. A printed block opens nothing: it
+   * carries every value whole.
+   */
+  readonly openTableRow?: (view: TableRowView) => void;
   /**
    * Whether the note is being drawn for paper or a PDF (#139). Each `table` block then asks
    * `queryTable` for every row its filter returns, in its declared order, and is drawn with no
@@ -295,6 +303,7 @@ export const HOST_KEYS = Object.keys({
   loadNoteAt: 1,
   noteAddress: 1,
   queryTable: 1,
+  openTableRow: 1,
   printing: 1,
   writable: 1,
   onToggleTask: 1,
@@ -327,6 +336,7 @@ export interface ResolvedHost {
    */
   readonly drawn: DrawnNote | null;
   readonly queryTable: ((request: TableRequest) => Promise<TablePage | null>) | null;
+  readonly openTableRow: ((view: TableRowView) => void) | null;
   readonly printing: boolean;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
@@ -370,6 +380,7 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     loadNoteAt: host.loadNoteAt ?? null,
     drawn: null,
     queryTable: host.queryTable ?? null,
+    openTableRow: host.openTableRow ?? null,
     printing: host.printing ?? false,
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,

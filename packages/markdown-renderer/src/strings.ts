@@ -29,11 +29,12 @@ export interface NoteStrings {
   readonly parameter: string;
   /** The title of a wikilink whose target writes a parameter, which leads nowhere until then. */
   readonly parameterLink: string;
-  /** How many rows the filter of a `table` block returns (§7.15). */
-  readonly tableRows: (count: number) => string;
-  /** Which page of a `table` block is drawn, of how many. */
-  readonly tablePage: (page: number, pages: number) => string;
-  /** The buttons that move a `table` block to the page before and after. */
+  /**
+   * Which rows of a `table` block are drawn, of how many the filter returns (§7.15, #163): `first`
+   * and `last` count from 1, and are 0 when the filter returns no row.
+   */
+  readonly tableShowing: (first: number, last: number, total: number) => string;
+  /** The buttons that move a `table` block to the page before and after, drawn after and before an arrow, which stands alone on a narrow block. */
   readonly tablePrevious: string;
   readonly tableNext: string;
   /** The label of the row that closes a table with its total. */
@@ -274,10 +275,10 @@ export const ENGLISH: NoteStrings = {
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
   parameter: 'Parameter: filled in when a notebook is created from this model.',
   parameterLink: 'A link to a parameter: it leads to a note once a notebook is created from this model.',
-  tableRows: (count) => (count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`),
-  tablePage: (page, pages) => `Page ${page} of ${pages}`,
-  tablePrevious: 'Previous page',
-  tableNext: 'Next page',
+  tableShowing: (first, last, total) =>
+    total === 0 ? 'No rows' : `${first.toLocaleString('en-US')}–${last.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`,
+  tablePrevious: 'Previous',
+  tableNext: 'Next',
   tableTotal: 'Total',
   tableEmpty: 'No row answers this filter.',
   tableSortBy: (column) => `Sort by ${column}, for you alone: the note keeps its order`,

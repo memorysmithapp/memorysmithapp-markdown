@@ -496,6 +496,21 @@ export interface TableRequest {
   readonly total: string | null;
 }
 
+/**
+ * A row of a `table` block a reader opened whole (#163): a cell holds one line on the screen, and a
+ * click or Enter on its row shows every value of it. The host shows it in its own dialog.
+ */
+export interface TableRowView {
+  /** The table, as the block names it. */
+  readonly table: string;
+  /** The columns the block draws, in its order, with their kinds. */
+  readonly columns: readonly TableColumn[];
+  /** The row as the host answered it. */
+  readonly row: TableRow;
+  /** Each column's value as the table draws it, in the reader's locale and as text, in the order of `columns`. */
+  readonly values: readonly string[];
+}
+
 /** What the host answers for a table it keeps (#138). */
 export interface TablePage {
   /** The table's columns, in its own order, with their kinds. */

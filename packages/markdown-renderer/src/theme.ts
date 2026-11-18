@@ -124,6 +124,16 @@ export interface ThemeProperties {
   readonly tableHeaderRule?: string;
   readonly tableStripeBg?: string;
   readonly tableHoverBg?: string;
+  // The Previous and Next of a `table` block, and the button that closes the row it shows whole
+  // (#163); `pagerWordsFrom` is the narrowest block on which Previous and Next show their words.
+  readonly pagerBg?: string;
+  readonly pagerColor?: string;
+  readonly pagerBorder?: string;
+  readonly pagerRadius?: string;
+  readonly pagerPadding?: string;
+  readonly pagerFont?: string;
+  readonly pagerHoverBg?: string;
+  readonly pagerWordsFrom?: string;
   // Embeds.
   readonly embedRule?: string;
   // The note's title and properties, as the default theme draws its frontmatter.
@@ -164,6 +174,7 @@ export const THEME_PROPERTIES = Object.keys({
   h1Weight: 1, h6Color: 1,
   quoteBorderColor: 1, quoteBorderWidth: 1, quoteColor: 1,
   tableBorder: 1, tableCellPadding: 1, tableHeaderBg: 1, tableHeaderRule: 1, tableStripeBg: 1, tableHoverBg: 1,
+  pagerBg: 1, pagerColor: 1, pagerBorder: 1, pagerRadius: 1, pagerPadding: 1, pagerFont: 1, pagerHoverBg: 1, pagerWordsFrom: 1,
   embedRule: 1,
   titleFont: 1, titleSize: 1, titleWeight: 1, titleColor: 1,
   propertiesRule: 1, propertiesLabelFont: 1, propertiesLabelColor: 1, propertiesKeyColor: 1,
