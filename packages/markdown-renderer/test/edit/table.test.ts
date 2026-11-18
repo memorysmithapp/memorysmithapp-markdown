@@ -62,6 +62,12 @@ describe('editing a table', () => {
     expect(apply(removeColumn(table, 1))).toBe('Before.\n\n| Name   |\n|:-------|\n| apple  |\n| pear |\n\nAfter.\n');
   });
 
+  it('reads and writes a justified column, `;---;` (#166)', () => {
+    const justified = readTable('| a | b |\n|---|;---;|\n| 1 | 2 |', 0, 25);
+    expect(justified.align).toEqual([null, 'justify']);
+    expect(apply(alignColumn(table, 1, 'justify'))).toBe(NOTE.replace('-----:', ';---;'));
+  });
+
   it('aligns a column by rewriting its delimiter cell only', () => {
     expect(apply(alignColumn(table, 1, 'center'))).toBe(NOTE.replace('-----:', ':---:'));
     expect(alignColumn(table, 0, 'left')).toEqual([{ from: expect.any(Number), to: expect.any(Number), insert: ':---' }]);

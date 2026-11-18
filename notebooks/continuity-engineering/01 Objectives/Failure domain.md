@@ -26,7 +26,7 @@ The frontmatter of this page states `author: Continuity Engineering` and `co-aut
 # The three domains we agreed
 
 | Domain | What is inside it | Objective |
-| --- | --- | --- |
+| --- | ;---; | --- |
 | Availability zone | One data centre | [[Recovery Time Objective\|RTO]] of 15 min |
 | Region | Every zone of one region | RTO of 4 h |
 | Account | Every region we hold | Not agreed |

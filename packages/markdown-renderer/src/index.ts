@@ -47,6 +47,8 @@ export {
 export { ordinalAt, taskBoxes, taskCheckedAt, toggleTaskAt } from './tasklist.js';
 export { readProperties, type NoteProperties, type PropertyEntry, type PropertyShape } from './properties.js';
 export { DELEGATED_TO_THE_BASE_PARSER, unclassified } from './delegated.js';
+export type { TableAppendix } from './appendices.js';
+export type { NoteStyle, StyleAlignment, StyleFont } from './note-style.js';
 export {
   runTableQuery,
   type TableColumn,
@@ -54,6 +56,7 @@ export {
   type TablePage,
   type TableRequest,
   type TableRow,
+  type TableRowView,
   type TableSchema,
   type TableSortKey,
   type TableValue,

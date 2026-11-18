@@ -2,7 +2,7 @@
   "$schema": "./schema/spec.schema.json",
   "spec": "MemorySmith Markdown Specification",
   "variant": "MemorySmith",
-  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.11.2/packages/markdown-spec/SPEC.md",
+  "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/v0.12.0/packages/markdown-spec/SPEC.md",
   "sources": [
     {
       "id": "commonmark",
@@ -25,6 +25,16 @@
       "id": "memorysmith-search",
       "name": "MemorySmith's search",
       "url": "https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts"
+    },
+    {
+      "id": "myst",
+      "name": "MyST Markdown",
+      "url": "https://mystmd.org/guide/syntax-overview#directives"
+    },
+    {
+      "id": "memorysmith-markdown",
+      "name": "The MemorySmith Markdown Specification",
+      "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/packages/markdown-spec/SPEC.md"
     }
   ],
   "notations": [
@@ -202,6 +212,14 @@
       "syntax": "| a | b | over a delimiter row of --- with optional :",
       "example": "| Rule | Where |\n|---|:---:|\n| The general one | [[Lei 14.133]] |\n| The exception | [[Lei 14.133\\|article 75]] |\n",
       "effect": "A table. The header row fixes the number of columns and a cell holds inlines, never blocks. A cell is a place text lives and not a boundary an Indexer stops at: a wikilink inside one is a link like any other, a literal pipe is written `\\|`, and an embed of a note is drawn as a link because no block fits in a cell.",
+      "spec": "4.1"
+    },
+    {
+      "id": "table-justified",
+      "reader": "reading-surface",
+      "syntax": "|;---;| in the delimiter row of a table",
+      "example": "| Item | Note |\n|:---|;---;|\n| Chairs | Bought in two instalments, the second after the [[Treasurer]] approved the budget |\n",
+      "effect": "A justified column: the text of each of its cells fills the width of the column, line by line. A `;`, one or more `-` and a `;`, with optional spaces around it. A `;` on one side only, or beside a colon, is no delimiter cell, so the lines are no table. This specification's own form, which GFM does not have: every other reader draws the whole table as text. A link in a justified cell is an edge as anywhere else.",
       "spec": "4.1"
     },
     {
@@ -491,6 +509,14 @@
       "example": "```table\ntable: expenses\ncolumns: date, description, amount, status\nwhere: status:pending date:2026-10\nsort: date desc\npage: 20\ntotal: amount\n```\n",
       "effect": "A fenced block whose info string is `table` presents a table of the notebook through a query, drawn as a table a page at a time: `table` names it; `columns` chooses and orders the columns, all of them when absent; `where` filters in the query language — terms that must all match, \"phrases\", -negation, OR, parentheses, column:value, and intervals over a date or a number; `sort` orders by columns, `asc` or `desc`, insertion order when absent; `page` is from 1 to 100 rows, 25 when absent; `total` sums a number column over every row the filter returns. Values are drawn in the reader's locale and as text, never as Markdown; a reader may sort by a column without a byte of the note changing; a printed note carries every filtered row. A missing table, an unknown key or column, a value its key cannot read or a filter that is an error is drawn in place of the table. Where no tables are kept the block is a code block, its lines as written.",
       "spec": "7.15, 6.9"
+    },
+    {
+      "id": "style-block",
+      "reader": "reading-surface",
+      "syntax": ":::{style}\n---\nkey: value\n---\ncontent\n:::",
+      "example": ":::{style}\n---\ntext: justify\nheadings: center\n---\n# Ata da assembleia\n\nO condomínio deliberou, por maioria, que a obra começa em março, e [[Síndico]] a acompanha.\n:::\n",
+      "effect": "A passage drawn in its own face and alignment, over the notebook's style: `font` (`sans`, `serif`), and `headings`, `text` and `tables` (`left`, `center`, `right`, `justify`). MyST's directive: a colon fence with its options in a `---` block, read as frontmatter is. A column's own delimiter wins over `tables`, and an inner block over an outer one. A key or value it cannot take sets nothing and is a notice, and so is a block never closed, which runs to the end of the note. It changes nothing an Indexer reads: a link inside is an edge, an option is no attribute, and the headings it holds are the note's own.",
+      "spec": "7.16"
     }
   ],
   "notices": [
@@ -637,6 +663,24 @@
       "severity": "hint",
       "spec": "7.15",
       "effect": "A table block naming a table the notebook does not keep says so in place of the table, until one of that name exists."
+    },
+    {
+      "code": "style-key-unknown",
+      "severity": "notice",
+      "spec": "7.16",
+      "effect": "A line of a style block's options that is not `key: value` with one of its four keys, or a key written twice, sets nothing."
+    },
+    {
+      "code": "style-value-invalid",
+      "severity": "notice",
+      "spec": "7.16",
+      "effect": "A value of a style block's options that its key does not take sets nothing."
+    },
+    {
+      "code": "style-unclosed",
+      "severity": "notice",
+      "spec": "7.16",
+      "effect": "A style block never closed runs to the end of the note."
     }
   ]
 }

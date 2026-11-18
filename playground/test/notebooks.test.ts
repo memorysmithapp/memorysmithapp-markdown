@@ -285,6 +285,8 @@ const DETECTS: Record<string, Detector> = {
   // A table with a wikilink in a cell, which is the crossing worth showing: a
   // cell is a place text lives and not a boundary the extractor stops at.
   table: inBody(/^\|.*\[\[.*\|/m),
+  'table-justified': inBody(/^\|.*;-+;/m),
+  'style-block': inBody(/^:::\{style\}\n---\n(?:[a-z]+: .*\n)+---\n[\s\S]*?\n:::$/m),
   strikethrough: inBody(/~~[^~\n]+~~/),
   // Bare, without the angle brackets. External either way, and never an edge.
   'autolink-extended': inBody(/(^|[^(<\]])https?:\/\//m),

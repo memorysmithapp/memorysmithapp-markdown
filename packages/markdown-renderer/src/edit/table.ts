@@ -8,7 +8,7 @@
 
 import type { Span } from './analyze.js';
 
-export type Alignment = 'left' | 'center' | 'right' | null;
+export type Alignment = 'left' | 'center' | 'right' | 'justify' | null;
 
 export interface TableCell extends Span {
   /** The content as written, trimmed: the range is the content's, without the padding. */
@@ -102,6 +102,8 @@ export function readTable(source: string, from: number, to: number): Table {
     at = end + 1;
   }
   const align = (rows[1]?.cells ?? []).map((cell): Alignment => {
+    // The justified column, `;---;`, the specification's own delimiter (§4.1).
+    if (/^;-+;$/.test(cell.text)) return 'justify';
     const left = cell.text.startsWith(':');
     const right = cell.text.endsWith(':');
     return left && right ? 'center' : right ? 'right' : left ? 'left' : null;
@@ -129,7 +131,7 @@ function rowText(table: Table, cells: readonly string[]): string {
 
 /** The delimiter cell of an alignment. */
 export function delimiterOf(alignment: Alignment): string {
-  return alignment === 'center' ? ':---:' : alignment === 'right' ? '---:' : alignment === 'left' ? ':---' : '---';
+  return alignment === 'center' ? ':---:' : alignment === 'right' ? '---:' : alignment === 'left' ? ':---' : alignment === 'justify' ? ';---;' : '---';
 }
 
 /**

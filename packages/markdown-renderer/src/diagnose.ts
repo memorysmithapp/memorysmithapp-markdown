@@ -19,6 +19,7 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import type { NoteHost } from './host.js';
 import { bodyStart, codeRegions, hideComments, insideCode, toUnixNewlines, type HiddenComments } from './source.js';
+import { findStyleBlocks, type StyleNoticeCode } from './style-block.js';
 import { hasParameterReference } from './parameters.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
@@ -44,7 +45,8 @@ export type NoticeCode =
   | 'strikethrough-single-tilde'
   | 'link-pending'
   | 'embed-pending'
-  | TableNoticeCode;
+  | TableNoticeCode
+  | StyleNoticeCode;
 
 /** `notice`: the page will differ from what was typed. `hint`: nothing is drawn wrong. */
 export type NoticeSeverity = 'notice' | 'hint';
@@ -104,6 +106,9 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'table-column-unknown': { severity: 'notice', section: '7.15', message: 'The table has no column of this name, so the block says so in place of the table.' },
   'table-filter-invalid': { severity: 'notice', section: '7.15', message: 'This filter cannot be answered, so the block says so in place of the table.' },
   'table-pending': { severity: 'hint', section: '7.15', message: 'The notebook keeps no table of this name yet, so the block says so in its place.' },
+  'style-key-unknown': { severity: 'notice', section: '7.16', message: 'This line of a style block is not one of its keys, or one written twice, so it sets nothing.' },
+  'style-value-invalid': { severity: 'notice', section: '7.16', message: 'This value is not one its key takes, so it sets nothing.' },
+  'style-unclosed': { severity: 'notice', section: '7.16', message: 'This style block is never closed by a :::, so it runs to the end of the note.' },
 };
 
 interface Point {
@@ -178,7 +183,11 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
 
   // A comment is never drawn, so nothing it holds raises a notice; positions are mapped back over it.
   const hidden = hideComments(text.slice(split));
-  const body = hidden.text;
+  // A style block's fences and options are no content (§7.16): they leave the text, every offset
+  // kept, so a line of options is no heading and what the block holds is the note's own.
+  const styled = findStyleBlocks(hidden.text);
+  for (const problem of styled.problems) report(problem.code, split + hidden.original(problem.at), split + hidden.original(problem.end, true));
+  const body = styled.text;
   const processor = unified().use(remarkParse).use(readingPlugins(() => undefined));
   const parsed = processor.parse(body) as Node;
   // The text as the parser found it, before a plugin cut a run of it and dropped its position.

@@ -51,6 +51,10 @@ async function draw(markdown: string, host: ReturnType<typeof hostOf>, locale = 
 const cells = (container: HTMLElement, selector: string): string[] =>
   [...container.querySelectorAll(selector)].map((cell) => cell.textContent ?? '');
 
+/** A button of the footer, by the word it carries beside its arrow. */
+const button = (container: HTMLElement, word: string): HTMLButtonElement =>
+  [...container.querySelectorAll<HTMLButtonElement>('.data-table-page')].find((each) => each.querySelector('.data-table-page-word')?.textContent === word)!;
+
 describe('a table block, where the host reaches the tables', () => {
   it('asks the host for the first page of what the block declares', async () => {
     const host = hostOf();
@@ -75,8 +79,8 @@ describe('a table block, where the host reaches the tables', () => {
     expect(cells(container, 'tbody tr:nth-child(2) td')).toEqual(['Oct 15, 2026', 'Conserto', '', 'No']);
     // The total is the sum over the whole filter, and not over the page.
     expect(cells(container, 'tfoot td')).toEqual(['Total', '', '3,099.90', '']);
-    expect(container.querySelector('.data-table-count')?.textContent).toBe('4 rows');
-    expect(container.querySelector('.data-table-pages')?.textContent).toContain('Page 1 of 2');
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('1–2 of 4');
+    expect(cells(container, '.data-table-pages button')).toEqual(['‹Previous', 'Next›']);
   });
 
   it('formats in the locale the host gives', async () => {
@@ -88,10 +92,12 @@ describe('a table block, where the host reaches the tables', () => {
   it('moves to the next page by asking the host for it', async () => {
     const host = hostOf();
     const container = await draw(BLOCK, host);
-    await act(async () => (container.querySelector('button[aria-label="Next page"]') as HTMLButtonElement).click());
+    await act(async () => button(container, 'Next').click());
     expect(host.queryTable.mock.calls.at(-1)?.[0].page).toBe(2);
-    expect(cells(container, 'tbody td:nth-child(2)')).toEqual(['Mercado', 'Aluguel de outubro']);
-    expect(container.querySelector('.data-table-pages')?.textContent).toContain('Page 2 of 2');
+    expect(cells(container, 'tbody tr:not(.data-table-filler) td:nth-child(2)')).toEqual(['Mercado', 'Aluguel de outubro']);
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('3–4 of 4');
+    expect(button(container, 'Next').disabled).toBe(true);
+    expect(button(container, 'Previous').disabled).toBe(false);
   });
 
   it('sorts by a header for the reader alone, asking the host again, from the first page', async () => {
@@ -180,6 +186,118 @@ describe('a table block, where the host reaches the tables', () => {
   });
 });
 
+describe('a table block on the screen (#163)', () => {
+  const widths = (container: HTMLElement): string[] => [...container.querySelectorAll<HTMLElement>('colgroup col')].map((col) => col.style.width);
+
+  it('gives a date, a number and a yes or no a width of their own, and leaves the text columns the rest', async () => {
+    const container = await draw(BLOCK, hostOf());
+    const [date, text, amount, paid] = widths(container);
+    expect(date).toMatch(/^calc\(\d+ch \+ 1\.25rem\)$/);
+    expect(text).toBe('');
+    expect(amount).toMatch(/^calc\(\d+ch \+ 1\.25rem\)$/);
+    expect(paid).toMatch(/^calc\(\d+ch \+ 1\.25rem\)$/);
+    expect(container.querySelector<HTMLElement>('table')?.style.minWidth).toContain('8rem');
+  });
+
+  it('keeps every column where it was as the pages turn and the order changes', async () => {
+    const container = await draw(BLOCK, hostOf());
+    const first = widths(container);
+    await act(async () => button(container, 'Next').click());
+    expect(widths(container)).toEqual(first);
+    const header = [...container.querySelectorAll<HTMLButtonElement>('th button')].find((each) => each.textContent?.startsWith('amount'))!;
+    await act(async () => header.click());
+    expect(widths(container)).toEqual(first);
+  });
+
+  it('fills a shorter last page with rows nobody sees, so the footer stays where it was', async () => {
+    const container = await draw('```table\ntable: expenses\npage: 2\n```\n', hostOf());
+    expect(container.querySelectorAll('tbody tr').length).toBe(2);
+    await act(async () => button(container, 'Next').click());
+    await act(async () => button(container, 'Next').click());
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('5–5 of 5');
+    expect(container.querySelectorAll('tbody tr.data-table-row').length).toBe(1);
+    const fillers = container.querySelectorAll('tbody tr.data-table-filler');
+    expect(fillers.length).toBe(1);
+    expect(fillers[0]?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('fills nothing on a table of one page, which has no Previous or Next', async () => {
+    const container = await draw('```table\ntable: expenses\nwhere: casa\n```\n', hostOf());
+    expect(container.querySelector('.data-table-filler')).toBeNull();
+    expect(container.querySelector('.data-table-pages')).toBeNull();
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('1–3 of 3');
+  });
+
+  it('draws Previous and Next with the host’s words, the arrows hidden from a screen reader', async () => {
+    mounted = await mount(
+      <NoteBody markdown={BLOCK} actions={false} queryTable={hostOf().queryTable} strings={{ tablePrevious: 'Anterior', tableNext: 'Próxima', tableShowing: (first, last, total) => `${first}–${last} de ${total}` }} />,
+    );
+    await act(async () => undefined);
+    const container = mounted.container;
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('1–2 de 4');
+    expect(button(container, 'Anterior').disabled).toBe(true);
+    expect(button(container, 'Próxima').disabled).toBe(false);
+    for (const arrow of container.querySelectorAll('.data-table-page-arrow')) expect(arrow.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('says so when the filter returns no row', async () => {
+    const container = await draw('```table\ntable: expenses\nwhere: nothing-matches-this\n```\n', hostOf());
+    expect(container.querySelector('.data-table-count')?.textContent).toBe('No rows');
+  });
+
+  it('hands the host a row clicked, with its columns and each value as the table draws it', async () => {
+    const openTableRow = vi.fn();
+    mounted = await mount(<NoteBody markdown={BLOCK} actions={false} queryTable={hostOf().queryTable} openTableRow={openTableRow} />);
+    await act(async () => undefined);
+    const row = mounted.container.querySelector<HTMLTableRowElement>('tbody tr.data-table-row')!;
+    await act(async () => row.click());
+    expect(openTableRow).toHaveBeenCalledTimes(1);
+    expect(openTableRow.mock.calls[0]?.[0]).toEqual({
+      table: 'expenses',
+      columns: [
+        { name: 'date', kind: 'date' },
+        { name: 'descrição', kind: 'text' },
+        { name: 'amount', kind: 'number' },
+        { name: 'paid', kind: 'boolean' },
+      ],
+      row: ROWS[4],
+      values: ['Oct 21, 2026', 'Farmácia', '-12.5', 'Yes'],
+    });
+    expect(mounted.container.querySelector('dialog')).toBeNull();
+  });
+
+  it('opens a row with Enter on it, as a click does', async () => {
+    const openTableRow = vi.fn();
+    mounted = await mount(<NoteBody markdown={BLOCK} actions={false} queryTable={hostOf().queryTable} openTableRow={openTableRow} />);
+    await act(async () => undefined);
+    const row = mounted.container.querySelectorAll<HTMLTableRowElement>('tbody tr.data-table-row')[1]!;
+    expect(row.tabIndex).toBe(0);
+    await act(async () => row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    expect(openTableRow.mock.calls[0]?.[0].values).toEqual(['Oct 15, 2026', 'Conserto', '', 'No']);
+  });
+
+  it('shows a row whole in a dialog of its own where the host shows none, and closes it', async () => {
+    const container = await draw('```table\ntable: expenses\ncolumns: descrição, amount\nwhere: livro\n```\n', hostOf());
+    await act(async () => container.querySelector<HTMLTableRowElement>('tbody tr.data-table-row')!.click());
+    const dialog = container.querySelector('dialog.data-table-dialog');
+    expect(dialog).not.toBeNull();
+    expect(dialog?.getAttribute('aria-label')).toBe('expenses');
+    expect(cells(container, 'dialog dt')).toEqual(['descrição', 'amount']);
+    expect(cells(container, 'dialog dd')).toEqual(['Livro [[Engelbart]] <b>raro</b>', '89.90']);
+    expect(container.querySelector('dialog b, dialog a')).toBeNull();
+    await act(async () => container.querySelector<HTMLButtonElement>('.data-table-dialog-close')!.click());
+    expect(container.querySelector('dialog')).toBeNull();
+  });
+
+  it('closes its own dialog with Escape', async () => {
+    const container = await draw(BLOCK, hostOf());
+    await act(async () => container.querySelector<HTMLTableRowElement>('tbody tr.data-table-row')!.click());
+    const dialog = container.querySelector('dialog')!;
+    await act(async () => dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(container.querySelector('dialog')).toBeNull();
+  });
+});
+
 describe('a table block being printed', () => {
   async function printed(markdown: string, host = hostOf(), locale = 'en-US'): Promise<HTMLElement> {
     mounted = await mount(<NoteBody markdown={markdown} actions={false} queryTable={host.queryTable} printing strings={{ locale }} />);
@@ -192,6 +310,19 @@ describe('a table block being printed', () => {
     const container = await printed(BLOCK, host);
     expect(host.queryTable.mock.calls[0]?.[0]).toMatchObject({ page: 1, size: 'all', sort: [{ column: 'date', descending: true }] });
     expect(cells(container, 'tbody td:nth-child(2)')).toEqual(['Farmácia', 'Conserto', 'Mercado', 'Aluguel de outubro']);
+  });
+
+  it('carries every value whole: no column fixed, no row to open, no row that fills a page (#163)', async () => {
+    const openTableRow = vi.fn();
+    mounted = await mount(<NoteBody markdown={'```table\ntable: expenses\npage: 2\n```\n'} actions={false} queryTable={hostOf().queryTable} openTableRow={openTableRow} printing />);
+    await act(async () => undefined);
+    const container = mounted.container;
+    expect(container.querySelector('colgroup')).toBeNull();
+    expect(container.querySelector('.data-table-row, .data-table-filler, [tabindex]')).toBeNull();
+    expect(container.querySelectorAll('tbody tr').length).toBe(5);
+    await act(async () => container.querySelector<HTMLTableRowElement>('tbody tr')!.click());
+    expect(openTableRow).not.toHaveBeenCalled();
+    expect(container.querySelector('dialog')).toBeNull();
   });
 
   it('draws no control, and keeps the header and the total', async () => {

@@ -175,6 +175,18 @@ describe('the stylesheet', () => {
     expect(/\.markdown \.data-table-printing thead \{([^}]*)\}/.exec(source)?.[1]).toContain('display: table-header-group;');
   });
 
+  it('keeps a table block to one line a cell, at fixed widths, on the screen alone, so paper wraps every value (#163)', () => {
+    const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const screen = /@media screen \{([\s\S]*?)\n\}/.exec(source)?.[1] ?? '';
+    expect(screen).toContain('table-layout: fixed;');
+    expect(screen).toContain('text-overflow: ellipsis;');
+    expect(screen).toContain('visibility: hidden;');
+    const outside = source.replace(/@media screen \{[\s\S]*?\n\}/g, '');
+    expect(outside).not.toContain('table-layout: fixed');
+    expect(outside).not.toMatch(/\.data-table[^{]*:is\(th, td\)[^{]*\{[^}]*white-space: nowrap/);
+    expect(/@media print \{\s*\.markdown \.data-table-filler \{([^}]*)\}/.exec(source)?.[1]).toContain('display: none;');
+  });
+
   it('never pulls a task item out of its list, past the edge of a container with little padding (#142)', () => {
     const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
     const rules = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, selector]) =>

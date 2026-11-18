@@ -72,6 +72,8 @@
   --ms-font-sans: var(--markdown-font-sans, 'Inter', 'Segoe UI', system-ui, sans-serif);
   --ms-font-display: var(--markdown-font-display, 'Space Grotesk', 'Segoe UI', system-ui, sans-serif);
   --ms-font-mono: var(--markdown-font-mono, ui-monospace, 'Cascadia Code', Consolas, monospace);
+  /* The face of a note, or a passage, whose style is serif (#164). */
+  --ms-font-serif: var(--markdown-font-serif, Georgia, 'Times New Roman', serif);
   --ms-radius: var(--markdown-radius, 8px);
   --ms-radius-large: var(--markdown-radius-large, 12px);
 
@@ -113,6 +115,15 @@
   --ms-table-stripe-bg: var(--markdown-table-stripe-bg, transparent);
   --ms-table-hover-bg: var(--markdown-table-hover-bg, var(--ms-code-bg));
   --ms-embed-rule: var(--markdown-embed-rule, var(--ms-accent));
+  /* The Previous and Next of a `table` block, which a host styles as its own
+     buttons (#163); left unset, a neutral bordered button. */
+  --ms-pager-bg: var(--markdown-pager-bg, var(--ms-surface));
+  --ms-pager-color: var(--markdown-pager-color, var(--ms-text));
+  --ms-pager-border: var(--markdown-pager-border, 1px solid var(--ms-border));
+  --ms-pager-radius: var(--markdown-pager-radius, 6px);
+  --ms-pager-padding: var(--markdown-pager-padding, 0.2rem 0.5rem);
+  --ms-pager-font: var(--markdown-pager-font, var(--ms-font-sans));
+  --ms-pager-hover-bg: var(--markdown-pager-hover-bg, var(--ms-code-bg));
 
   /* The frontmatter, drawn above the body as MemorySmith's note page draws it:
      the name as the title, in the face and at the size of a first heading, and
@@ -156,7 +167,8 @@
      draws it. */
   background: var(--ms-bg);
   color: var(--ms-text);
-  font-family: var(--ms-font-sans);
+  /* The face a style chooses (#164), else the text face. */
+  font-family: var(--ms-face, var(--ms-font-sans));
 }
 
 /* Dark: brand "Fundo escuro" #0B1220, Papel as text. */
@@ -225,8 +237,13 @@
   overflow-wrap: break-word;
 }
 
+/* A style block sets the face of its passage (#164): declared again where the
+   block's own custom property can reach it. */
+.markdown .style-block {
+  font-family: var(--ms-face, var(--ms-font-sans));
+}
 .markdown :is(h1, h2, h3, h4, h5, h6) {
-  font-family: var(--ms-font-heading);
+  font-family: var(--ms-face-heading, var(--ms-font-heading));
   font-weight: var(--ms-heading-weight);
   color: var(--ms-heading-color);
   line-height: var(--ms-line-height-tight);
@@ -429,7 +446,6 @@
 .markdown :is(th, td) {
   border: 1px solid var(--ms-table-border);
   padding: var(--ms-table-cell-padding);
-  text-align: start;
 }
 /* The header is told apart by the type and by a heavier rule, and not by a
    fill; the only tint a table has is the row under the pointer. */
@@ -459,7 +475,8 @@
 
 /* A `table` block drawn as its table (§7.15): the note's table, with a header
    that sorts for the reader alone, numbers to the end of their cells, the
-   total under its column, and the count and the pages under the table. */
+   total under its column, rows a click opens whole, and under the table the
+   rows shown on the left and Previous and Next on the right (#163). */
 .markdown .data-table {
   margin-block: var(--ms-p-spacing);
 }
@@ -502,6 +519,17 @@
 }
 .markdown .data-table-loading {
   color: var(--ms-text-soft);
+}
+/* A printed note's tables as appendices (#165): in place of each, the line
+   that sends the reader to it, and at the end of the note each under its
+   title. */
+.markdown .table-reference {
+  font-style: italic;
+  color: var(--ms-text-soft);
+}
+.markdown .table-appendix-title {
+  margin-block: 0 var(--ms-p-spacing);
+  font-size: var(--ms-h3-size);
 }
 /* A block that cannot be answered says why, in place of its table. */
 .markdown .data-table-problems {
@@ -550,7 +578,7 @@
   .markdown .data-table thead {
     display: table-header-group;
   }
-  .markdown .data-table-page,
+  .markdown .data-table-pages,
   .markdown .data-table-sort span {
     display: none;
   }
@@ -565,23 +593,75 @@
   font-size: 0.875em;
   color: var(--ms-text-soft);
 }
+/* Previous and Next stand closer when they are their arrows alone, below
+   --markdown-pager-words-from, through the switch `structure.css` uses. */
 .markdown .data-table-pages {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: calc(0.25rem + min(calc(clamp(0px, (100cqi - var(--markdown-pager-words-from, 420px)) * 1000, 1px) * 10000), 0.25rem));
 }
-.markdown .data-table-page {
+.markdown .data-table-page,
+.markdown .data-table-dialog-close {
   min-width: 2rem;
   min-height: 2rem;
-  border: 1px solid var(--ms-border);
-  border-radius: 6px;
-  background: var(--ms-surface);
-  color: var(--ms-text);
+  padding: var(--ms-pager-padding);
+  border: var(--ms-pager-border);
+  border-radius: var(--ms-pager-radius);
+  background: var(--ms-pager-bg);
+  color: var(--ms-pager-color);
+  font-family: var(--ms-pager-font);
+  font-size: inherit;
   cursor: pointer;
+}
+.markdown .data-table-page:hover:not(:disabled),
+.markdown .data-table-dialog-close:hover {
+  background: var(--ms-pager-hover-bg);
 }
 .markdown .data-table-page:disabled {
   cursor: default;
   opacity: 0.4;
+}
+/* The rows that fill a shorter page are space, not an empty grid: their rules
+   give way to the last row's and to the total's. */
+.markdown .data-table-filler td {
+  border-color: transparent;
+}
+.markdown .data-table-row:focus-visible {
+  outline: 2px solid var(--ms-accent);
+  outline-offset: -2px;
+}
+.markdown .data-table-dialog {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--ms-border);
+  border-radius: var(--ms-radius-large);
+  background: var(--ms-surface);
+  color: var(--ms-text);
+  font-family: var(--ms-face, var(--ms-font-sans));
+  line-height: var(--ms-line-height);
+}
+.markdown .data-table-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+.markdown .data-table-dialog-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--ms-font-display);
+  font-weight: 600;
+}
+.markdown .data-table-dialog dl {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+.markdown .data-table-dialog dt {
+  font-size: 0.875em;
+  color: var(--ms-text-soft);
+}
+.markdown .data-table-dialog .data-table-number {
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+.markdown .data-table-dialog-close {
+  margin-top: 1rem;
 }
 
 .markdown hr {
@@ -599,7 +679,7 @@
    would read as a link. */
 .markdown .note-title {
   margin: 0 0 0.6rem;
-  font-family: var(--ms-title-font);
+  font-family: var(--ms-face-heading, var(--ms-title-font));
   font-size: var(--ms-title-size);
   font-weight: var(--ms-title-weight);
   line-height: var(--ms-line-height-tight);
@@ -1901,7 +1981,7 @@
 /* The text: the line height of a run, and the caret in the accent. */
 .markdown .markdown-editor .cm-content {
   padding: 0;
-  font-family: var(--ms-font-sans);
+  font-family: var(--ms-face, var(--ms-font-sans));
   line-height: var(--ms-line-height-normal);
   caret-color: var(--ms-accent);
 }
@@ -1921,8 +2001,46 @@
   font-weight: normal;
   font-style: normal;
 }
+/* A line or a drawn block a style block holds carries its style (#166): its
+   face is declared again where the block's own custom property reaches it. */
+.markdown .markdown-editor .cm-line.cm-ms-styled:not(.cm-ms-heading, .cm-ms-code-line),
+.markdown .markdown-editor .cm-ms-block {
+  font-family: var(--ms-face, var(--ms-font-sans));
+}
+/* A style block's opening while the author is elsewhere: what it sets, small
+   and soft, over a rule that its closing fence draws again at its end. */
+.markdown .edit-style-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.15rem 0 0.25rem;
+  border-bottom: 1px dashed var(--ms-border);
+  font-family: var(--ms-font-display);
+  font-size: 0.8rem;
+  color: var(--ms-text-soft);
+  cursor: pointer;
+}
+.markdown .edit-style-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+.markdown .edit-style-summary svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+.markdown .cm-ms-style-end {
+  height: 0;
+  margin: 0.25rem 0;
+  border-top: 1px dashed var(--ms-border);
+}
+.markdown .cm-ms-style-source {
+  color: var(--ms-text-soft);
+}
 .markdown .cm-ms-heading {
-  font-family: var(--ms-font-heading);
+  font-family: var(--ms-face-heading, var(--ms-font-heading));
   font-weight: var(--ms-heading-weight);
   color: var(--ms-heading-color);
   line-height: var(--ms-line-height-tight);

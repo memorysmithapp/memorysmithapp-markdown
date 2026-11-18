@@ -133,7 +133,7 @@ const STACKED_PROPERTIES = 528;
 const UNDECLARED_IMAGE_HEIGHT = 200;
 
 /** What a block is, for its estimate. */
-export type BlockKind = 'frontmatter' | 'callout' | 'table' | 'embed' | 'diagram' | 'preview' | 'add-properties' | 'image';
+export type BlockKind = 'frontmatter' | 'callout' | 'table' | 'embed' | 'diagram' | 'preview' | 'add-properties' | 'image' | 'style';
 
 /** The height a block of this kind and these lines is drawn at, near enough to lay out the page. */
 export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMetrics): number {
@@ -166,6 +166,9 @@ export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMe
       return Math.round(8 * lineHeight);
     case 'diagram':
       return Math.round(12 * lineHeight);
+    case 'style':
+      // The options of a style block, drawn as one line of what it sets (#166).
+      return Math.round(1.6 * lineHeight);
     case 'preview':
       return Math.round(lineHeight + wrapped(lines, metrics.width, metrics) * lineHeight);
     case 'add-properties':

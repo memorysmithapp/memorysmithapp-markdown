@@ -1,3 +1,4 @@
+import type { TableAppendix } from './appendices.js';
 import type { TableNoticeCode } from './table-block.js';
 
 /**
@@ -29,11 +30,12 @@ export interface NoteStrings {
   readonly parameter: string;
   /** The title of a wikilink whose target writes a parameter, which leads nowhere until then. */
   readonly parameterLink: string;
-  /** How many rows the filter of a `table` block returns (§7.15). */
-  readonly tableRows: (count: number) => string;
-  /** Which page of a `table` block is drawn, of how many. */
-  readonly tablePage: (page: number, pages: number) => string;
-  /** The buttons that move a `table` block to the page before and after. */
+  /**
+   * Which rows of a `table` block are drawn, of how many the filter returns (§7.15, #163): `first`
+   * and `last` count from 1, and are 0 when the filter returns no row.
+   */
+  readonly tableShowing: (first: number, last: number, total: number) => string;
+  /** The buttons that move a `table` block to the page before and after, drawn after and before an arrow, which stands alone on a narrow block. */
   readonly tablePrevious: string;
   readonly tableNext: string;
   /** The label of the row that closes a table with its total. */
@@ -46,6 +48,14 @@ export interface NoteStrings {
   readonly tableProblem: (code: TableNoticeCode, table: string | null) => string;
   /** The line that closes a printed `table` block: the table, its filter or `null`, how many rows and when they were read. */
   readonly tablePrinted: (read: { readonly table: string; readonly filter: string | null; readonly count: number; readonly readAt: string }) => string;
+  /**
+   * The title of a table printed as an appendix at the end of the note (#165): its number among the
+   * appendices, and the table a `table` block names, or for a Markdown table, which has none, its
+   * number among the note's Markdown tables.
+   */
+  readonly tableAppendix: (appendix: TableAppendix) => string;
+  /** What stands in a printed note in place of a table printed as an appendix, linked to it (#165). */
+  readonly tableAppendixReference: (appendix: TableAppendix) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -125,6 +135,25 @@ export interface EditorWords {
   readonly math: string;
   readonly diagram: string;
   readonly rule: string;
+  /**
+   * A `:::{style}` block (`SPEC.md` §7.16, #166): the control and the title of its form, the form's
+   * four keys, what each value reads as, the choice that writes no key, and its two verbs — one that
+   * wraps the passage in a new block, one that changes the block the cursor is in.
+   */
+  readonly style: string;
+  readonly styleFont: string;
+  readonly styleHeadings: string;
+  readonly styleText: string;
+  readonly styleTables: string;
+  readonly styleNotebook: string;
+  readonly styleSans: string;
+  readonly styleSerif: string;
+  readonly styleLeft: string;
+  readonly styleCenter: string;
+  readonly styleRight: string;
+  readonly styleJustify: string;
+  readonly styleInsert: string;
+  readonly styleApply: string;
   readonly footnote: string;
   readonly comment: string;
   /** The toolbar's button that attaches a file, and what it says while the host keeps it or failed (#75). */
@@ -214,6 +243,8 @@ export interface EditorWords {
   readonly alignLeft: string;
   readonly alignCenter: string;
   readonly alignRight: string;
+  /** Justifies the column of the cell the author is in, `;---;` (`SPEC.md` §4.1, #166). */
+  readonly alignJustify: string;
   /** The buttons beside the switch that show the note's Markdown and copy it, and the dialog (#63, #76). */
   readonly showMarkdown: string;
   readonly copyMarkdown: string;
@@ -274,10 +305,10 @@ export const ENGLISH: NoteStrings = {
   refusedLink: 'This address is not one the reading surface follows, so the text stays and the link does not.',
   parameter: 'Parameter: filled in when a notebook is created from this model.',
   parameterLink: 'A link to a parameter: it leads to a note once a notebook is created from this model.',
-  tableRows: (count) => (count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`),
-  tablePage: (page, pages) => `Page ${page} of ${pages}`,
-  tablePrevious: 'Previous page',
-  tableNext: 'Next page',
+  tableShowing: (first, last, total) =>
+    total === 0 ? 'No rows' : `${first.toLocaleString('en-US')}–${last.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`,
+  tablePrevious: 'Previous',
+  tableNext: 'Next',
   tableTotal: 'Total',
   tableEmpty: 'No row answers this filter.',
   tableSortBy: (column) => `Sort by ${column}, for you alone: the note keeps its order`,
@@ -299,6 +330,8 @@ export const ENGLISH: NoteStrings = {
   },
   tablePrinted: ({ table, filter, count, readAt }) =>
     `Table ${table}${filter === null ? '' : `, filtered by ${filter}`}: ${count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`}, read on ${readAt}.`,
+  tableAppendix: ({ number, table, markdownTable }) => `Appendix ${number} — ${table ?? `Table ${markdownTable}`}`,
+  tableAppendixReference: ({ number, table, markdownTable }) => `See appendix ${number}, ${table ?? `table ${markdownTable}`}.`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',
@@ -372,6 +405,20 @@ export const ENGLISH: NoteStrings = {
     math: 'Formula',
     diagram: 'Diagram',
     rule: 'Divider',
+    style: 'Style',
+    styleFont: 'Font',
+    styleHeadings: 'Headings',
+    styleText: 'Text',
+    styleTables: 'Tables',
+    styleNotebook: "The notebook's",
+    styleSans: 'Sans serif',
+    styleSerif: 'Serif',
+    styleLeft: 'Left',
+    styleCenter: 'Centered',
+    styleRight: 'Right',
+    styleJustify: 'Justified',
+    styleInsert: 'Set apart',
+    styleApply: 'Apply',
     footnote: 'Footnote',
     comment: 'Comment',
     attach: 'Attach a file',
@@ -443,6 +490,7 @@ export const ENGLISH: NoteStrings = {
     alignLeft: 'Align left',
     alignCenter: 'Center',
     alignRight: 'Align right',
+    alignJustify: 'Justify',
     showMarkdown: 'Show Markdown',
     copyMarkdown: 'Copy Markdown',
     sourceTitle: 'The note in Markdown',

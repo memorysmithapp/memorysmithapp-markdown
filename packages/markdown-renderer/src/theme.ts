@@ -21,6 +21,7 @@
  * is read by the default theme's rules.
  */
 
+import { styleProperties, type NoteStyle } from './note-style.js';
 import type { ReactNode } from 'react';
 import type { FileShape } from './file-types.js';
 import type { KeptFile } from './host.js';
@@ -89,6 +90,8 @@ export interface ThemeProperties {
   readonly fontSans?: string;
   readonly fontDisplay?: string;
   readonly fontMono?: string;
+  /** The face of a note, or of a passage, whose style is `serif` (#164). */
+  readonly fontSerif?: string;
   readonly fontHeading?: string;
   // Shape.
   readonly radius?: string;
@@ -124,6 +127,16 @@ export interface ThemeProperties {
   readonly tableHeaderRule?: string;
   readonly tableStripeBg?: string;
   readonly tableHoverBg?: string;
+  // The Previous and Next of a `table` block, and the button that closes the row it shows whole
+  // (#163); `pagerWordsFrom` is the narrowest block on which Previous and Next show their words.
+  readonly pagerBg?: string;
+  readonly pagerColor?: string;
+  readonly pagerBorder?: string;
+  readonly pagerRadius?: string;
+  readonly pagerPadding?: string;
+  readonly pagerFont?: string;
+  readonly pagerHoverBg?: string;
+  readonly pagerWordsFrom?: string;
   // Embeds.
   readonly embedRule?: string;
   // The note's title and properties, as the default theme draws its frontmatter.
@@ -156,7 +169,7 @@ export const THEME_PROPERTIES = Object.keys({
   calloutTitleLinkDecoration: 1, calloutTitleLinkOffset: 1,
   iconNote: 1, iconInfo: 1, iconSummary: 1, iconTip: 1, iconSuccess: 1, iconQuestion: 1, iconWarning: 1,
   iconFailure: 1, iconDanger: 1, iconExample: 1, iconQuote: 1, iconChevron: 1,
-  fontSans: 1, fontDisplay: 1, fontMono: 1, fontHeading: 1,
+  fontSans: 1, fontDisplay: 1, fontMono: 1, fontSerif: 1, fontHeading: 1,
   radius: 1, radiusLarge: 1,
   fontSize: 1, lineHeight: 1, lineHeightTight: 1, rootLineHeight: 1, paragraphSpacing: 1, headingSpacing: 1,
   listIndent: 1, listSpacing: 1,
@@ -164,6 +177,7 @@ export const THEME_PROPERTIES = Object.keys({
   h1Weight: 1, h6Color: 1,
   quoteBorderColor: 1, quoteBorderWidth: 1, quoteColor: 1,
   tableBorder: 1, tableCellPadding: 1, tableHeaderBg: 1, tableHeaderRule: 1, tableStripeBg: 1, tableHoverBg: 1,
+  pagerBg: 1, pagerColor: 1, pagerBorder: 1, pagerRadius: 1, pagerPadding: 1, pagerFont: 1, pagerHoverBg: 1, pagerWordsFrom: 1,
   embedRule: 1,
   titleFont: 1, titleSize: 1, titleWeight: 1, titleColor: 1,
   propertiesRule: 1, propertiesLabelFont: 1, propertiesLabelColor: 1, propertiesKeyColor: 1,
@@ -447,14 +461,14 @@ export function schemeOf(theme: Theme, asked: Scheme): Scheme {
 }
 
 /** The custom properties the root of a note carries for a theme in a scheme. */
-export function rootStyle(theme: Theme, scheme: Scheme): Record<string, string> {
+export function rootStyle(theme: Theme, scheme: Scheme, style: NoteStyle = {}): Record<string, string> {
   const properties = theme.properties;
-  if (!properties) return {};
+  if (!properties) return styleProperties(style);
   const values = isPerScheme(properties) ? (properties[scheme] ?? {}) : properties;
-  const style: Record<string, string> = {};
+  const css: Record<string, string> = {};
   for (const name of THEME_PROPERTIES) {
     const value = values[name];
-    if (value !== undefined) style[customPropertyOf(name)] = value;
+    if (value !== undefined) css[customPropertyOf(name)] = value;
   }
-  return style;
+  return { ...css, ...styleProperties(style) };
 }

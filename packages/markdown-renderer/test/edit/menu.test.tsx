@@ -43,6 +43,18 @@ const groups = () => $$('.edit-menu [role="group"]').map((group) => group.getAtt
 const item = (label: string) => $$<HTMLButtonElement>('.edit-menu [role="menuitem"]').find((each) => each.querySelector('.edit-menu-label')?.textContent === label)!;
 
 describe('the editing menu (#81)', () => {
+  it('opens the form of a style block from Insert, which wraps the paragraph the cursor is in (#166)', async () => {
+    const { view, changes } = await open('One.\n\nTwo.\n');
+    act(() => view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('Two') } }));
+    await rightClick(view.contentDOM);
+    await act(async () => item('Style').click());
+    const select = $<HTMLSelectElement>('dialog.edit-style select[name="headings"]')!;
+    select.value = 'center';
+    await act(async () => select.dispatchEvent(new Event('change', { bubbles: true })));
+    await act(async () => $<HTMLFormElement>('dialog.edit-style form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(changes.at(-1)).toBe('One.\n\n:::{style}\n---\nheadings: center\n---\nTwo.\n:::\n');
+  });
+
   it('opens where the author right-clicks, with Format only for a selection', async () => {
     const { view } = await open();
     expect(await rightClick(view.contentDOM)).toBe(false);

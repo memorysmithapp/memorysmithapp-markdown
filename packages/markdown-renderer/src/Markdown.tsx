@@ -26,7 +26,11 @@ import { readDimensions, readImageAlt, sizedAttributes, type Dimensions } from '
 import { choiceTargetOf, LinkChoice } from './LinkChoice.js';
 import { toUnixNewlines } from './source.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
+import type { Pluggable } from 'unified';
 import { readingPlugins } from './reading.js';
+import { remarkTableReferences, type TableAppendix } from './appendices.js';
+import { justifyColumns, remarkJustifiedColumns } from './justified.js';
+import { findStyleBlocks, rangesFor, remarkStyleBlocks, type StyleRange } from './style-block.js';
 import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type FootnoteRef } from './footnotes.js';
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import type { TaskSave } from './task-saves.js';
@@ -59,6 +63,17 @@ export interface MarkdownProps {
    * `'section'` for the pass that draws the note's one section.
    */
   readonly footnotes?: { readonly refs: readonly FootnoteRef[] } | 'section';
+  /**
+   * The tables of this run printed as appendices (#165, `appendices.ts`): the number its first
+   * table takes, and the note's appendices, whose references take the tables' places.
+   */
+  readonly appendices?: { readonly first: number; readonly appendices: readonly TableAppendix[] };
+  /**
+   * The `:::{style}` blocks this run holds, by its own lines, when the note they belong to was read
+   * whole (`NoteBody`), its fences already blanked. Left out, the run finds its own: an embedded
+   * note, which is drawn on its own.
+   */
+  readonly styles?: readonly StyleRange[];
 }
 
 type LiProps = HTMLAttributes<HTMLLIElement> & { node?: unknown };
@@ -566,18 +581,31 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes }: MarkdownProps) {
+export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes, appendices, styles }: MarkdownProps) {
   const text = toUnixNewlines(children);
-  const { strings } = useHost();
+  const { strings, queryTable } = useHost();
   const calloutTitle = (kind: string): string | undefined =>
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
+  // A style block's fences and options leave the text, every offset kept, and its lines are wrapped once parsed (§7.16).
+  const styled = useMemo(() => {
+    if (styles) return { text, ranges: styles };
+    const found = findStyleBlocks(text);
+    return { text: found.text, ranges: rangesFor(found.blocks, 1, found.text.split('\n').length) };
+  }, [text, styles]);
+  // A justified column, `;---;`, is read as a centred one and turned justified once parsed (§4.1).
+  const justified = useMemo(() => justifyColumns(styled.text), [styled.text]);
 
   return (
     // The pass that draws a cut note's footnotes continues the note rather than opening a run,
     // so its section keeps the space a section takes at the end of a note.
     <div className={footnotes === 'section' ? 'markdown footnotes-run' : 'markdown'}>
       <ReactMarkdown
-        remarkPlugins={readingPlugins(calloutTitle, strings.parameter)}
+        remarkPlugins={[
+          ...readingPlugins(calloutTitle, strings.parameter),
+          [remarkJustifiedColumns, { columns: justified.columns }],
+          [remarkStyleBlocks, { ranges: styled.ranges, locale: strings.locale }],
+          ...(appendices ? [[remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }] as Pluggable] : []),
+        ]}
         // Raw HTML is NOT enabled, and its absence is the point: no
         // `rehype-raw` is loaded, so a note carrying `<script>` is text. It is
         // a security boundary rather than a rendering preference, because a
@@ -626,7 +654,7 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           ),
         }}
       >
-        {text}
+        {justified.text}
       </ReactMarkdown>
     </div>
   );

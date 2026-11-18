@@ -24,7 +24,7 @@ A outra nota chamada **Índice** está em `01 Castas`, e as duas continuam de p�
 ## Safras
 
 | Ano | Nota | Estado |
-| --- | --- | --- |
+| --- | ;---; | --- |
 | 2026 | [[Safra 2026 · Serra Gaúcha]] | Fechada |
 | 2025 | Ainda não transcrita | — |
 

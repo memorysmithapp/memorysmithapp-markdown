@@ -57,6 +57,23 @@
       ]
     },
     {
+      "id": "table/justified-column-links",
+      "notation": "table-justified",
+      "markdown": "| Item | Note |\n|:---|;---;|\n| Chairs | Approved by [[Treasurer]] and filed under [[Lei 14.133\\|the law]] |\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null },
+        { "name": "Lei 14.133", "anchor": null }
+      ]
+    },
+    {
+      "id": "table/justified-one-sided-is-no-table",
+      "notation": "table-justified",
+      "markdown": "| Item | Note |\n|:---|;---|\n| Chairs | Approved by [[Treasurer]] |\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null }
+      ]
+    },
+    {
       "id": "wikilink/anchor-is-kept-and-not-resolved",
       "notation": "wikilink-anchor",
       "markdown": "See [[Lei 14.133#Article 75]] for the exception.",
@@ -2003,6 +2020,73 @@
         { "code": "table-key-unknown", "line": 10 },
         { "code": "table-filter-invalid", "line": 11 }
       ]
+    },
+    {
+      "id": "style/a-link-inside-is-an-edge",
+      "notation": "style-block",
+      "markdown": ":::{style}\n---\ntext: justify\n---\nThe works start in March, and [[Treasurer]] follows them.\n\n| Item | Note |\n|---|;---;|\n| Chairs | Approved by [[Lei 14.133\\|the law]] |\n:::\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null },
+        { "name": "Lei 14.133", "anchor": null }
+      ]
+    },
+    {
+      "id": "style/an-option-is-no-attribute",
+      "notation": "style-block",
+      "markdown": "---\ntags: [condomínio]\n---\n:::{style}\n---\nfont: serif\ntags: [other]\n---\nBody.\n:::\n",
+      "facets": {"tags": {"kind": "list", "values": ["condomínio"]}}
+    },
+    {
+      "id": "style/a-block-around-the-whole-body-keeps-its-outline",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n:::{style}\n---\nheadings: center\ntext: justify\n---\n# Ata da assembleia\n\n## Presentes\n\nO síndico e onze moradores.\n:::\n",
+      "notices": []
+    },
+    {
+      "id": "style/the-options-are-no-heading",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nheadings: center\n---\n### Deliberações\n:::\n",
+      "notices": [
+        { "code": "heading-skipped-level", "line": 12 }
+      ]
+    },
+    {
+      "id": "style/a-key-or-value-it-cannot-take-sets-nothing",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\ntext: justify\ncolour: red\ntext: center\nheadings: middle\nnot an option\n---\nBody.\n:::\n",
+      "notices": [
+        { "code": "style-key-unknown", "line": 11 },
+        { "code": "style-key-unknown", "line": 12 },
+        { "code": "style-value-invalid", "line": 13 },
+        { "code": "style-key-unknown", "line": 14 }
+      ]
+    },
+    {
+      "id": "style/a-block-never-closed-runs-to-the-end",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\ntext: justify\n---\nEverything after this is justified.\n",
+      "notices": [
+        { "code": "style-unclosed", "line": 8 }
+      ]
+    },
+    {
+      "id": "style/a-block-above-the-frontmatter-leaves-the-note-without-one",
+      "notation": "style-block",
+      "markdown": ":::{style}\n---\nname: Ata\ntext: justify\n---\n# Ata\n:::\n",
+      "name": null,
+      "facets": {},
+      "notices": [
+        { "code": "name-missing", "line": 1 },
+        { "code": "aliases-missing", "line": 1 },
+        { "code": "tags-missing", "line": 1 },
+        { "code": "style-key-unknown", "line": 3 }
+      ]
+    },
+    {
+      "id": "style/a-fence-inside-code-is-an-example",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n```markdown\n:::{style}\n---\ncolour: red\n---\n```\n",
+      "notices": []
     },
     {
       "id": "resolution/a-table-by-its-name-with-case-folded",
