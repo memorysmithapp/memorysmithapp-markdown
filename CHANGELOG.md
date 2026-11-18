@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-18
+
 ### Added
 
 - The editor writes a `:::{style}` block from its controls (#166). *Style*, on the toolbar and in the editing menu's Insert, opens a form of the four keys, each starting at the notebook's, which writes no key. It wraps the selection, or the paragraph the cursor is in, in a new block, which opens below the frontmatter even when the whole note is selected. On the block the cursor is in, it changes that block's options and nothing else. In edit mode a block is drawn as reading draws it: its fence and options as what it sets while the author is elsewhere, and its content in its style. New words: `editor.style` and the form's.
@@ -339,7 +341,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.10.2...v0.11.0
