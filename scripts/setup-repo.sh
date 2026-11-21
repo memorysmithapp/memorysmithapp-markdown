@@ -211,9 +211,12 @@ normalize_protection='{
 }'
 want_protection=$(jq -S "$normalize_protection" <<<"$desired_protection")
 
+# An absent protection is a 404, told apart from a failure to read it. gh's message is captured and
+# tested on its own, not piped into grep: under pipefail the pipeline would take gh's exit status
+# and never see the 404.
 if protection=$(gh api "repos/$repo/branches/$branch/protection" 2>/dev/null); then
   have_protection=$(jq -S "$normalize_protection" <<<"$protection")
-elif gh api "repos/$repo/branches/$branch/protection" 2>&1 | grep -q 'HTTP 404'; then
+elif read_error=$(gh api "repos/$repo/branches/$branch/protection" 2>&1 >/dev/null); [[ $read_error == *'HTTP 404'* ]]; then
   have_protection=none
 else
   die "cannot read the branch protection of $branch on $repo"
