@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-20
+
 ### Fixed
 
 - `scripts/setup-repo.sh` creates the branch protection of a repository whose default branch has none, instead of dying with "cannot read the branch protection": under `pipefail`, `gh api … | grep -q 'HTTP 404'` took the exit status of `gh` and never saw the 404. gh's message is now captured and tested on its own, as in `memorysmithapp-template` (#168, memorysmithapp/memorysmithapp-template#46).
@@ -345,7 +347,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.0...v0.11.1
