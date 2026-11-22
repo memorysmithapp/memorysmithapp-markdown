@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-22
+
+### Changed
+
+- `SDLC.md` §2 and `AGENTS.md` §4: each repository stands on its own, as `memorysmithapp-template` v0.5.4 says (#179). A problem found in another repository is registered there, as one issue, and no sub-issue is opened elsewhere; comparing with the template is this repository's own work, in its own cycle. It replaces the rule that registered a gap at its origin with a sub-issue in every repository it reached.
+- `SDLC.md` §2 and §8 and `AGENTS.md` §4 state two rules `memorysmithapp-template` v0.5.3 added (#179, #176): a cycle is planned from every open issue, reviewed with the owner, leaving one out being the owner's decision with a reason; and a workflow that delivers to an environment is dispatched only on the owner's go-ahead, which a go-ahead to implement is not. With no staging here, that environment is a pre-release of the packages on npm (#176).
+
+### Fixed
+
+- `scripts/setup-repo.sh` gives the organization's team `contributors` write on the repository, as it does `maintainers`, and requires both teams to exist, as `memorysmithapp-template` v0.5.3's does (#179). A repository it set up left `contributors` at the organization's base permission, read, so its members could push no branch, create no milestone and apply no label.
+
 ## [0.13.0] - 2026-11-22
 
 ### Added
@@ -361,7 +372,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...v0.12.0

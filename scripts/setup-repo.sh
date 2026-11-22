@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Applies to a repository created from memorysmithapp-template what a template does not copy:
 # the description and topics, the merge options, wiki and discussions off, the ruleset `main`
-# protecting the default branch, write on the repository for the organization's team `maintainers`,
-# and the branch protection of the default branch letting only that team push to it and merge into
-# it. Issue labels are left as GitHub's defaults.
+# protecting the default branch, write on the repository for the organization's teams `maintainers`
+# and `contributors`, and the branch protection of the default branch letting only `maintainers`
+# push to it and merge into it. Issue labels are not touched.
 #
 # Run once, right after creating the repository, with gh authenticated as an administrator of it,
-# in an organization that has the team `maintainers`.
+# in an organization that has the teams `maintainers` and `contributors`.
 # Idempotent: a second run changes nothing and says so.
 #
 #   scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]
@@ -50,13 +50,17 @@ report() {
 info=$(gh api "repos/$repo" 2>/dev/null) || die "cannot read $repo: check that it exists and that gh is authenticated (gh auth status)"
 [ "$(jq -r '.permissions.admin' <<<"$info")" = true ] || die "the authenticated account is not an administrator of $repo"
 
-# Only the team `maintainers` merges to the default branch, so the repository belongs to an
-# organization that has that team, and the default branch exists to be protected.
+# Only the team `maintainers` merges to the default branch, and the team `contributors` works on
+# the repository without merging to it, so the repository belongs to an organization that has both
+# teams, and the default branch exists to be protected.
 org=${repo%%/*}
 team=maintainers
+teams_with_write=(maintainers contributors)
 [ "$(jq -r '.owner.type' <<<"$info")" = Organization ] ||
   die "$repo is not owned by an organization: only the team $team of an organization merges to its default branch"
-gh api "orgs/$org/teams/$team" >/dev/null 2>&1 || die "the organization $org has no team $team, or gh cannot read it"
+for t in "${teams_with_write[@]}"; do
+  gh api "orgs/$org/teams/$t" >/dev/null 2>&1 || die "the organization $org has no team $t, or gh cannot read it"
+done
 branch=$(jq -r '.default_branch' <<<"$info")
 gh api "repos/$repo/branches/$branch" >/dev/null 2>&1 || die "the default branch $branch of $repo does not exist yet: push a first commit"
 
@@ -158,19 +162,22 @@ else
   fi
 fi
 
-# The team `maintainers` needs write on the repository for the branch protection to name it; a
-# higher role is left as it is.
-role=$(gh api -H "Accept: application/vnd.github.v3.repository+json" "orgs/$org/teams/$team/repos/$repo" --jq '.role_name' 2>/dev/null) || role=none
-case $role in
-  write | maintain | admin)
-    report "already in place" "team $team has $role"
-    ;;
-  *)
-    gh api -X PUT "orgs/$org/teams/$team/repos/$repo" -f permission=push >/dev/null ||
-      die "could not give the team $team write on $repo"
-    report changed "team $team given write (was $role)"
-    ;;
-esac
+# Both teams get write on the repository: `maintainers` for the branch protection to name it,
+# `contributors` to push branches, open pull requests and set milestones and labels, which the
+# organization's base permission, read, does not allow. A higher role is left as it is.
+for t in "${teams_with_write[@]}"; do
+  role=$(gh api -H "Accept: application/vnd.github.v3.repository+json" "orgs/$org/teams/$t/repos/$repo" --jq '.role_name' 2>/dev/null) || role=none
+  case $role in
+    write | maintain | admin)
+      report "already in place" "team $t has $role"
+      ;;
+    *)
+      gh api -X PUT "orgs/$org/teams/$t/repos/$repo" -f permission=push >/dev/null ||
+        die "could not give the team $t write on $repo"
+      report changed "team $t given write (was $role)"
+      ;;
+  esac
+done
 
 # The branch protection of the default branch: only the team `maintainers` pushes to it, and so
 # only that team merges a pull request into it; administrators included, no force push, no

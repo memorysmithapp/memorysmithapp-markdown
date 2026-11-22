@@ -43,7 +43,7 @@ The first run clones MemorySmith at the commit the renderer was extracted from a
 
 ## Repository settings
 
-The settings a copy of the files does not carry — description, topics, merge options, wiki and discussions off, the ruleset `main` that protects the default branch (no deletion, no force push, every change through a pull request with the check `Quality`), write on the repository for the organization's team `maintainers`, and the branch protection that lets only that team merge to the default branch — are applied by a script, with `gh` authenticated as an administrator of a repository owned by an organization that has the team `maintainers`, and [`jq`](https://jqlang.org/) installed. It was run with:
+The settings a copy of the files does not carry — description, topics, merge options, wiki and discussions off, the ruleset `main` that protects the default branch (no deletion, no force push, every change through a pull request with the check `Quality`), write on the repository for the organization's teams `maintainers` and `contributors`, and the branch protection that lets only `maintainers` merge to the default branch — are applied by a script, with `gh` authenticated as an administrator of a repository owned by an organization that has both teams, and [`jq`](https://jqlang.org/) installed. It was run with:
 
 ```sh
 scripts/setup-repo.sh memorysmithapp/memorysmithapp-markdown \

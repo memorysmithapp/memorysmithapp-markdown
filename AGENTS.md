@@ -48,8 +48,10 @@ One line each; the reason lives where the link points.
 - `main` is protected: every change reaches it through a pull request. Never push to `main`; never use `--admin`, *Bypass rules*, `--no-verify` or an equivalent ([SDLC §1](docs/SDLC.md#1-the-life-cycle-of-a-change)).
 - A blocked merge means **stop and report**, never work around it ([SDLC §7](docs/SDLC.md#7-a-blocked-merge)).
 - An issue before implementing. An opinion asked for, or "open the issue", means register and ask; implement only on an explicit go-ahead from the owner, which puts the issue in a milestone ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
-- A gap that reaches other repositories of the organization is registered at its origin, with a sub-issue in each repository it reaches, without asking whether to open them ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- A cycle is planned from every open issue: review them with the owner before the work starts, say which ones touch it and recommend including them; leaving one out, or moving it to a later version, is the owner's decision with a reason ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
+- Each repository stands on its own: a problem found in another repository is registered there, as one issue, with no sub-issues elsewhere; comparing with the template is this repository's own decision ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - Anything the packages publish, and every script and workflow, lands on the `release/vX.Y.Z` of its issue's milestone, never on `main` from a `feat/` or `fix/` branch ([SDLC §3](docs/SDLC.md#3-branches)).
+- A workflow that delivers to staging or another environment — here, a pre-release of the packages on npm — is dispatched only on the owner's go-ahead in the session; a go-ahead to implement is not one to deliver, and pushing a branch needs none ([SDLC §8](docs/SDLC.md#8-tests-and-review)).
 - Nobody tags by hand: tags and Releases are written by the release workflow ([SDLC §10](docs/SDLC.md#10-release)).
 - A document never describes the future: if it is in a document, it is true now ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - No version notes, revision dates or "internal document" footers inside documents; history lives in `CHANGELOG.md` and git ([SDLC §4](docs/SDLC.md#4-commits)).
@@ -70,7 +72,7 @@ Each command with the directory it runs in, what it does, and the date somebody 
 
 | Command | Run in | What it does | Last verified |
 |---|---|---|---|
-| `scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]` | The root | Applies the description, topics, merge options, wiki and discussions off, the ruleset `main`, write for the team `maintainers`, and the branch protection of `main`; idempotent | 2026-11-20, against this repository, which it found already set up |
+| `scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]` | The root | Applies the description, topics, merge options, wiki and discussions off, the ruleset `main`, write for the teams `maintainers` and `contributors`, and the branch protection of `main`; idempotent | 2026-11-22, against this repository, which it found already set up, both teams' write included |
 | `pnpm install` | The root | Installs the workspace from `pnpm-lock.yaml` | 2026-10-12 |
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-11-18 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-11-18 |
