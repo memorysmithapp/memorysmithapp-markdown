@@ -1088,7 +1088,7 @@ print:
 
 **The form is a fenced block whose info string is `contents`** and nothing else, as the `table` block is (§7.15), and the name is Docutils' directive (§2), which lists the headings of the document it is written in. An empty block is the classic contents: the headings, three levels deep. It may stand anywhere below the frontmatter a fenced block can stand, a note may hold more than one, and **it always lists the whole note**, the headings above it included.
 
-**What it lists** is the note's outline (§3.3): its headings at the top level, the ones a style block holds included (§7.16). An entry is its heading as drawn — its inline marks kept, a link drawn as its text, a footnote reference left out — and it leads to the heading's slug (§3.3). The groups are drawn in the order they are written.
+**What it lists** is the note's outline (§3.3): its headings at the top level, the ones a style block holds included (§7.16). An entry is its heading as drawn — its inline marks kept, a link drawn as its text, a footnote reference left out — and it leads to the heading's slug (§3.3). The groups are drawn in the order they are written. **A list with no entry is not drawn**, its title included, and a contents none of whose lists has an entry draws nothing in that medium, as `none` does.
 
 **Figures, tables and attachments.** Each entry takes the first of these that exists: its title, then the description the notebook keeps for the file, then the file's name. No notation is added to give one: an author, or an assistant, writes the title the notation already has.
 

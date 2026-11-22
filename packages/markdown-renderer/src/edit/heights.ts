@@ -152,9 +152,11 @@ export function estimateHeight(kind: BlockKind, source: string, metrics: BlockMe
       return Math.round(lineHeight + wrapped(text, metrics.width - 32, metrics) * lineHeight);
     }
     case 'table': {
-      // A row per line but the delimiter row. The columns share the width by what they hold, so a
-      // row wraps as the text of all its cells would in the width their padding leaves.
-      const rows = lines.filter((line, index) => index !== 1 || !/^[\s|:-]+$/.test(line));
+      // A row per line but the delimiter row, up to the blank line before the caption the block
+      // covers (#182). The columns share the width by what they hold, so a row wraps as the text of
+      // all its cells would in the width their padding leaves.
+      const blank = lines.findIndex((line) => line.trim() === '');
+      const rows = (blank === -1 ? lines : lines.slice(0, blank)).filter((line, index) => index !== 1 || !/^[\s|:-]+$/.test(line));
       const cells = (row: string) => row.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((cell) => cell.trim());
       const columns = Math.max(1, ...rows.map((row) => cells(row).length));
       const width = metrics.width - 16 * columns;

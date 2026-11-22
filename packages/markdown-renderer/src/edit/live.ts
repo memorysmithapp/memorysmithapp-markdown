@@ -665,11 +665,16 @@ function build(state: EditorState): DecorationSet {
           block(from, to, 'callout', `callout:${from}:${source}`, (view) => createElement(CalloutBlock, { view, text: source, marker }));
         }
         break;
-      case 'table':
+      case 'table': {
         if (!alone(from, to)) break;
-        if (open) eachLine(from, to, 'cm-ms-table-source');
-        else block(from, to, 'table', `table:${from}:${source}`, (view) => createElement(TableBlock, { view, from, to }), false);
+        // Its `Table:` paragraph is drawn by the block, as the field under it (#182): the block
+        // covers it, and shows it among the table's lines when the author is on either.
+        const caption = construct.caption;
+        const end = caption ? linesOf(caption.from, caption.to).to : lines.to;
+        if (touches(lines.from, end)) eachLine(from, caption?.to ?? to, 'cm-ms-table-source');
+        else block(from, caption?.to ?? to, 'table', `table:${from}:${text.slice(lines.from, end)}`, (view) => createElement(TableBlock, { view, from, to, caption }), false);
         break;
+      }
       case 'mathBlock':
         if (!alone(from, to)) break;
         if (open) {

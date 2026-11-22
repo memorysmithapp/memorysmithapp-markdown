@@ -2375,6 +2375,20 @@
 .markdown .edit-table table {
   width: 100%;
 }
+/* A table's caption is this field alone in the editor (#182): as wide as the
+   block, so the caption reads whole. */
+.markdown .edit-table-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-start: 0.35rem;
+  color: var(--ms-text-soft);
+  font-size: 0.9rem;
+}
+.markdown .edit-table-caption .edit-attach-input {
+  flex: 1;
+  min-width: 0;
+}
 .markdown .edit-cell {
   outline: none;
 }

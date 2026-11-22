@@ -225,7 +225,7 @@ describe('the figures, tables and attachments of a contents (#175)', () => {
 
   it('lists an image alone in its paragraph as a figure, by its title, its description, its name', () => {
     const page = html(`${LISTS}![Rua](https://example.org/rua.jpg "A rua em março")\n\n![[fachada.jpg]]\n\n![](../assets/planta.png)\n\nInline ![x](https://example.org/i.png) is no figure.\n\n![[contrato.pdf]]\n`, files);
-    const figures = page.slice(page.indexOf('data-list="figures"'), page.indexOf('data-list="tables"'));
+    const figures = page.slice(page.indexOf('data-list="figures"'), page.indexOf('data-list="attachments"'));
     expect(figures).toContain('<span class="contents-number">Figure 1</span> A rua em março');
     expect(figures).toContain('<span class="contents-number">Figure 2</span> Fachada após a reforma');
     expect(figures).toContain('<span class="contents-number">Figure 3</span> planta.png');
@@ -293,6 +293,27 @@ describe('the figures, tables and attachments of a contents (#175)', () => {
     expect(printed).toContain('Appendix 1 — Despesas pendentes');
     // The caption went with its table.
     expect(printed).not.toContain('<p class="table-caption">');
+  });
+
+  it('draws no list that has nothing to list, and nothing when no list has (#181)', () => {
+    const empty = html('```contents\nheadings:\nfigures:\ntables:\nattachments:\n```\n\n# Only a heading\n');
+    expect(empty).toContain('data-list="headings"');
+    expect(empty).not.toContain('data-list="figures"');
+    expect(empty).not.toContain('data-list="tables"');
+    expect(empty).not.toContain('data-list="attachments"');
+    expect(empty).not.toContain('>Figures<');
+    const none = html('```contents\nheadings:\nfigures:\n```\n\nNo heading, no figure.\n');
+    expect(none).not.toContain('<nav');
+    expect(none).not.toContain('Contents');
+    expect(none).not.toContain('language-contents');
+    const printed = html('```contents\nprint:\n  place: start\n```\n\nNo heading.\n', { printing: true });
+    expect(printed).not.toContain('<nav');
+  });
+
+  it('keeps an empty contents busy and hidden while a figure may still come (#181)', () => {
+    const page = html("```contents\nfigures:\n```\n\n![[fachada.jpg]]\n", { keeps: () => true, fileOf: () => new Promise<null>(() => {}) });
+    expect(page).toContain('<nav class="contents" aria-busy="true" hidden="">');
+    expect(page).not.toContain('contents-title');
   });
 
   it('lists nothing of an embed', async () => {

@@ -20,7 +20,8 @@ import { splitEmbeds } from '../embeds.js';
 import { embedsFile } from '../embed-target.js';
 import { STYLE_KEYS, type NoteStyle } from '../note-style.js';
 import { wikilinkAddress } from '../wikilink-address.js';
-import { planItems, planOutline } from '../outline.js';
+import { CAPTION, planItems, planOutline } from '../outline.js';
+import type { Span } from './analyze.js';
 import { useKeptFiles } from '../kept-files.js';
 import { readContents, resolveBlock, type ContentsPlan } from '../contents.js';
 import { ContentsAt, ContentsContext, listedIn } from '../ContentsBlock.js';
@@ -830,7 +831,7 @@ const chosenCells = new WeakMap<EditorView, { from: number; row: number; column:
  * content only. The controls add and remove rows and columns and align the column of the cell last
  * focused.
  */
-export function TableBlock({ view, from, to }: { view: EditorView; from: number; to: number }) {
+export function TableBlock({ view, from, to, caption = null }: { view: EditorView; from: number; to: number; caption?: Span | null }) {
   const { strings } = useHost();
   const words = strings.editor;
   const source = view.state.doc.sliceString(0, view.state.doc.length, '\n');
@@ -1046,40 +1047,39 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
           )}
         </table>
       </div>
-      <CaptionField view={view} end={table.to} />
+      <CaptionField view={view} end={table.to} caption={caption} />
     </div>
   );
 }
 
-/** A Markdown table's caption (#175): the `Table:` paragraph after a blank line below its last row. */
-const CAPTION_AFTER = /^\n[ \t]*\n[ \t]*table:[ \t]*([^\n]*)/i;
-
-/** The caption of the table that ends at `end`: where it is written, from the line break after the table, and its text. */
-export function tableCaptionAt(source: string, end: number): { from: number; to: number; text: string } | null {
-  const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
-  const match = CAPTION_AFTER.exec(source.slice(at));
-  return match ? { from: at, to: at + match[0].length, text: match[1]!.trim() } : null;
+/** A caption as its field shows it: its paragraph without its keyword, its lines joined (#175, #182). */
+export function captionText(source: string, caption: Span): string {
+  return source.slice(caption.from, caption.to).replace(CAPTION, '').replace(/[ \t]*\n[ \t]*/g, ' ').trim();
 }
 
-/** The changes that set a table's caption to `text`: written, rewritten, or taken out when empty. */
-export function setTableCaption(source: string, end: number, text: string): TextChange[] {
+/**
+ * The changes that set the caption of the table that ends at `end`, whose `Table:` paragraph is
+ * `caption` or none: written after a blank line, rewritten, or taken out with that line when empty.
+ */
+export function setTableCaption(source: string, end: number, caption: Span | null, text: string): TextChange[] {
   const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
-  const caption = tableCaptionAt(source, end);
   const written = text.trim() === '' ? '' : `\n\nTable: ${text.trim()}`;
-  if (caption) return caption.text === text.trim() ? [] : [{ from: caption.from, to: caption.to, insert: written }];
+  if (caption) return captionText(source, caption) === text.trim() ? [] : [{ from: at, to: caption.to, insert: written }];
   return written ? [{ from: at, to: at, insert: written }] : [];
 }
 
-/** The field under a table that writes its caption, so the author never types `Table:` (#175). */
-function CaptionField({ view, end }: { view: EditorView; end: number }) {
+/**
+ * The field under every table that writes its caption, empty when it has none, so the author never
+ * types `Table:` (#175); the paragraph itself is drawn by the table's block, as this field (#182).
+ */
+function CaptionField({ view, end, caption }: { view: EditorView; end: number; caption: Span | null }) {
   const { strings } = useHost();
-  const source = view.state.doc.sliceString(0, view.state.doc.length, '\n');
-  const written = tableCaptionAt(source, end)?.text ?? '';
+  const written = caption ? captionText(view.state.doc.sliceString(0, view.state.doc.length, '\n'), caption) : '';
   const [value, setValue] = useState(written);
   useEffect(() => setValue(written), [written]);
   const commit = (): void => {
     const now = view.state.doc.sliceString(0, view.state.doc.length, '\n');
-    write(view, setTableCaption(now, end, value));
+    write(view, setTableCaption(now, end, caption, value));
   };
   return (
     <label className="edit-table-caption" data-ms-control="">

@@ -120,7 +120,7 @@ export interface KeptReference {
 }
 
 /** The keyword of a Markdown table's caption (#175): `Table:`, Pandoc's, case folded. */
-const CAPTION = /^table:[ \t]*/i;
+export const CAPTION = /^table:[ \t]*/i;
 
 /** The kept file an attachment link names, as `resolveWikilinks` writes it: `attachment:name|size`. */
 export function attachmentName(url: string): string | null {

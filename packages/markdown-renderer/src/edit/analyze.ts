@@ -23,6 +23,7 @@ import type { NoteStyle } from '../note-style.js';
 import { CALLOUT_MARKER } from '../remark-callouts.js';
 import { breaksDollarRule } from '../remark-ring.js';
 import { hasParameterReference, parameterReferences } from '../parameters.js';
+import { CAPTION } from '../outline.js';
 
 /** A range of the text: `from` included, `to` excluded. */
 export interface Span {
@@ -87,7 +88,13 @@ export type Construct =
       readonly marker: Span;
     }
   | { readonly kind: 'quoteMarker'; readonly from: number; readonly to: number }
-  | { readonly kind: 'table'; readonly from: number; readonly to: number }
+  | {
+      readonly kind: 'table';
+      readonly from: number;
+      readonly to: number;
+      /** The `Table: …` paragraph that captions it, after a blank line (§7.17, #182), or `null`. */
+      readonly caption: Span | null;
+    }
   | {
       readonly kind: 'listMarker';
       readonly from: number;
@@ -234,7 +241,7 @@ export function analyze(text: string): Analysis {
   }
   const inWikilink = (span: Span): boolean => wikilinks.some((link) => span.from < link.to && span.to > link.from);
 
-  const visit = (node: MdNode, inCallout: boolean): void => {
+  const visit = (node: MdNode, inCallout: boolean, parent: MdNode | null): void => {
     const span = offsets(node);
     const children = node.children ?? [];
     if (span && !inComment(span.from)) {
@@ -344,7 +351,7 @@ export function analyze(text: string): Analysis {
               fold: callout[2] === '+' || callout[2] === '-' ? callout[2] : null,
               marker: { from: markerFrom, to: markerFrom + markerText.length },
             });
-            for (const child of children) visit(child, true);
+            for (const child of children) visit(child, true, node);
             return;
           }
           if (!inCallout) {
@@ -360,9 +367,13 @@ export function analyze(text: string): Analysis {
           }
           break;
         }
-        case 'table':
-          found.push({ kind: 'table', ...span });
+        case 'table': {
+          const next = parent?.children?.[parent.children.indexOf(node) + 1];
+          const first = next?.type === 'paragraph' ? next.children?.[0] : undefined;
+          const caption = next && first?.type === 'text' && CAPTION.test(first.value ?? '') ? offsets(next) : null;
+          found.push({ kind: 'table', ...span, caption });
           return;
+        }
         case 'listItem': {
           const marker = LIST_MARKER.exec(text.slice(span.from, span.to));
           if (marker) {
@@ -425,9 +436,9 @@ export function analyze(text: string): Analysis {
           return;
       }
     }
-    for (const child of children) visit(child, inCallout);
+    for (const child of children) visit(child, inCallout, node);
   };
-  visit(tree, false);
+  visit(tree, false, null);
 
   found.sort((a, b) => a.from - b.from || b.to - a.to);
   return { constructs: found, bodyFrom };
