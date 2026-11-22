@@ -22,6 +22,7 @@ The **Recovery Time Objective** is how long a service may stay down before the l
 ```contents
 headings:
   depth: 1
+tables:
 ```
 
 # How it is stated

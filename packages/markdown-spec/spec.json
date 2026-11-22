@@ -32,6 +32,11 @@
       "url": "https://mystmd.org/guide/syntax-overview#directives"
     },
     {
+      "id": "pandoc",
+      "name": "Pandoc",
+      "url": "https://pandoc.org/MANUAL.html#extension-table_captions"
+    },
+    {
       "id": "docutils",
       "name": "Docutils",
       "url": "https://docutils.sourceforge.io/docs/ref/rst/directives.html#table-of-contents"
@@ -510,9 +515,9 @@
     {
       "id": "table-block",
       "reader": "reading-surface",
-      "syntax": "```table\ntable: name\ncolumns: a, b\nwhere: query\nsort: a desc\npage: 25\ntotal: b\n```",
+      "syntax": "```table\ntable: name\ncolumns: a, b\nwhere: query\nsort: a desc\npage: 25\ntotal: b\ntitle: text\n```",
       "example": "```table\ntable: expenses\ncolumns: date, description, amount, status\nwhere: status:pending date:2026-10\nsort: date desc\npage: 20\ntotal: amount\n```\n",
-      "effect": "A fenced block whose info string is `table` presents a table of the notebook through a query, drawn as a table a page at a time: `table` names it; `columns` chooses and orders the columns, all of them when absent; `where` filters in the query language — terms that must all match, \"phrases\", -negation, OR, parentheses, column:value, and intervals over a date or a number; `sort` orders by columns, `asc` or `desc`, insertion order when absent; `page` is from 1 to 100 rows, 25 when absent; `total` sums a number column over every row the filter returns. Values are drawn in the reader's locale and as text, never as Markdown; a reader may sort by a column without a byte of the note changing; a printed note carries every filtered row. A missing table, an unknown key or column, a value its key cannot read or a filter that is an error is drawn in place of the table. Where no tables are kept the block is a code block, its lines as written.",
+      "effect": "A fenced block whose info string is `table` presents a table of the notebook through a query, drawn as a table a page at a time: `table` names it; `columns` chooses and orders the columns, all of them when absent; `where` filters in the query language — terms that must all match, \"phrases\", -negation, OR, parentheses, column:value, and intervals over a date or a number; `sort` orders by columns, `asc` or `desc`, insertion order when absent; `page` is from 1 to 100 rows, 25 when absent; `total` sums a number column over every row the filter returns; `title` names it in a contents and on its appendix, its table's name when absent. Values are drawn in the reader's locale and as text, never as Markdown; a reader may sort by a column without a byte of the note changing; a printed note carries every filtered row. A missing table, an unknown key or column, a value its key cannot read or a filter that is an error is drawn in place of the table. Where no tables are kept the block is a code block, its lines as written.",
       "spec": "7.15, 6.9"
     },
     {
@@ -526,9 +531,9 @@
     {
       "id": "contents-block",
       "reader": "reading-surface",
-      "syntax": "```contents\nheadings:\n  title: text\n  depth: 3\nplace: start\nscreen: none\nprint:\n  headings:\n```",
+      "syntax": "```contents\nheadings:\n  title: text\n  depth: 3\nfigures:\ntables:\nattachments:\nplace: start\nscreen: none\nprint:\n  headings:\n```",
       "example": "Resumo da reunião de novembro.\n\n```contents\nheadings:\n  title: Sumário\n  depth: 2\nprint:\n  place: start\n```\n\n# Abertura\n\nO síndico abriu a sessão.\n\n# Deliberações\n\n## Orçamento 2027\n\n### Detalhe\n",
-      "effect": "The note's table of contents: its outline — the headings at the top level, a style block's included — as links nested by level, each its heading as drawn, leading to the heading's slug. An empty block lists the headings three levels deep. Settings in YAML's shape: `headings` with `title` and `depth` (1 to 6), `place` (`start`, `end`), and `screen` and `print` groups that override the root for their medium, or draw nothing there with `none`. Drawn where it is written unless `place` moves it; it always lists the whole note. A Reader's own settings in the same structure are the defaults of a block, `place` excepted, and give a contents to a note with no block. Printed, each entry carries its page. Inside an embed it draws nothing. A key or value it cannot take sets nothing and is a notice. It changes nothing an Indexer reads.",
+      "effect": "The note's table of contents: its outline — the headings at the top level, a style block's included — as links nested by level, each its heading as drawn, leading to the heading's slug. An empty block lists the headings three levels deep. Settings in YAML's shape: `headings` with `title` and `depth` (1 to 6), `figures`, `tables` and `attachments` with `title` — a figure an image alone in its paragraph, remote or a kept image; a table a Markdown table or a `table` block, numbered as the appendices are; an attachment a kept file the note embeds, once — each entry its title, else the kept file's description, else its name, and the line under a figure or a table drawn where that kind is listed; `place` (`start`, `end`), and `screen` and `print` groups that override the root for their medium, or draw nothing there with `none`. Drawn where it is written unless `place` moves it; it always lists the whole note. A Reader's own settings in the same structure are the defaults of a block, `place` excepted, and give a contents to a note with no block. Printed, each entry carries its page. Inside an embed it draws nothing. A key or value it cannot take sets nothing and is a notice. It changes nothing an Indexer reads.",
       "spec": "7.17, 3.3"
     },
     {
@@ -538,6 +543,14 @@
       "example": "See [the vote](#deliberações) below.\n\n# Deliberações\n",
       "effect": "A heading's slug is its text in lower case, letters with their marks, digits, `-` and `_` kept, each space a `-`, anything else dropped, a repeat taking `-1`, `-2`. A link whose target is only an anchor — `[text](#slug)`, `[[#Heading]]` — leads within the note it is written in: no edge and no pending link.",
       "spec": "3.3, 5.2"
+    },
+    {
+      "id": "table-caption",
+      "reader": "reading-surface",
+      "syntax": "| a |\n|---|\n| 1 |\n\nTable: caption",
+      "example": "| Item | Valor |\n|---|---:|\n| Obra | 120 |\n\nTable: Previsão de despesas para 2027\n",
+      "effect": "The paragraph right after a table, after a blank line, that starts with `Table:` (case folded) is its caption, Pandoc's form: drawn under the table without its keyword, whether or not anything lists it, with the table's number before it where a contents lists the tables. It names the table in a contents and on its appendix. Without the blank line the line is one more row of the table.",
+      "spec": "7.17"
     }
   ],
   "notices": [
@@ -659,7 +672,7 @@
       "code": "table-key-unknown",
       "severity": "notice",
       "spec": "7.15",
-      "effect": "A line of a table block that is not key: value with one of its six keys: the block says so in place of the table."
+      "effect": "A line of a table block that is not key: value with one of its seven keys: the block says so in place of the table."
     },
     {
       "code": "table-key-invalid",

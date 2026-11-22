@@ -2089,6 +2089,20 @@
       "notices": []
     },
     {
+      "id": "table-caption/a-link-in-a-caption-is-an-edge",
+      "notation": "table-caption",
+      "markdown": "| Item | Valor |\n|---|---:|\n| Obra | 120 |\n\nTable: Previsão aprovada por [[Treasurer]]\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null }
+      ]
+    },
+    {
+      "id": "table/a-title-is-a-key",
+      "notation": "table-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```table\ntable: despesas\ntitle: Despesas pendentes\n```\n",
+      "notices": []
+    },
+    {
       "id": "style/numbering-is-a-key",
       "notation": "style-block",
       "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nnumbering: decimal\n---\n## Presentes\n\n## Pauta\n:::\n",
@@ -2183,6 +2197,20 @@
           "code": "fence-unclosed",
           "line": 8
         }
+      ]
+    },
+    {
+      "id": "contents/the-lists-of-a-block-raise-nothing",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\nheadings:\nfigures:\n  title: Fotos\ntables:\nattachments:\nprint:\n  tables:\n```\n\n# Abertura\n",
+      "notices": []
+    },
+    {
+      "id": "contents/a-depth-outside-the-headings",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\nfigures:\n  depth: 2\n```\n\n# Abertura\n",
+      "notices": [
+        { "code": "contents-key-unknown", "line": 8 }
       ]
     },
     {

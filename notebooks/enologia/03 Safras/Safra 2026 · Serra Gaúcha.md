@@ -18,6 +18,8 @@ A safra em que a chuva chegou antes do IPT. O registro existe para que a decisã
 ```contents
 headings:
   title: Sumário
+tables:
+  title: Tabelas
 print:
   place: start
 ```
@@ -33,6 +35,8 @@ print:
 | 10 fev | 21,1 | 47 | Curva subindo |
 | 17 fev | 22,0 | 55 | Chuva anunciada |
 | 24 fev | 22,3 | 58 | Antecipada, contra [[Vinificação em tinto]] |
+
+Table: A curva de maturação, semana a semana
 
 A caderneta do campo, copiada como foi anotada, sem colunas, porque quem anota no vinhedo não para para alinhar nada:[^caderneta]
 

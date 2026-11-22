@@ -12,6 +12,7 @@ import { contentsBlockAt, contentsText, newContentsBlock, setContents } from '..
 import { contentsFields, contentsSettings } from '../../src/edit/ContentsDialog.js';
 import { readContents } from '../../src/contents.js';
 import { applyChanges } from '../../src/edit/table.js';
+import { setTableCaption, tableCaptionAt } from '../../src/edit/blocks.js';
 import { mount, type Mounted } from '../render.js';
 
 const FRONT = '---\nname: Ata\n---\n';
@@ -136,5 +137,37 @@ describe('a contents block in edit mode', () => {
     for (let i = 0; i < 3; i++) await act(async () => new Promise((done) => setTimeout(done, 0)));
     expect(view.contentDOM.textContent).toContain('depth: 2');
     expect(view.dom.querySelector('nav.contents')).toBeNull();
+  });
+});
+
+describe('the lists of the form and the caption of a table (#175)', () => {
+  it('writes the lists chosen, a bare one included, and the headings alone as nothing', () => {
+    expect(contentsText({ figures: {} })).toBe('figures:\n');
+    const fields = contentsFields({});
+    fields.root.lists.figures = true;
+    fields.root.titles.figures = 'Fotos';
+    expect(contentsSettings(fields)).toEqual({ headings: {}, figures: { title: 'Fotos' } });
+    expect(contentsText(contentsSettings(fields))).toBe('headings:\nfigures:\n  title: Fotos\n');
+  });
+
+  it('names a medium lists only where they differ from the root, and all of them when it does', () => {
+    const fields = contentsFields({ headings: {}, tables: {} });
+    fields.media.print = { mode: 'own', layer: { ...fields.root, lists: { ...fields.root.lists }, place: 'start' } };
+    expect(contentsSettings(fields)).toEqual({ headings: {}, tables: {}, print: { place: 'start' } });
+    fields.media.print.layer.lists.tables = false;
+    expect(contentsSettings(fields)).toEqual({ headings: {}, tables: {}, print: { headings: {}, place: 'start' } });
+    expect(contentsText(contentsSettings(fields))).toBe('headings:\ntables:\nprint:\n  headings:\n  place: start\n');
+  });
+
+  it('writes, rewrites and takes out a table caption after a blank line', () => {
+    const text = '| a |\n|---|\n| 1 |\n\nAfter.\n';
+    const end = text.indexOf('| 1 |') + 5;
+    const once = applyChanges(text, setTableCaption(text, end, 'Previsão'));
+    expect(once).toBe('| a |\n|---|\n| 1 |\n\nTable: Previsão\n\nAfter.\n');
+    expect(tableCaptionAt(once, end)).toEqual({ from: end, to: end + '\n\nTable: Previsão'.length, text: 'Previsão' });
+    const again = applyChanges(once, setTableCaption(once, end, 'Votação'));
+    expect(again).toBe('| a |\n|---|\n| 1 |\n\nTable: Votação\n\nAfter.\n');
+    expect(applyChanges(again, setTableCaption(again, end, ''))).toBe(text);
+    expect(setTableCaption(text, end, '  ')).toEqual([]);
   });
 });

@@ -37,7 +37,8 @@ import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownS
 import type { TaskSave } from './task-saves.js';
 import { ordinalAt } from './tasklist.js';
 import { InPageAnchor } from './InPageAnchor.js';
-import { ContentsBlock, ContentsContext } from './ContentsBlock.js';
+import { Caption, ContentsBlock, ContentsContext } from './ContentsBlock.js';
+import { tableId } from './outline.js';
 import { isContentsBlock } from './contents.js';
 import { remarkOutline, type OutlineRun } from './outline.js';
 
@@ -431,7 +432,15 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
   // code block it is everywhere else (§7.15).
   const meta = (code as { data?: { meta?: unknown } } | undefined)?.data?.meta;
   if (queryTable && isTableBlock(language, typeof meta === 'string' ? meta : null)) {
-    return <DataTable source={typed} fallback={drawn} />;
+    // Numbered among the note's tables (#175): its id, which a contents leads to, and the line under it.
+    const number = code?.properties?.['dataTable'];
+    if (typeof number !== 'number') return <DataTable source={typed} fallback={drawn} />;
+    return (
+      <div id={tableId(number)} className="table-block-figure">
+        <DataTable source={typed} fallback={drawn} />
+        <Caption kind="table" number={number} />
+      </div>
+    );
   }
   // A `contents` block is the note's contents where the note's outline is known (§7.17, #173).
   if (isContentsBlock(language, typeof meta === 'string' ? meta : null)) {
@@ -439,6 +448,17 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
     return <ContentsBlock ordinal={typeof ordinal === 'number' ? ordinal : null} fallback={drawn} />;
   }
   return drawn;
+}
+
+/** The line under a figure or a table, as `remarkOutline` marks it (#175). */
+function MarkdownCaption({ children, node: _node, ...rest }: WithNode<HTMLAttributes<HTMLElement>>) {
+  const attributes = rest as Record<string, unknown>;
+  const number = Number(attributes['data-number']);
+  return (
+    <Caption kind={attributes['data-kind'] === 'table' ? 'table' : 'figure'} number={Number.isFinite(number) ? number : null}>
+      {children}
+    </Caption>
+  );
 }
 
 /** The text of a hast element, which for a fence is the code as typed. */
@@ -587,7 +607,19 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           ...readingPlugins(calloutTitle, strings.parameter),
           [remarkJustifiedColumns, { columns: justified.columns }],
           [remarkStyleBlocks, { ranges: styled.ranges, locale: strings.locale }],
-          [remarkOutline, { slugs: outline?.slugs ?? null, numbers: outline?.numbers ?? null, firstBlock: outline?.firstBlock ?? 0, ids: !embedded }],
+          [
+            remarkOutline,
+            {
+              slugs: outline?.slugs ?? null,
+              numbers: outline?.numbers ?? null,
+              firstBlock: outline?.firstBlock ?? 0,
+              ids: !embedded,
+              figures: outline?.figures ?? null,
+              tables: outline?.tables ?? null,
+              attachments: outline?.attachments ?? null,
+              tableBlocks: outline?.tableBlocks ?? queryTable !== null,
+            },
+          ],
           ...(appendices ? [[remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }] as Pluggable] : []),
         ]}
         // Raw HTML is NOT enabled, and its absence is the point: no
@@ -627,6 +659,8 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           blockquote: MarkdownBlockquote,
           section: MarkdownSection,
           ...headings,
+          // The line under a figure or a table (#175), which `remarkOutline` puts in its place.
+          ...({ 'ms-caption': MarkdownCaption } as Record<string, unknown>),
           li: (props: LiProps) => (
             <TaskItem
               {...props}

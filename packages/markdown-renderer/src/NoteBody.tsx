@@ -20,9 +20,10 @@ import { findStyleBlocks, rangesFor, styleAt, blockAttributes, type StyleRange }
 import type { StyleNumbering } from './note-style.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
-import { planOutline } from './outline.js';
+import { planItems, planOutline, type FileKind } from './outline.js';
+import { useKeptFiles } from './kept-files.js';
 import { readContents, resolveBlock, resolveHost as resolveHostContents } from './contents.js';
-import { ContentsAt, ContentsContext, type BlockPlans, type ContentsScope } from './ContentsBlock.js';
+import { ContentsAt, ContentsContext, listedIn, type BlockPlans, type ContentsScope } from './ContentsBlock.js';
 
 export interface NoteBodyProps extends NoteHost {
   /**
@@ -300,10 +301,24 @@ function NoteView({
   const numbering = resolved.noteStyle.numbering ?? 'none';
   const numberingAt = (run: number, line: number): StyleNumbering =>
     (lined && runStarts[run] !== undefined ? styleAt(styled.blocks, runStarts[run]! + line - 1).numbering : undefined) ?? numbering;
+  const tableBlocks = resolved.queryTable !== null;
   const outline = useMemo(
-    () => planOutline(drawnRuns, numberingAt),
-    [drawnRuns.join('\u0000'), numbering, JSON.stringify(styled.blocks)],
+    () => planOutline(drawnRuns, numberingAt, tableBlocks),
+    [drawnRuns.join('\u0000'), numbering, JSON.stringify(styled.blocks), tableBlocks],
   );
+  // The note's figures, tables and attachments (#175): a kept file is a figure when its media type
+  // is an image's, which only the host says, so what it says of each file is asked first.
+  const keptNames = useMemo(() => [...new Set(outline.kept.map((reference) => reference.name))].filter((name) => resolved.keeps(name)), [outline, resolved.keeps]);
+  const files = useKeptFiles(resolved, keptNames);
+  const items = useMemo(() => {
+    const kindOf = (name: string, form: 'image' | 'embed'): FileKind => {
+      if (!resolved.fileOf) return form === 'image' ? 'image' : 'other';
+      const file = files.get(name);
+      if (file === undefined) return 'pending';
+      return file?.mimeType.startsWith('image/') ? 'image' : 'other';
+    };
+    return planItems(outline, kindOf, resolved.keeps);
+  }, [outline, files, resolved.fileOf, resolved.keeps]);
   const contentsScope = useMemo((): { scope: ContentsScope; placed: readonly BlockPlans[] } => {
     const blocks = outline.blocks.map((source): BlockPlans => {
       const { settings } = readContents(source);
@@ -311,8 +326,33 @@ function NoteView({
     });
     const host: BlockPlans[] =
       blocks.length === 0 ? [{ screen: resolveHostContents(resolved.contents, 'screen'), print: resolveHostContents(resolved.contents, 'print') }] : [];
-    return { scope: { kind: 'note', headings: outline.headings, blocks, printing: resolved.printing }, placed: [...blocks, ...host] };
-  }, [outline, resolved.contents, resolved.printing]);
+    const placed = [...blocks, ...host];
+    return {
+      scope: {
+        kind: 'note',
+        headings: outline.headings,
+        items,
+        files,
+        blocks,
+        listed: listedIn(placed),
+        printing: resolved.printing,
+        appendices: Boolean(appendices),
+      },
+      placed,
+    };
+  }, [outline, items, files, resolved.contents, resolved.printing, appendices]);
+  // A run marks the figures, tables and attachments a list leads to, and only those: a note with no
+  // such list draws its images, tables and files exactly as before (#175).
+  const marked = contentsScope.scope.kind === 'note' ? contentsScope.scope.listed : null;
+  const any = (kind: 'figures' | 'tables' | 'attachments') => Boolean(marked && (marked[kind].screen || marked[kind].print));
+  const markedOf = (index: number) => {
+    const plan = items.runs[index];
+    return {
+      ...(plan && any('figures') ? { figures: plan.figures } : {}),
+      ...(plan && any('tables') ? { tables: plan.tables } : {}),
+      ...(plan && any('attachments') ? { attachments: plan.attachments } : {}),
+    };
+  };
   const placed = (place: 'start' | 'end') => contentsScope.placed.map((plans, index) => <ContentsAt key={`${place}-${index}`} plans={plans} place={place} />);
   let run = 0;
 
@@ -349,9 +389,12 @@ function NoteView({
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
-          const first = appendices?.first[run];
-          const runOutline = outline.runs[run];
-          const planned = footnotes?.runs[run++];
+          // The run's place among the runs, counted here: `footnotes?.runs[run++]` counted nothing
+          // when the note had no footnotes, and every run then took the first one's place.
+          const current = run++;
+          const first = appendices?.first[current];
+          const runOutline = outline.runs[current];
+          const planned = footnotes?.runs[current];
           return (
             <Markdown
               key={index}
@@ -367,7 +410,7 @@ function NoteView({
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
               {...(appendices && first !== undefined ? { appendices: { first, appendices: appendices.appendices } } : {})}
               styles={lined ? rangesFor(styled.blocks, startLines[index]!, startLines[index]! + segment.text.split('\n').length - 1) : NO_STYLES}
-              {...(runOutline ? { outline: runOutline } : {})}
+              {...(runOutline ? { outline: { ...runOutline, ...markedOf(current), tableBlocks } } : {})}
             >
               {planned?.text ?? segment.rendered}
             </Markdown>

@@ -60,6 +60,8 @@ export interface TableBlock {
   readonly sort: readonly TableSortKey[] | null;
   readonly page: number;
   readonly total: string | null;
+  /** The title it writes, which names it in a contents and on its appendix (#175), or `null`. */
+  readonly title: string | null;
   /** The mistakes that do not need the table, at most one a line. */
   readonly problems: readonly TableProblem[];
   /** The line of each key that was read, for the mistakes found against the table. */
@@ -67,7 +69,7 @@ export interface TableBlock {
 }
 
 /** The six keys, in English in every notebook (§7.15). */
-export const TABLE_KEYS = ['table', 'columns', 'where', 'sort', 'page', 'total'] as const;
+export const TABLE_KEYS = ['table', 'columns', 'where', 'sort', 'page', 'total', 'title'] as const;
 export type TableKey = (typeof TABLE_KEYS)[number];
 
 /** Rows to a page when the block says nothing, and the most it may ask for. */
@@ -197,6 +199,7 @@ export function readTableBlock(value: string): TableBlock {
     columns,
     where,
     whereText: values.where ?? null,
+    title: values.title ?? null,
     sort,
     page,
     total,

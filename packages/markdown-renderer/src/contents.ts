@@ -10,7 +10,7 @@
  */
 
 /** The lists a contents block draws, each a group of its settings. */
-export const CONTENTS_LISTS = ['headings'] as const;
+export const CONTENTS_LISTS = ['headings', 'figures', 'tables', 'attachments'] as const;
 export type ContentsList = (typeof CONTENTS_LISTS)[number];
 
 /** The media a contents block tells apart. */

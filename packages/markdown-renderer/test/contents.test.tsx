@@ -210,3 +210,100 @@ describe('the contents drawn', () => {
     expect(scrolled).toBe(2);
   });
 });
+
+describe('the figures, tables and attachments of a contents (#175)', () => {
+  const kept: Record<string, { mimeType: string; description?: string }> = {
+    'fachada.jpg': { mimeType: 'image/jpeg', description: 'Fachada após a reforma' },
+    'planta.png': { mimeType: 'image/png' },
+    'contrato.pdf': { mimeType: 'application/pdf', description: 'Contrato de obra assinado' },
+  };
+  const files = {
+    keeps: (name: string) => name in kept,
+    fileOf: (name: string) => (name in kept ? { ...kept[name]!, bytes: 10, url: `/files/${name}` } : null),
+  };
+  const LISTS = '```contents\nfigures:\ntables:\nattachments:\n```\n\n';
+
+  it('lists an image alone in its paragraph as a figure, by its title, its description, its name', () => {
+    const page = html(`${LISTS}![Rua](https://example.org/rua.jpg "A rua em março")\n\n![[fachada.jpg]]\n\n![](../assets/planta.png)\n\nInline ![x](https://example.org/i.png) is no figure.\n\n![[contrato.pdf]]\n`, files);
+    const figures = page.slice(page.indexOf('data-list="figures"'), page.indexOf('data-list="tables"'));
+    expect(figures).toContain('<span class="contents-number">Figure 1</span> A rua em março');
+    expect(figures).toContain('<span class="contents-number">Figure 2</span> Fachada após a reforma');
+    expect(figures).toContain('<span class="contents-number">Figure 3</span> planta.png');
+    expect(figures).not.toContain('Figure 4');
+    expect(figures).not.toContain('i.png');
+    expect(page).toContain('id="contents-figure-1"');
+  });
+
+  it('draws the line under a figure only where its kind is listed', () => {
+    const listed = html(`${LISTS}![Rua](https://example.org/rua.jpg "A rua em março")\n`);
+    expect(listed).toContain('<span class="figure-caption"><span class="caption-number">Figure 1</span> A rua em março</span>');
+    const unlisted = html('```contents\n```\n\n![Rua](https://example.org/rua.jpg "A rua em março")\n');
+    expect(unlisted).not.toContain('figure-caption');
+    const printOnly = html('```contents\nprint:\n  figures:\n```\n\n![Rua](https://example.org/rua.jpg "A rua")\n');
+    expect(printOnly).toContain('<span class="figure-caption" data-media="print">');
+  });
+
+  it('counts a kept image a figure without fileOf only when it is written as an image', () => {
+    const page = html(`${LISTS}![](../assets/planta.png)\n\n![[fachada.jpg]]\n`, { keeps: files.keeps });
+    expect(page).toContain('Figure 1</span> planta.png');
+    expect(page).not.toContain('Figure 2');
+  });
+
+  it('takes a Table: caption as the caption, drawn without its keyword even with no list', () => {
+    const table = '| a | b |\n|---|---|\n| 1 | 2 |\n\nTable: Previsão de [[Despesas]]\n';
+    const unlisted = html(table);
+    expect(unlisted).toContain('<p class="table-caption">Previsão de ');
+    expect(unlisted).not.toContain('Table:');
+    expect(unlisted).not.toContain('caption-number');
+    const listed = html(`${LISTS}${table}\n| c |\n|---|\n| 3 |\n`);
+    expect(listed).toContain('<p class="table-caption"><span class="caption-number">Table 1 </span>Previsão de ');
+    expect(listed).toContain('<p class="table-caption"><span class="caption-number">Table 2</span></p>');
+    expect(listed).toContain('<span class="contents-number">Table 1</span> Previsão de ');
+    expect(listed).toContain('href="#contents-table-2"');
+    expect(listed).toContain('<table id="contents-table-1">');
+  });
+
+  it('reads a caption only on the paragraph after a blank line, the line under a table being a row', () => {
+    const page = html('| a |\n|---|\n| 1 |\nTable: not a caption\n');
+    expect(page).not.toContain('table-caption');
+    expect(page).toContain('<td>Table: not a caption</td>');
+  });
+
+  it('lists each kept file once, by its title, its description, its name, where it is first referenced', () => {
+    const page = html(`${LISTS}See ![[contrato.pdf]] and ![[contrato.pdf]].\n\n![Planta](../assets/planta.png "A planta baixa")\n\n![[fachada.jpg]]\n\n![](missing.png)\n`, files);
+    const attachments = page.slice(page.indexOf('data-list="attachments"'), page.indexOf('</nav>'));
+    expect(attachments).toContain('href="#contents-attachment-1"');
+    expect(attachments).toContain('Contrato de obra assinado');
+    expect(attachments).toContain('A planta baixa');
+    expect(attachments).toContain('Fachada após a reforma');
+    expect(attachments).not.toContain('missing.png');
+    expect(page.match(/id="contents-attachment-1"/g)).toHaveLength(1);
+  });
+
+  it('names a table block by its title, else its table, and leads a printed appendix there', () => {
+    const queryTable = async () => ({ schema: { name: 'despesas', columns: [{ name: 'a', kind: 'text' as const }] }, rows: [], count: 0, total: null, readAt: '2026-11-22' });
+    const note = `${LISTS}\`\`\`table\ntable: despesas\ntitle: Despesas pendentes\n\`\`\`\n\n\`\`\`table\ntable: receitas\n\`\`\`\n\n| a |\n|---|\n| 1 |\n\nTable: Votação\n`;
+    const page = html(note, { queryTable });
+    expect(page).toContain('<span class="contents-number">Table 1</span> Despesas pendentes');
+    expect(page).toContain('<span class="contents-number">Table 2</span> receitas');
+    expect(page).toContain('<div id="contents-table-1" class="table-block-figure">');
+    const printed = html(note, { queryTable, printing: true, tablesAsAppendices: true });
+    expect(printed).toContain('href="#table-appendix-3"');
+    expect(printed).toContain('Appendix 3 — Votação');
+    expect(printed).toContain('Appendix 1 — Despesas pendentes');
+    // The caption went with its table.
+    expect(printed).not.toContain('<p class="table-caption">');
+  });
+
+  it('lists nothing of an embed', async () => {
+    const embedded = '---\nname: Capítulo\n---\n![Rua](https://example.org/rua.jpg "A rua")\n\n| a |\n|---|\n| 1 |\n';
+    mounted = await draw(`${LISTS}![[Capítulo]]\n`, {
+      resolve: (name) => (name === 'Capítulo' ? '/notes/capitulo' : null),
+      loadNote: async () => ({ name: 'Capítulo', address: '/notes/capitulo', markdown: embedded }),
+    });
+    await act(async () => {});
+    expect(mounted.container.querySelectorAll('.contents-entry')).toHaveLength(0);
+    expect(mounted.container.querySelector('.embed .figure-caption')).toBeNull();
+    expect(mounted.container.querySelector('.embed .table-caption')).toBeNull();
+  });
+});

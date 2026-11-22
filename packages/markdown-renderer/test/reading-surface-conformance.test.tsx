@@ -78,6 +78,11 @@ const EXPECTED: Record<string, (html: string) => void> = {
     expect(html).toContain('id="user-content-detalhe"');
     expect(html).not.toContain('language-contents');
   },
+  // A table's caption (§7.17): drawn under it without its keyword, whatever lists it.
+  'table-caption': (html) => {
+    expect(html).toContain('<p class="table-caption">Previsão de despesas para 2027</p>');
+    expect(html).not.toContain('Table:');
+  },
   // This specification's own delimiter cell (§4.1): a table, its column justified.
   'table-justified': (html) => {
     expect(html).toContain('<table>');

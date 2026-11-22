@@ -54,6 +54,7 @@ Every form this specification declares was taken from somewhere, and the places 
 | [Obsidian](https://help.obsidian.md/syntax) | The wikilink and its alias, anchor, embed and block forms; callouts; marked text; comments; block identifiers; footnotes; the `{{variable}}` of a template; the `query` block that draws what a query returns in place of itself | §5, §7 |
 | [MemorySmith's search](https://github.com/memorysmithapp/memorysmithapp/blob/main/memorysmith-backend/services/discovery/src/domain/SearchQuery.ts) | The query language: terms, phrases, negation, `OR`, groups, fields and the intervals over a date | §6 |
 | [MyST Markdown](https://mystmd.org/guide/syntax-overview#directives) | The directive: a colon fence, `:::{name}`, that holds blocks, with its options in a `---` block at its start | §7.16 |
+| [Pandoc](https://pandoc.org/MANUAL.html#extension-table_captions) | The caption of a table: a paragraph that starts with `Table:` beside it | §7.17 |
 | [Docutils](https://docutils.sourceforge.io/docs/ref/rst/directives.html#table-of-contents) | The `contents` directive, which MyST inherits: a table of contents that lists the headings of the document it is written in, to a `depth` | §7.17 |
 | This specification | The justified column of a table, `;---;` in the delimiter row | §4.1 |
 
@@ -738,7 +739,7 @@ A **Reader** renders a note for a person. Everything in this section is display:
 
 Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram, a table block and a contents block are fenced blocks, an embed is an image whose target happens to be a note, and a style block is its content between two lines of colons. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
 
-Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, math and diagrams by the wider convention both it and GitHub follow, the directive a style block is written as by MyST, and the contents a note declares by Docutils (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
+Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, math and diagrams by the wider convention both it and GitHub follow, the directive a style block is written as by MyST, the contents a note declares by Docutils, and the caption of a table by Pandoc (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
 
 ### 7.1 Callouts
 
@@ -936,7 +937,7 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `link-pending` | hint | §7.4 | A wikilink no note answers is drawn as pending |
 | `embed-pending` | hint | §7.3 | An embed no note and no kept file answers is drawn as a pending link, not as content; so is an image whose destination names no host and no kept file answers (§5.8), whose description is drawn as pending text |
 | `table-unnamed` | notice | §7.15 | A `table` block whose `table` key is missing, empty or written twice names no table, and says so in place of one |
-| `table-key-unknown` | notice | §7.15 | A line of a `table` block that is not `key: value` with one of its six keys: the block says so in place of the table |
+| `table-key-unknown` | notice | §7.15 | A line of a `table` block that is not `key: value` with one of its seven keys: the block says so in place of the table |
 | `table-key-invalid` | notice | §7.15 | A key of a `table` block written twice, or a value its key cannot read: the block says so in place of the table |
 | `table-column-unknown` | notice | §7.15 | A column the table does not have, named by a key of a `table` block or as a field of its `where`: the block says so in place of the table |
 | `table-filter-invalid` | notice | §7.15 | A `where` that is an error (§6.9): the block says so in place of the table |
@@ -998,7 +999,7 @@ total: amount
 
 A fenced code block whose info string is `table` presents a table of the notebook (§5.9) through a query: the rows the query returns, in the order the block asks, a page at a time. **The block holds the question and never the answer**: the rows stay in the table, and the note keeps the same bytes whatever the table comes to hold. The form, a fenced block that draws what a query returns in place of itself, is Obsidian's `query` block (§2); the language of its filter is §6.9.
 
-**The lines.** Each line of the block is `key: value`: the key is what precedes the first `:` and the value what follows it, both trimmed, and blank lines are ignored. The keys are written in English in every notebook, as the reserved keys of the frontmatter are (§6.4), and there are six:
+**The lines.** Each line of the block is `key: value`: the key is what precedes the first `:` and the value what follows it, both trimmed, and blank lines are ignored. The keys are written in English in every notebook, as the reserved keys of the frontmatter are (§6.4), and there are seven:
 
 | Key | Value | When absent |
 |---|---|---|
@@ -1008,12 +1009,13 @@ A fenced code block whose info string is `table` presents a table of the noteboo
 | `sort` | Column names separated by commas, each followed by `asc` or `desc`, or by nothing for `asc`; the first decides, and each next one breaks the ties of those before it | The order the rows were added in |
 | `page` | Rows per page, a whole number from 1 to 100, in digits | 25 |
 | `total` | A column of kind `number`, among those drawn, whose sum over every row the filter returns closes the table — not the sum of one page | No total |
+| `title` | Text: what names the table in a contents and on its appendix (§7.17) | The table's name |
 
 A key with an empty value is absent. A column is named as a field of a query is (§6.9), with case and marks folded, so `descricao` names `Descrição`; the header shows each column as the table writes it, whatever the block wrote.
 
 **The order of rows**, whether a key or a reader asks for it: numbers as numbers, dates in ISO 8601, which orders as text, booleans `false` first, and text and lists by their folded text (§6.9). An empty value comes last in either direction, and rows that tie keep the order they were added in.
 
-**A block that cannot be read is drawn as what is wrong with it**, in place of the table, and never as an empty table or as nothing. That is a block whose `table` key is missing, empty or written twice; a line that is not `key: value`, or whose key is not one of the six; another key written twice; a value its key cannot read — a column listed twice in one key, a name that is not one word (§5.9), a direction other than `asc` and `desc`, a `page` outside 1 to 100, a `total` over a column that is not a number or is not drawn; a column the table does not have, in a key or as a field of `where`; a `where` that is an error (§6.9); and a table the notebook does not keep. Each is a notice (§7.13). A block's mistake stays in the block: the rest of the note draws as written.
+**A block that cannot be read is drawn as what is wrong with it**, in place of the table, and never as an empty table or as nothing. That is a block whose `table` key is missing, empty or written twice; a line that is not `key: value`, or whose key is not one of the seven; another key written twice; a value its key cannot read — a column listed twice in one key, a name that is not one word (§5.9), a direction other than `asc` and `desc`, a `page` outside 1 to 100, a `total` over a column that is not a number or is not drawn; a column the table does not have, in a key or as a field of `where`; a `where` that is an error (§6.9); and a table the notebook does not keep. Each is a notice (§7.13). A block's mistake stays in the block: the rest of the note draws as written.
 
 **Drawing.** A Reader that reaches the notebook's tables MUST draw the block as a table: a header, the rows of one page, a way to the other pages when there are more, and the total, when there is one, under its column. A value is drawn in the reader's locale — a number with the reader's separators, a date in the reader's form, a boolean in the reader's words, a list as its items — and always **as text**: nothing in a row is parsed as Markdown, so a `[[link]]` or a `<b>` a row holds is its characters. That keeps rows out of the graph and raw HTML off the page (§7.9).
 
@@ -1068,7 +1070,7 @@ Keys and values are compared with case folded. **What wins**, nearest first: a c
 
 ### 7.17 Contents blocks
 
-A note can declare its table of contents: a list of its headings, nested by level, that leads to each of them.
+A note can declare its table of contents: a list of its headings, nested by level, that leads to each of them, and lists of its figures, its tables and its attachments.
 
 ````markdown
 ```contents
@@ -1084,7 +1086,15 @@ print:
 
 **The form is a fenced block whose info string is `contents`** and nothing else, as the `table` block is (§7.15), and the name is Docutils' directive (§2), which lists the headings of the document it is written in. An empty block is the classic contents: the headings, three levels deep. It may stand anywhere below the frontmatter a fenced block can stand, a note may hold more than one, and **it always lists the whole note**, the headings above it included.
 
-**What it lists** is the note's outline (§3.3): its headings at the top level, the ones a style block holds included (§7.16). An entry is its heading as drawn — its inline marks kept, a link drawn as its text, a footnote reference left out — and it leads to the heading's slug (§3.3).
+**What it lists** is the note's outline (§3.3): its headings at the top level, the ones a style block holds included (§7.16). An entry is its heading as drawn — its inline marks kept, a link drawn as its text, a footnote reference left out — and it leads to the heading's slug (§3.3). The groups are drawn in the order they are written.
+
+**Figures, tables and attachments.** Each entry takes the first of these that exists: its title, then the description the notebook keeps for the file, then the file's name. No notation is added to give one: an author, or an assistant, writes the title the notation already has.
+
+- **A figure** is an image alone in its paragraph, in either form, `![alt](x "title")` or `![[photo.jpg]]`: a remote image, or a kept file whose media type is an image's — which its media type decides and never its name (§5.8). An image inside a line of text is not a figure. Its title is the one after its destination; the alt text describes the image for whoever cannot see it and is never its entry. Figures are numbered in the order they appear.
+- **A table** is a Markdown table, or a `table` block where a Reader draws one (§7.15), in one sequence, the one a printed note numbers its appendices in. A block's entry is its `title`, else the table it names. A Markdown table's is its **caption**, a paragraph right after it, separated from it by a blank line, that starts with `Table:`, compared with case folded, as Pandoc writes one (§2); without the blank line GFM reads that line as one more row. With no caption the entry is the table's number alone.
+- **An attachment** is a file the note embeds, `![[file]]`, or names in an image whose destination names no host (§5.8), listed once, at its first reference, in the order they appear. A link never names an attachment (§5.8), so it adds none.
+
+**The line under a figure or a table.** A Reader that draws a list of figures draws under each figure its number, *Figure 1* in the reader's words, and its entry; a list of tables does the same under each table. It is drawn only in a medium where the note draws that list, so a note with no such list draws its images and tables as it did. **A caption is drawn as a caption whether or not anything lists it**: under its table, without its keyword, with the table's number before it where the tables are listed — it is text the author wrote and a reader reads anyway. Nothing of this is written into the note.
 
 **The settings are YAML's shape.** A key alone on its line opens a group; the `key: value` lines indented below it belong to it, each at the indent of the first. Keys and values are compared with case folded; a key with an empty value is absent.
 
@@ -1093,6 +1103,7 @@ print:
 | The root, or a medium | `headings` | A group: the list of the headings | The headings, when nothing names a list |
 | Under `headings` | `title` | Text | The Reader's word for the list |
 | Under `headings` | `depth` | `1` to `6`: the levels listed, counted from the highest level the outline has | `3` |
+| The root, or a medium | `figures`, `tables`, `attachments` | A group: the list of that kind, which takes `title` | — |
 | The root, or a medium | `place` | `start`, `end` | Where the block is written |
 | The root | `screen`, `print` | A group of lists and `place` for that medium alone, or `none` | The root's |
 
@@ -1102,7 +1113,7 @@ print:
 
 **On paper** an entry carries the page its heading lands on, where the Reader lays out pages; on a screen it carries none.
 
-**Inside an embed** (§7.3) a contents block draws nothing: an embed draws another note's content, and the apparatus that leads a reader through a note is the open note's alone. The headings of an embed never enter the contents of the note that embeds it.
+**Inside an embed** (§7.3) a contents block draws nothing: an embed draws another note's content, and the apparatus that leads a reader through a note is the open note's alone. The headings, figures, tables and attachments of an embed never enter the contents of the note that embeds it, and carry no number.
 
 **A key or a value the block cannot take sets nothing**, and the rest is read: a line that is not `key: value`, a key its place does not take, a line indented under no group or at another indent than its siblings, a key written twice — the first counts — and `screen` or `print` anywhere but the root are `contents-key-unknown`; a value its key cannot read, and a group written with a value, are `contents-value-invalid` (§7.13). A block never closed is the fence of §3.7, `fence-unclosed`.
 
@@ -1232,6 +1243,7 @@ Every form this document declares, in one table. The last column is the section 
 | Style block | `:::{style}` over a `---` block of options, closed by `:::` | Draws a passage in its own face and alignment; changes nothing an Indexer reads | 7.16 |
 | Contents block | ` ```contents ` | Draws the note's outline as a list of links, on the screen and with page numbers in print; nothing inside an embed; changes nothing an Indexer reads | 7.17, 3.3 |
 | Heading slug | `[text](#section)` | Leads to the heading of that slug in the same note; never an edge | 3.3 |
+| Table caption | `Table: …` in the paragraph after a table | The table's caption, drawn without its keyword; names the table in a contents and on its appendix | 7.17 |
 | Query | `status:pending -draft amount:>=100` | One language for a search and for the filter of a table block | 6.9 |
 | Parameter reference | `{{name}}` | Drawn as a parameter until a notebook is created from the model; a wikilink to one is no edge and not pending; a value writing one is not indexed | 7.14, 5.2, 6.3 |
 | External link | `[text](https://…)` | Renders as a link; never an edge | 5.2 |

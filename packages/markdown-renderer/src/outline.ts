@@ -19,10 +19,12 @@ import { CLOBBER_PREFIX } from './footnotes.js';
 import { readingPlugins } from './reading.js';
 import { isContentsBlock } from './contents.js';
 import type { StyleNumbering } from './note-style.js';
+import { keptImageName } from './kept-image.js';
+import { isTableBlock, readTableBlock } from './table-block.js';
 
 /** A node of the tree as much as is read here. */
 export interface OutlineNode {
-  readonly type: string;
+  type: string;
   readonly depth?: number;
   readonly value?: string;
   readonly position?: { readonly start?: { readonly line?: number } };
@@ -30,6 +32,7 @@ export interface OutlineNode {
   readonly meta?: string | null;
   readonly url?: string;
   readonly alt?: string | null;
+  readonly title?: string | null;
   children?: OutlineNode[];
   data?: { hProperties?: Record<string, unknown> } & Record<string, unknown>;
 }
@@ -55,6 +58,12 @@ export interface NoteOutline {
   readonly headings: readonly OutlineHeading[];
   /** The source of each `contents` block of the note, in order. */
   readonly blocks: readonly string[];
+  /** Each image alone in its paragraph, in order: what may be a figure once its file is known (#175). */
+  readonly figureCandidates: readonly FigureCandidate[];
+  /** Each table of the note, in order (#175). */
+  readonly tables: readonly TableItem[];
+  /** Each reference to a kept file, in order (#175). */
+  readonly kept: readonly KeptReference[];
 }
 
 export interface OutlineRun {
@@ -64,6 +73,109 @@ export interface OutlineRun {
   readonly numbers?: readonly (string | null)[];
   /** The ordinal of its first `contents` block among the note's. */
   readonly firstBlock: number;
+  /** What each image alone in its paragraph is (#175): a figure's number, or `null`. */
+  readonly figures?: readonly (number | null)[];
+  /** The number of each table of the run, in the order of the walk (#175). */
+  readonly tables?: readonly number[];
+  /** The id of each reference to a kept file, on the first one of its name only (#175). */
+  readonly attachments?: readonly (string | null)[];
+  /** Whether a `table` block is a table, as the plan counted the tables. */
+  readonly tableBlocks?: boolean;
+}
+
+/** An image alone in its paragraph (#175): remote, or a file the notebook keeps. */
+export interface FigureCandidate {
+  readonly run: number;
+  readonly kept: boolean;
+  /** The kept file's name, or the last segment of a remote image's address. */
+  readonly name: string;
+  /** The title written after its destination, `![…](x "title")`, or `null`. */
+  readonly title: string | null;
+  /** Whether it is written as an image, `![…](…)`, or as an embed, `![[…]]`. */
+  readonly form: 'image' | 'embed';
+}
+
+/** A table of the note (#175): a Markdown table and its `Table:` caption, or a `table` block. */
+export interface TableItem {
+  readonly run: number;
+  readonly kind: 'markdown' | 'block';
+  /** A Markdown table's caption inlines, keyword left out, or `null`. */
+  readonly caption: readonly OutlineNode[] | null;
+  /** A block's `title`, else the table it names, or `null`. */
+  readonly title: string | null;
+}
+
+/** A reference to a file the notebook keeps (#175): an embed or an image whose destination names no host. */
+export interface KeptReference {
+  readonly run: number;
+  readonly name: string;
+  readonly title: string | null;
+}
+
+/** The keyword of a Markdown table's caption (#175): `Table:`, Pandoc's, case folded. */
+const CAPTION = /^table:[ \t]*/i;
+
+/** The kept file an attachment link names, as `resolveWikilinks` writes it: `attachment:name|size`. */
+export function attachmentName(url: string): string | null {
+  if (!url.startsWith('attachment:')) return null;
+  let address: string;
+  try {
+    address = decodeURIComponent(url.slice('attachment:'.length));
+  } catch {
+    address = url.slice('attachment:'.length);
+  }
+  const at = address.lastIndexOf('|');
+  return (at === -1 ? address : address.slice(0, at)).normalize('NFC');
+}
+
+/** The kept file or remote image a node references, or `null`. */
+export function referenceOf(node: OutlineNode): { kept: boolean; name: string; title: string | null; form: 'image' | 'embed' } | null {
+  if (node.type === 'link' && node.url) {
+    const name = attachmentName(node.url);
+    return name === null ? null : { kept: true, name, title: null, form: 'embed' };
+  }
+  if (node.type === 'image' && node.url) {
+    const name = keptImageName(node.url);
+    if (name !== null) return { kept: true, name, title: node.title ?? null, form: 'image' };
+    const last = node.url.split(/[?#]/, 1)[0]!.split('/').filter(Boolean).pop() ?? node.url;
+    let decoded = last;
+    try {
+      decoded = decodeURIComponent(last);
+    } catch {
+      // An escape that is not one is left as written.
+    }
+    return { kept: false, name: decoded, title: node.title ?? null, form: 'image' };
+  }
+  return null;
+}
+
+/** The one image or file a paragraph holds and nothing else, which makes it a figure's candidate (#175). */
+export function aloneIn(paragraph: OutlineNode): OutlineNode | null {
+  if (paragraph.type !== 'paragraph') return null;
+  const meaningful = (paragraph.children ?? []).filter((child) => !(child.type === 'text' && (child.value ?? '').trim() === ''));
+  const only = meaningful.length === 1 ? meaningful[0]! : null;
+  return only && referenceOf(only) ? only : null;
+}
+
+/** Whether a node is a table the note draws: a Markdown table, or a `table` block where tables are reached. */
+export function isTableNode(node: OutlineNode, blocks: boolean): boolean {
+  return node.type === 'table' || (blocks && node.type === 'code' && isTableBlock(node.lang, node.meta));
+}
+
+/** The paragraph right after a table that captions it (`Table: …`), or `null`. */
+export function captionAfter(node: OutlineNode, parent: OutlineNode | null): OutlineNode | null {
+  if (node.type !== 'table' || !parent?.children) return null;
+  const next = parent.children[parent.children.indexOf(node) + 1];
+  const first = next?.type === 'paragraph' ? next.children?.[0] : undefined;
+  return first?.type === 'text' && CAPTION.test(first.value ?? '') ? next! : null;
+}
+
+/** A caption's inlines without its keyword. */
+export function captionContent(paragraph: OutlineNode): OutlineNode[] {
+  const [first, ...rest] = paragraph.children ?? [];
+  if (!first) return [];
+  const value = (first.value ?? '').replace(CAPTION, '');
+  return value === '' ? rest : [{ ...first, value }, ...rest];
 }
 
 /** The id a heading of the note carries on the page. */
@@ -151,17 +263,38 @@ export function numberHeadings(headings: readonly { readonly level: number; read
  * The outline of a note drawn in these runs, the text of each as it is drawn. `numberingAt` says
  * how the heading at a line of a run is numbered, as the style that reaches it says (#174).
  */
-export function planOutline(runs: readonly string[], numberingAt: (run: number, line: number) => StyleNumbering = () => 'none'): NoteOutline {
+export function planOutline(
+  runs: readonly string[],
+  numberingAt: (run: number, line: number) => StyleNumbering = () => 'none',
+  /** Whether a `table` block is drawn as a table, which it is where the host reaches tables. */
+  tableBlocks = false,
+): NoteOutline {
   const slugger = new Slugger();
   const found: Omit<OutlineHeading, 'number'>[] = [];
   const at: { run: number; index: number }[] = [];
   const blocks: string[] = [];
+  const figureCandidates: FigureCandidate[] = [];
+  const tables: TableItem[] = [];
+  const kept: KeptReference[] = [];
   const planned = runs.map((text, run) => {
     const tree = parseRun(text);
     const slugs: string[] = [];
     const firstBlock = blocks.length;
     walkTree(tree, (node, parent) => {
       if (node.type === 'code' && isContentsBlock(node.lang, node.meta)) blocks.push(node.value ?? '');
+      const alone = aloneIn(node);
+      if (alone) figureCandidates.push({ run, ...referenceOf(alone)! });
+      if (isTableNode(node, tableBlocks)) {
+        if (node.type === 'code') {
+          const block = readTableBlock(node.value ?? '');
+          tables.push({ run, kind: 'block', caption: null, title: block.title ?? block.table });
+        } else {
+          const caption = captionAfter(node, parent);
+          tables.push({ run, kind: 'markdown', caption: caption ? entryContent(captionContent(caption)) : null, title: null });
+        }
+      }
+      const reference = referenceOf(node);
+      if (reference?.kept) kept.push({ run, name: reference.name, title: reference.title });
       if (node.type !== 'heading') return;
       const slug = slugger.slug(textOf(node));
       slugs.push(slug);
@@ -181,7 +314,88 @@ export function planOutline(runs: readonly string[], numberingAt: (run: number, 
     runs: planned.map((run, index) => ({ ...run, numbers: perRun[index]! })),
     headings: found.map((heading, index) => ({ ...heading, number: numbers[index] ?? null })),
     blocks,
+    figureCandidates,
+    tables,
+    kept,
   };
+}
+
+/** What a kept file is, as far as a figure is concerned: an image, something else, or not known yet. */
+export type FileKind = 'image' | 'other' | 'pending';
+
+export interface FigureItem {
+  readonly id: string;
+  readonly number: number;
+  readonly kept: boolean;
+  readonly name: string;
+  readonly title: string | null;
+}
+
+export interface TableEntry {
+  readonly id: string;
+  readonly number: number;
+  readonly kind: 'markdown' | 'block';
+  readonly caption: readonly OutlineNode[] | null;
+  readonly title: string | null;
+}
+
+export interface AttachmentItem {
+  readonly id: string;
+  readonly name: string;
+  readonly title: string | null;
+}
+
+/** A note's figures, tables and attachments, numbered, and what each run marks of them (#175). */
+export interface NoteItems {
+  readonly figures: readonly FigureItem[];
+  readonly tables: readonly TableEntry[];
+  readonly attachments: readonly AttachmentItem[];
+  readonly runs: readonly { readonly figures: readonly (number | null)[]; readonly tables: readonly number[]; readonly attachments: readonly (string | null)[] }[];
+  /** Whether a candidate's file is not known yet, so the figures may still change. */
+  readonly pending: boolean;
+}
+
+export const figureId = (number: number): string => `contents-figure-${number}`;
+export const tableId = (number: number): string => `contents-table-${number}`;
+export const attachmentId = (number: number): string => `contents-attachment-${number}`;
+
+/**
+ * Numbers a note's figures, tables and attachments (#175). An image alone in its paragraph is a
+ * figure when it is remote, or when the file it names is an image, which only its media type says
+ * (§5.8); an attachment is listed once, at the first reference to its name.
+ */
+export function planItems(outline: NoteOutline, kindOf: (name: string, form: 'image' | 'embed') => FileKind, keeps: (name: string) => boolean = () => true): NoteItems {
+  const runs = outline.runs.map(() => ({ figures: [] as (number | null)[], tables: [] as number[], attachments: [] as (string | null)[] }));
+  const figures: FigureItem[] = [];
+  let pending = false;
+  for (const candidate of outline.figureCandidates) {
+    const kind = !candidate.kept ? 'image' : keeps(candidate.name) ? kindOf(candidate.name, candidate.form) : 'other';
+    if (kind === 'pending') pending = true;
+    if (kind !== 'image') {
+      runs[candidate.run]!.figures.push(null);
+      continue;
+    }
+    const number = figures.length + 1;
+    figures.push({ id: figureId(number), number, ...candidate });
+    runs[candidate.run]!.figures.push(number);
+  }
+  const tables = outline.tables.map((table, index): TableEntry => {
+    runs[table.run]!.tables.push(index + 1);
+    return { id: tableId(index + 1), number: index + 1, kind: table.kind, caption: table.caption, title: table.title };
+  });
+  const attachments: AttachmentItem[] = [];
+  const seen = new Set<string>();
+  for (const reference of outline.kept) {
+    if (seen.has(reference.name) || !keeps(reference.name)) {
+      runs[reference.run]!.attachments.push(null);
+      continue;
+    }
+    seen.add(reference.name);
+    const id = attachmentId(attachments.length + 1);
+    attachments.push({ id, name: reference.name, title: reference.title });
+    runs[reference.run]!.attachments.push(id);
+  }
+  return { figures, tables, attachments, runs, pending };
 }
 
 /**
@@ -189,14 +403,72 @@ export function planOutline(runs: readonly string[], numberingAt: (run: number, 
  * Handed the run's slugs, it gives each heading its id and its slug; with none it counts its own,
  * for a note drawn in one run, and with `ids: false` — inside an embed — gives the slug alone.
  */
-export function remarkOutline(options: { slugs?: readonly string[] | null; numbers?: readonly (string | null)[] | null; ids?: boolean; firstBlock?: number } = {}) {
+export function remarkOutline(
+  options: {
+    slugs?: readonly string[] | null;
+    numbers?: readonly (string | null)[] | null;
+    ids?: boolean;
+    firstBlock?: number;
+    /** Each image alone in its paragraph: its figure's number, or `null` (#175). */
+    figures?: readonly (number | null)[] | null;
+    /** Each table's number (#175). */
+    tables?: readonly number[] | null;
+    /** Each kept file's reference: the id of its first, or `null` (#175). */
+    attachments?: readonly (string | null)[] | null;
+    /** Whether a `table` block is a table, as the plan counted them. */
+    tableBlocks?: boolean;
+  } = {},
+) {
   return (tree: OutlineNode): void => {
     const own = options.slugs ? null : new Slugger();
     let heading = 0;
     let block = options.firstBlock ?? 0;
-    walkTree(tree, (node) => {
+    let figure = 0;
+    let table = 0;
+    let reference = 0;
+    const mark = (node: OutlineNode, properties: Record<string, unknown>): void => {
+      node.data = { ...node.data, hProperties: { ...node.data?.hProperties, ...properties } };
+    };
+    walkTree(tree, (node, parent) => {
       if (node.type === 'code' && isContentsBlock(node.lang, node.meta)) {
-        node.data = { ...node.data, hProperties: { ...node.data?.hProperties, dataContents: block++ } };
+        mark(node, { dataContents: block++ });
+        return;
+      }
+      // An image alone in its paragraph that is a figure carries its id, and its caption's place (#175).
+      if (aloneIn(node)) {
+        const number = options.figures?.[figure++] ?? null;
+        if (number !== null) {
+          mark(node, { id: figureId(number), className: ['figure'] });
+          node.children!.push({ type: 'msCaption', data: { hName: 'ms-caption', hProperties: { dataKind: 'figure', dataNumber: number } }, children: [] });
+        }
+      }
+      if (isTableNode(node, options.tableBlocks ?? false)) {
+        const number = options.tables?.[table++];
+        if (node.type === 'code') {
+          if (number !== undefined) mark(node, { dataTable: number });
+          return;
+        }
+        if (number !== undefined) mark(node, { id: tableId(number) });
+        // Its caption, `Table: …`, is drawn without the keyword, and where none is written the place
+        // for its number (#175).
+        const caption = captionAfter(node, parent);
+        const properties = { dataKind: 'table', ...(number !== undefined ? { dataNumber: number } : {}) };
+        if (caption) {
+          caption.children = captionContent(caption);
+          caption.type = 'msCaption';
+          caption.data = { ...caption.data, hName: 'ms-caption', hProperties: properties };
+        } else if (number !== undefined && parent?.children) {
+          parent.children.splice(parent.children.indexOf(node) + 1, 0, { type: 'msCaption', data: { hName: 'ms-caption', hProperties: properties }, children: [] });
+        }
+        return;
+      }
+      if (referenceOf(node)?.kept) {
+        const id = options.attachments?.[reference++] ?? null;
+        // The first reference to a file is where its entry leads (#175).
+        if (id !== null && parent?.children) {
+          const index = parent.children.indexOf(node);
+          parent.children[index] = { type: 'msAnchor', data: { hName: 'span', hProperties: { id, className: ['attachment-anchor'] } }, children: [node] };
+        }
         return;
       }
       if (node.type !== 'heading') return;
@@ -207,7 +479,7 @@ export function remarkOutline(options: { slugs?: readonly string[] | null; numbe
       const properties: Record<string, unknown> = { dataHeading: slug };
       if (number !== null) properties['dataNumber'] = number;
       if (options.ids !== false) properties['id'] = headingId(slug);
-      node.data = { ...node.data, hProperties: { ...node.data?.hProperties, ...properties } };
+      mark(node, properties);
     });
   };
 }

@@ -20,9 +20,10 @@ import { splitEmbeds } from '../embeds.js';
 import { embedsFile } from '../embed-target.js';
 import { STYLE_KEYS, type NoteStyle } from '../note-style.js';
 import { wikilinkAddress } from '../wikilink-address.js';
-import { planOutline } from '../outline.js';
+import { planItems, planOutline } from '../outline.js';
+import { useKeptFiles } from '../kept-files.js';
 import { readContents, resolveBlock, type ContentsPlan } from '../contents.js';
-import { ContentsAt, ContentsContext } from '../ContentsBlock.js';
+import { ContentsAt, ContentsContext, listedIn } from '../ContentsBlock.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
 import { describeImage, MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
@@ -1042,7 +1043,57 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
           )}
         </table>
       </div>
+      <CaptionField view={view} end={table.to} />
     </div>
+  );
+}
+
+/** A Markdown table's caption (#175): the `Table:` paragraph after a blank line below its last row. */
+const CAPTION_AFTER = /^\n[ \t]*\n[ \t]*table:[ \t]*([^\n]*)/i;
+
+/** The caption of the table that ends at `end`: where it is written, from the line break after the table, and its text. */
+export function tableCaptionAt(source: string, end: number): { from: number; to: number; text: string } | null {
+  const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
+  const match = CAPTION_AFTER.exec(source.slice(at));
+  return match ? { from: at, to: at + match[0].length, text: match[1]!.trim() } : null;
+}
+
+/** The changes that set a table's caption to `text`: written, rewritten, or taken out when empty. */
+export function setTableCaption(source: string, end: number, text: string): TextChange[] {
+  const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
+  const caption = tableCaptionAt(source, end);
+  const written = text.trim() === '' ? '' : `\n\nTable: ${text.trim()}`;
+  if (caption) return caption.text === text.trim() ? [] : [{ from: caption.from, to: caption.to, insert: written }];
+  return written ? [{ from: at, to: at, insert: written }] : [];
+}
+
+/** The field under a table that writes its caption, so the author never types `Table:` (#175). */
+function CaptionField({ view, end }: { view: EditorView; end: number }) {
+  const { strings } = useHost();
+  const source = view.state.doc.sliceString(0, view.state.doc.length, '\n');
+  const written = tableCaptionAt(source, end)?.text ?? '';
+  const [value, setValue] = useState(written);
+  useEffect(() => setValue(written), [written]);
+  const commit = (): void => {
+    const now = view.state.doc.sliceString(0, view.state.doc.length, '\n');
+    write(view, setTableCaption(now, end, value));
+  };
+  return (
+    <label className="edit-table-caption" data-ms-control="">
+      <span>{strings.editor.tableCaption}</span>
+      <input
+        className="edit-attach-input"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+          }
+        }}
+      />
+    </label>
   );
 }
 
@@ -1521,7 +1572,7 @@ export function ContentsPreview({ body, ordinal }: { body: string; ordinal: numb
   const host = useHost();
   const file = embedsFile(host);
   const drawn = resolveWikilinks(hideComments(body).text, (name) => wikilinkAddress(host, name), file);
-  const outline = useMemo(() => planOutline([drawn]), [drawn]);
+  const outline = useMemo(() => planOutline([drawn], undefined, host.queryTable !== null), [drawn, host.queryTable]);
   const blocks = useMemo(
     () =>
       outline.blocks.map((source) => {
@@ -1530,11 +1581,26 @@ export function ContentsPreview({ body, ordinal }: { body: string; ordinal: numb
       }),
     [outline, host.contents],
   );
+  const names = useMemo(() => [...new Set(outline.kept.map((reference) => reference.name))].filter((name) => host.keeps(name)), [outline, host.keeps]);
+  const files = useKeptFiles(host, names);
+  const items = useMemo(
+    () =>
+      planItems(
+        outline,
+        (name, form) => {
+          if (!host.fileOf) return form === 'image' ? 'image' : 'other';
+          const file = files.get(name);
+          return file === undefined ? 'pending' : file?.mimeType.startsWith('image/') ? 'image' : 'other';
+        },
+        host.keeps,
+      ),
+    [outline, files, host.fileOf, host.keeps],
+  );
   const mine = blocks[ordinal];
   if (!mine) return null;
   if (mine.screen && mine.screen.place === null) {
     return (
-      <ContentsContext.Provider value={{ kind: 'note', headings: outline.headings, blocks, printing: false }}>
+      <ContentsContext.Provider value={{ kind: 'note', headings: outline.headings, items, files, blocks, listed: listedIn(blocks), printing: false, appendices: false }}>
         <ContentsAt plans={{ screen: mine.screen, print: null }} place={null} />
       </ContentsContext.Provider>
     );

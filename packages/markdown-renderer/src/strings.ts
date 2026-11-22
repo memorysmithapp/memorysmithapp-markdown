@@ -58,6 +58,13 @@ export interface NoteStrings {
   readonly tableAppendixReference: (appendix: TableAppendix) => string;
   /** The title of a contents' list of headings when its block writes none (§7.17, #173). */
   readonly contentsHeadings: string;
+  /** The titles of a contents' lists of figures, tables and attachments when its block writes none (#175). */
+  readonly contentsFigures: string;
+  readonly contentsTables: string;
+  readonly contentsAttachments: string;
+  /** What a figure and a table are called with their number, in a contents and under them (#175). */
+  readonly figureNumber: (number: number) => string;
+  readonly tableNumber: (number: number) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -277,6 +284,8 @@ export interface EditorWords {
   readonly alignRight: string;
   /** Justifies the column of the cell the author is in, `;---;` (`SPEC.md` §4.1, #166). */
   readonly alignJustify: string;
+  /** The field under a table in edit mode that writes its `Table:` caption (#175). */
+  readonly tableCaption: string;
   /** The buttons beside the switch that show the note's Markdown and copy it, and the dialog (#63, #76). */
   readonly showMarkdown: string;
   readonly copyMarkdown: string;
@@ -362,9 +371,14 @@ export const ENGLISH: NoteStrings = {
   },
   tablePrinted: ({ table, filter, count, readAt }) =>
     `Table ${table}${filter === null ? '' : `, filtered by ${filter}`}: ${count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`}, read on ${readAt}.`,
-  tableAppendix: ({ number, table, markdownTable }) => `Appendix ${number} — ${table ?? `Table ${markdownTable}`}`,
+  tableAppendix: ({ number, table, markdownTable, title }) => `Appendix ${number} — ${title ?? table ?? `Table ${markdownTable}`}`,
   tableAppendixReference: ({ number, table, markdownTable }) => `See appendix ${number}, ${table ?? `table ${markdownTable}`}.`,
   contentsHeadings: 'Contents',
+  contentsFigures: 'Figures',
+  contentsTables: 'Tables',
+  contentsAttachments: 'Attachments',
+  figureNumber: (number) => `Figure ${number}`,
+  tableNumber: (number) => `Table ${number}`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',
@@ -547,6 +561,7 @@ export const ENGLISH: NoteStrings = {
     alignCenter: 'Center',
     alignRight: 'Align right',
     alignJustify: 'Justify',
+    tableCaption: 'Caption',
     showMarkdown: 'Show Markdown',
     copyMarkdown: 'Copy Markdown',
     sourceTitle: 'The note in Markdown',

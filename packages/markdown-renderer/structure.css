@@ -613,17 +613,22 @@
   overflow-wrap: anywhere;
 }
 /* A note's contents (#173): a list of the note's headings, nested by level.
-   Drawn for one medium, it is marked with it and shown only there, so a print
-   the browser makes on its own is the print the settings declared. */
+   A contents, or the line under a figure or a table (#175), drawn for one
+   medium is marked with it and shown only there, so a print the browser makes
+   on its own is the print the settings declared. */
 @media print {
-  .markdown .contents[data-media='screen'] {
+  .markdown [data-media='screen'] {
     display: none;
   }
 }
 @media not print {
-  .markdown .contents[data-media='print'] {
+  .markdown [data-media='print'] {
     display: none;
   }
+}
+/* The line under a figure stands on a line of its own, below the picture. */
+.markdown .figure-caption {
+  display: block;
 }
 .markdown .contents-entries {
   margin: 0;

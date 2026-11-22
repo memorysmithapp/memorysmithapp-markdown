@@ -539,6 +539,17 @@
   font-variant-numeric: tabular-nums;
   opacity: 0.75;
 }
+/* The line under a figure or a table (#175): its number and what names it,
+   small and soft, as a caption is. */
+.markdown .figure-caption,
+.markdown .table-caption {
+  margin-block: 0.35rem var(--ms-p-spacing);
+  font-size: 0.9em;
+  color: var(--ms-text-soft);
+}
+.markdown .caption-number {
+  font-weight: 600;
+}
 /* A note's contents (#173): each list under its title, its entries the
    note's links in the colour of the text, so the list reads as a list. */
 .markdown .contents {

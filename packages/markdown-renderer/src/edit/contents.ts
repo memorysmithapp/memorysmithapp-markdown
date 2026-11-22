@@ -47,7 +47,7 @@ function layerLines(layer: ContentsLayer, indent: string, all: boolean): string[
     if (!(kind in layer)) continue;
     const options = listLines(layer[kind], `${indent}  `);
     // A list with nothing to say is written only where it chooses the lists, beside others.
-    if (options.length > 0 || all) lines.push(`${indent}${kind}:`, ...options);
+    if (options.length > 0 || all || kind !== 'headings') lines.push(`${indent}${kind}:`, ...options);
   }
   if (layer.place) lines.push(`${indent}place: ${layer.place}`);
   return lines;
@@ -64,7 +64,8 @@ export function contentsText(settings: ContentsSettings): string {
     const layer = settings[medium];
     if (layer === 'none') lines.push(`${medium}: none`);
     else if (layer) {
-      const inner = layerLines(layer, '  ', lists(layer) > 1);
+      // A medium that names its lists names each, the headings alone included.
+      const inner = layerLines(layer, '  ', true);
       if (inner.length > 0) lines.push(`${medium}:`, ...inner);
     }
   }
