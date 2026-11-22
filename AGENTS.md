@@ -72,7 +72,7 @@ Each command with the directory it runs in, what it does, and the date somebody 
 
 | Command | Run in | What it does | Last verified |
 |---|---|---|---|
-| `scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]` | The root | Applies the description, topics, merge options, wiki and discussions off, the ruleset `main`, write for the team `maintainers`, and the branch protection of `main`; idempotent | 2026-11-20, against this repository, which it found already set up |
+| `scripts/setup-repo.sh <owner>/<repo> "<description>" <topic>[,<topic>...]` | The root | Applies the description, topics, merge options, wiki and discussions off, the ruleset `main`, write for the teams `maintainers` and `contributors`, and the branch protection of `main`; idempotent | 2026-11-22, against this repository, which it found already set up, both teams' write included |
 | `pnpm install` | The root | Installs the workspace from `pnpm-lock.yaml` | 2026-10-12 |
 | `pnpm -r build` | The root | Builds every package into its `dist/` | 2026-11-18 |
 | `pnpm -r typecheck` | The root | Type-checks every package, sources and tests | 2026-11-18 |
