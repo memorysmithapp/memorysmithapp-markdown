@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-22
+
 ### Changed
 
 - `SDLC.md` §2 and `AGENTS.md` §4: each repository stands on its own, as `memorysmithapp-template` v0.5.4 says (#179). A problem found in another repository is registered there, as one issue, and no sub-issue is opened elsewhere; comparing with the template is this repository's own work, in its own cycle. It replaces the rule that registered a gap at its origin with a sub-issue in every repository it reached.
@@ -370,7 +372,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.0...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...v0.12.0
