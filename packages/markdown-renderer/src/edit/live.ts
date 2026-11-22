@@ -25,6 +25,8 @@ import { justifies, styleProperties, type NoteStyle } from '../note-style.js';
 import { caretAt, sourceOffsetOf } from './click-source.js';
 import { LanguageControl } from './LanguageControl.js';
 import { toggleTaskBox } from './commands.js';
+import { findStyleBlocks, styleAt } from '../style-block.js';
+import { planOutline } from '../outline.js';
 
 /** What the drawn blocks read: the host the note is edited under. */
 export interface EditorEnvironment {
@@ -385,6 +387,37 @@ class LineEstimate extends WidgetType {
   }
 }
 
+/** A heading's number, as the style numbers the outline (#174), drawn before its text. */
+class HeadingNumberWidget extends WidgetType {
+  constructor(readonly number: string) {
+    super();
+  }
+  override eq(other: HeadingNumberWidget): boolean {
+    return other.number === this.number;
+  }
+  toDOM(): HTMLElement {
+    const element = document.createElement('span');
+    element.className = 'heading-number cm-ms-heading-number';
+    element.textContent = `${this.number} `;
+    element.setAttribute('aria-hidden', 'true');
+    return element;
+  }
+}
+
+/**
+ * The number of each heading of the body, by its line in the document, where the notebook's style
+ * or a style block numbers them (#174); empty where nothing does.
+ */
+function headingNumbers(text: string, bodyFrom: number, numbering: 'none' | 'decimal' | undefined, firstLine: number): Map<number, string> {
+  const numbers = new Map<number, string>();
+  const body = text.slice(bodyFrom);
+  if (numbering !== 'decimal' && !/^[ \t]*numbering:/m.test(body)) return numbers;
+  const found = findStyleBlocks(body);
+  const outline = planOutline([found.text], (_run, line) => styleAt(found.blocks, line).numbering ?? numbering ?? 'none');
+  for (const heading of outline.headings) if (heading.number !== null) numbers.set(firstLine + heading.line - 1, heading.number);
+  return numbers;
+}
+
 class BulletWidget extends WidgetType {
   override eq(): boolean {
     return true;
@@ -564,6 +597,8 @@ function build(state: EditorState): DecorationSet {
   // The `contents` blocks met so far, and what their drawing depends on besides their lines: the
   // note's headings (#173).
   let contentsSeen = 0;
+  /** The number of each heading, by its line, read the first time a heading needs it (#174). */
+  let numbers: Map<number, string> | null = null;
   let signature: string | null = null;
   const headingsSignature = (): string =>
     (signature ??= constructs.flatMap((construct) => (construct.kind === 'heading' ? [text.slice(construct.from, construct.to)] : [])).join('\n'));
@@ -713,7 +748,13 @@ function build(state: EditorState): DecorationSet {
         const { marker } = construct;
         headingLevels.set(doc.lineAt(from).number, construct.level);
         if (touches(doc.lineAt(from).from, doc.lineAt(from).to)) out.push(syntax.range(marker.from, marker.to));
-        else out.push(hide.range(marker.from, marker.to));
+        else {
+          out.push(hide.range(marker.from, marker.to));
+          // Its number, as reading draws it, while the author is elsewhere (#174).
+          numbers ??= headingNumbers(text, bodyFrom, host.noteStyle.numbering, doc.lineAt(bodyFrom).number);
+          const number = numbers.get(doc.lineAt(from).number);
+          if (number) out.push(Decoration.widget({ widget: new HeadingNumberWidget(number), side: 1 }).range(marker.to));
+        }
         break;
       }
       case 'mark': {

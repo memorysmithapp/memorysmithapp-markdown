@@ -80,8 +80,10 @@ function write(view: EditorView, changes: readonly TextChange[] | ChangeSet, eve
  */
 export function StyleSummary({ style }: { style: NoteStyle }) {
   const words = useHost().strings.editor;
-  const label = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables };
+  const label = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables, numbering: words.styleNumbering };
   const value: Record<string, string> = {
+    none: words.styleNumberingNone,
+    decimal: words.styleNumberingDecimal,
     sans: words.styleSans,
     serif: words.styleSerif,
     left: words.styleLeft,

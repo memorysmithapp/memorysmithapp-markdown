@@ -587,7 +587,7 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           ...readingPlugins(calloutTitle, strings.parameter),
           [remarkJustifiedColumns, { columns: justified.columns }],
           [remarkStyleBlocks, { ranges: styled.ranges, locale: strings.locale }],
-          [remarkOutline, { slugs: outline?.slugs ?? null, firstBlock: outline?.firstBlock ?? 0, ids: !embedded }],
+          [remarkOutline, { slugs: outline?.slugs ?? null, numbers: outline?.numbers ?? null, firstBlock: outline?.firstBlock ?? 0, ids: !embedded }],
           ...(appendices ? [[remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }] as Pluggable] : []),
         ]}
         // Raw HTML is NOT enabled, and its absence is the point: no

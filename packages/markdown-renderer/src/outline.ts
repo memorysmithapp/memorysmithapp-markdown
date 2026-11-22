@@ -18,12 +18,14 @@ import { unified } from 'unified';
 import { CLOBBER_PREFIX } from './footnotes.js';
 import { readingPlugins } from './reading.js';
 import { isContentsBlock } from './contents.js';
+import type { StyleNumbering } from './note-style.js';
 
 /** A node of the tree as much as is read here. */
 export interface OutlineNode {
   readonly type: string;
   readonly depth?: number;
   readonly value?: string;
+  readonly position?: { readonly start?: { readonly line?: number } };
   readonly lang?: string | null;
   readonly meta?: string | null;
   readonly url?: string;
@@ -40,6 +42,11 @@ export interface OutlineHeading {
   readonly level: number;
   /** The heading's inlines, as drawn: links are their text, footnote references are gone. */
   readonly content: readonly OutlineNode[];
+  /** Its number, as the style numbers it (#174), or `null`. */
+  readonly number: string | null;
+  /** The run it is in, and its line there, from 1. */
+  readonly run: number;
+  readonly line: number;
 }
 
 /** What a note's runs carry: each run's slugs and contents blocks, and the note's outline. */
@@ -53,6 +60,8 @@ export interface NoteOutline {
 export interface OutlineRun {
   /** The slug of every heading of the run, in the order a walk of its tree meets them. */
   readonly slugs: readonly string[];
+  /** The number of each of those headings, `null` for one the style does not number (#174). */
+  readonly numbers?: readonly (string | null)[];
   /** The ordinal of its first `contents` block among the note's. */
   readonly firstBlock: number;
 }
@@ -120,12 +129,34 @@ export function parseRun(text: string): OutlineNode {
   return processor.runSync(processor.parse(text), text) as unknown as OutlineNode;
 }
 
-/** The outline of a note drawn in these runs, the text of each as it is drawn. */
-export function planOutline(runs: readonly string[]): NoteOutline {
+/**
+ * The numbers of the headings of an outline (#174): `decimal` ones counted 1, 1.1, 1.2 from the
+ * highest level they reach; one the style leaves at `none` takes no number and advances no counter.
+ */
+export function numberHeadings(headings: readonly { readonly level: number; readonly numbering: StyleNumbering }[]): (string | null)[] {
+  const numbered = headings.filter((heading) => heading.numbering === 'decimal');
+  if (numbered.length === 0) return headings.map(() => null);
+  const top = Math.min(...numbered.map((heading) => heading.level));
+  const counters: number[] = [];
+  return headings.map(({ level, numbering }) => {
+    if (numbering !== 'decimal') return null;
+    const depth = level - top;
+    counters.length = depth + 1;
+    counters[depth] = (counters[depth] ?? 0) + 1;
+    return Array.from({ length: depth + 1 }, (_, index) => counters[index] ?? 0).join('.');
+  });
+}
+
+/**
+ * The outline of a note drawn in these runs, the text of each as it is drawn. `numberingAt` says
+ * how the heading at a line of a run is numbered, as the style that reaches it says (#174).
+ */
+export function planOutline(runs: readonly string[], numberingAt: (run: number, line: number) => StyleNumbering = () => 'none'): NoteOutline {
   const slugger = new Slugger();
-  const headings: OutlineHeading[] = [];
+  const found: Omit<OutlineHeading, 'number'>[] = [];
+  const at: { run: number; index: number }[] = [];
   const blocks: string[] = [];
-  const planned: OutlineRun[] = runs.map((text) => {
+  const planned = runs.map((text, run) => {
     const tree = parseRun(text);
     const slugs: string[] = [];
     const firstBlock = blocks.length;
@@ -135,12 +166,22 @@ export function planOutline(runs: readonly string[]): NoteOutline {
       const slug = slugger.slug(textOf(node));
       slugs.push(slug);
       if (parent === tree && node.depth !== undefined) {
-        headings.push({ id: headingId(slug), slug, level: node.depth, content: entryContent(node.children ?? []) });
+        found.push({ id: headingId(slug), slug, level: node.depth, content: entryContent(node.children ?? []), run, line: node.position?.start?.line ?? 1 });
+        at.push({ run, index: slugs.length - 1 });
       }
     });
     return { slugs, firstBlock };
   });
-  return { runs: planned, headings, blocks };
+  const numbers = numberHeadings(found.map((heading) => ({ level: heading.level, numbering: numberingAt(heading.run, heading.line) })));
+  const perRun = planned.map((run) => run.slugs.map((): string | null => null));
+  numbers.forEach((number, index) => {
+    perRun[at[index]!.run]![at[index]!.index] = number;
+  });
+  return {
+    runs: planned.map((run, index) => ({ ...run, numbers: perRun[index]! })),
+    headings: found.map((heading, index) => ({ ...heading, number: numbers[index] ?? null })),
+    blocks,
+  };
 }
 
 /**
@@ -148,7 +189,7 @@ export function planOutline(runs: readonly string[]): NoteOutline {
  * Handed the run's slugs, it gives each heading its id and its slug; with none it counts its own,
  * for a note drawn in one run, and with `ids: false` — inside an embed — gives the slug alone.
  */
-export function remarkOutline(options: { slugs?: readonly string[] | null; ids?: boolean; firstBlock?: number } = {}) {
+export function remarkOutline(options: { slugs?: readonly string[] | null; numbers?: readonly (string | null)[] | null; ids?: boolean; firstBlock?: number } = {}) {
   return (tree: OutlineNode): void => {
     const own = options.slugs ? null : new Slugger();
     let heading = 0;
@@ -160,9 +201,11 @@ export function remarkOutline(options: { slugs?: readonly string[] | null; ids?:
       }
       if (node.type !== 'heading') return;
       const slug = own ? own.slug(textOf(node)) : options.slugs?.[heading];
+      const number = own ? null : (options.numbers?.[heading] ?? null);
       heading++;
       if (slug === undefined) return;
       const properties: Record<string, unknown> = { dataHeading: slug };
+      if (number !== null) properties['dataNumber'] = number;
       if (options.ids !== false) properties['id'] = headingId(slug);
       node.data = { ...node.data, hProperties: { ...node.data?.hProperties, ...properties } };
     });

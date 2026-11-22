@@ -110,6 +110,11 @@ function Entries({ branches }: { branches: readonly Branch[] }) {
       {branches.map(({ heading, children }) => (
         <li key={heading.id} className="contents-item">
           <InPageAnchor href={`#${heading.id}`} className="contents-entry">
+            {heading.number !== null && (
+              <>
+                <span className="contents-number">{heading.number}</span>{' '}
+              </>
+            )}
             {entryContent(heading)}
           </InPageAnchor>
           {children.length > 0 && <Entries branches={children} />}

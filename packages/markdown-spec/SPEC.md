@@ -941,7 +941,7 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `table-column-unknown` | notice | §7.15 | A column the table does not have, named by a key of a `table` block or as a field of its `where`: the block says so in place of the table |
 | `table-filter-invalid` | notice | §7.15 | A `where` that is an error (§6.9): the block says so in place of the table |
 | `table-pending` | hint | §7.15 | A `table` block naming a table the notebook does not keep says so in place of the table, until one of that name exists (§5.9) |
-| `style-key-unknown` | notice | §7.16 | A line of a style block's options that is not `key: value` with one of its four keys, or a key written twice, sets nothing |
+| `style-key-unknown` | notice | §7.16 | A line of a style block's options that is not `key: value` with one of its five keys, or a key written twice, sets nothing |
 | `style-value-invalid` | notice | §7.16 | A value of a style block's options that its key does not take sets nothing |
 | `style-unclosed` | notice | §7.16 | A style block never closed runs to the end of the note |
 | `contents-key-unknown` | notice | §7.17 | A line of a contents block that is not `key: value` with a key its place takes, a line indented under no group, or a key written twice, sets nothing |
@@ -1054,6 +1054,9 @@ O condomínio deliberou, por maioria, ...
 | `headings` | `left`, `center`, `right`, `justify` | The alignment of headings |
 | `text` | `left`, `center`, `right`, `justify` | The alignment of paragraphs and list items |
 | `tables` | `left`, `center`, `right`, `justify` | The alignment of a table's cells whose column declares none, and of a `table` block's text columns |
+| `numbering` | `none`, `decimal` | The numbering of the headings: `decimal` numbers the outline (§3.3) 1, 1.1, 1.2, counted from the highest level it numbers; `none` numbers nothing |
+
+**A number is drawn, never written.** It stands before its heading's text and before the heading's entry in a contents (§7.17), and it is no part of the heading's slug (§3.3) nor of the anchor a link names. A heading in a passage whose numbering is `none` takes no number and advances no counter, so a preface or an appendix can stand outside the count.
 
 Keys and values are compared with case folded. **What wins**, nearest first: a column's own delimiter (`:---:`, `;---;`, §4.1) over `tables`; an inner block over an outer one; a block over the notebook's style; the notebook's style over the drawing a Reader has with none. Justified text SHOULD hyphenate, in the language of whoever reads it. Printing honours all of it.
 

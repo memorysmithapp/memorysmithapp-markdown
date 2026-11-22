@@ -156,6 +156,10 @@ export interface EditorWords {
   readonly styleJustify: string;
   readonly styleInsert: string;
   readonly styleApply: string;
+  /** The numbering of headings (#174): the field, and its two values. */
+  readonly styleNumbering: string;
+  readonly styleNumberingNone: string;
+  readonly styleNumberingDecimal: string;
   /**
    * A `contents` block (`SPEC.md` §7.17, #173): the control and the title of its form, its fields
    * — the title, the levels, where it is drawn, and what the screen and print draw — the choices of
@@ -448,6 +452,9 @@ export const ENGLISH: NoteStrings = {
     styleJustify: 'Justified',
     styleInsert: 'Set apart',
     styleApply: 'Apply',
+    styleNumbering: 'Numbering',
+    styleNumberingNone: 'None',
+    styleNumberingDecimal: '1, 1.1, 1.2',
     contents: 'Contents',
     contentsTitle: 'Title',
     contentsDepth: 'Levels',

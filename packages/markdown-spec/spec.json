@@ -520,7 +520,7 @@
       "reader": "reading-surface",
       "syntax": ":::{style}\n---\nkey: value\n---\ncontent\n:::",
       "example": ":::{style}\n---\ntext: justify\nheadings: center\n---\n# Ata da assembleia\n\nO condomínio deliberou, por maioria, que a obra começa em março, e [[Síndico]] a acompanha.\n:::\n",
-      "effect": "A passage drawn in its own face and alignment, over the notebook's style: `font` (`sans`, `serif`), and `headings`, `text` and `tables` (`left`, `center`, `right`, `justify`). MyST's directive: a colon fence with its options in a `---` block, read as frontmatter is. A column's own delimiter wins over `tables`, and an inner block over an outer one. A key or value it cannot take sets nothing and is a notice, and so is a block never closed, which runs to the end of the note. It changes nothing an Indexer reads: a link inside is an edge, an option is no attribute, and the headings it holds are the note's own.",
+      "effect": "A passage drawn in its own face and alignment, over the notebook's style: `font` (`sans`, `serif`), `headings`, `text` and `tables` (`left`, `center`, `right`, `justify`), and `numbering` (`none`, `decimal`), which numbers the outline's headings 1, 1.1, 1.2, drawn and never written, a heading under `none` advancing no counter. MyST's directive: a colon fence with its options in a `---` block, read as frontmatter is. A column's own delimiter wins over `tables`, and an inner block over an outer one. A key or value it cannot take sets nothing and is a notice, and so is a block never closed, which runs to the end of the note. It changes nothing an Indexer reads: a link inside is an edge, an option is no attribute, and the headings it holds are the note's own.",
       "spec": "7.16"
     },
     {
@@ -689,7 +689,7 @@
       "code": "style-key-unknown",
       "severity": "notice",
       "spec": "7.16",
-      "effect": "A line of a style block's options that is not `key: value` with one of its four keys, or a key written twice, sets nothing."
+      "effect": "A line of a style block's options that is not `key: value` with one of its five keys, or a key written twice, sets nothing."
     },
     {
       "code": "style-value-invalid",

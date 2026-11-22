@@ -243,6 +243,8 @@ export interface HeadingSlotProps {
   readonly id?: string;
   /** The heading's slug, which a link written as `#slug` names; put it on the element as `data-heading`. */
   readonly slug?: string;
+  /** Its number, `1.2`, where the style numbers the headings (#174), to draw before its text. */
+  readonly number?: string;
 }
 
 /** A quotation that is not a callout. */

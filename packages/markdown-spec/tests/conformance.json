@@ -2089,6 +2089,20 @@
       "notices": []
     },
     {
+      "id": "style/numbering-is-a-key",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nnumbering: decimal\n---\n## Presentes\n\n## Pauta\n:::\n",
+      "notices": []
+    },
+    {
+      "id": "style/a-numbering-it-cannot-take",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nnumbering: roman\n---\n## Presentes\n:::\n",
+      "notices": [
+        { "code": "style-value-invalid", "line": 10 }
+      ]
+    },
+    {
       "id": "contents/a-block-is-no-edge",
       "notation": "contents-block",
       "markdown": "Resumo.\n\n```contents\nheadings:\n  title: [[Sumário]]\n```\n\n# Abertura\n\nSee [[Treasurer]].\n",

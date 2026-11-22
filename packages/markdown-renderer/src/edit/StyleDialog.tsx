@@ -6,7 +6,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useHost } from '../host.js';
-import { STYLE_ALIGNMENTS, STYLE_FONTS, STYLE_KEYS, type NoteStyle, type StyleKey } from '../note-style.js';
+import { STYLE_ALIGNMENTS, STYLE_FONTS, STYLE_KEYS, STYLE_NUMBERINGS, type NoteStyle, type StyleKey } from '../note-style.js';
 import { ICONS } from './blocks.js';
 
 export function StyleDialog({
@@ -46,8 +46,10 @@ export function StyleDialog({
     };
   }, []);
 
-  const label: Record<StyleKey, string> = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables };
+  const label: Record<StyleKey, string> = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables, numbering: words.styleNumbering };
   const value: Record<string, string> = {
+    none: words.styleNumberingNone,
+    decimal: words.styleNumberingDecimal,
     sans: words.styleSans,
     serif: words.styleSerif,
     left: words.styleLeft,
@@ -103,7 +105,7 @@ export function StyleDialog({
                 }}
               >
                 <option value="">{words.styleNotebook}</option>
-                {(key === 'font' ? STYLE_FONTS : STYLE_ALIGNMENTS).map((each) => (
+                {(key === 'font' ? STYLE_FONTS : key === 'numbering' ? STYLE_NUMBERINGS : STYLE_ALIGNMENTS).map((each) => (
                   <option key={each} value={each}>
                     {value[each]}
                   </option>

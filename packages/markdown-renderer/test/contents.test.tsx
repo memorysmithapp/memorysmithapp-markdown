@@ -106,8 +106,8 @@ describe('the outline', () => {
   it('counts the slugs across the runs, and lists only the headings at the top level', () => {
     const outline = planOutline(['# Um\n\n> ## Citado\n\n## Dois\n', '# Um\n\n```contents\n```\n']);
     expect(outline.runs).toEqual([
-      { slugs: ['um', 'citado', 'dois'], firstBlock: 0 },
-      { slugs: ['um-1'], firstBlock: 0 },
+      { slugs: ['um', 'citado', 'dois'], firstBlock: 0, numbers: [null, null, null] },
+      { slugs: ['um-1'], firstBlock: 0, numbers: [null] },
     ]);
     expect(outline.headings.map((heading) => [heading.id, heading.level])).toEqual([
       ['user-content-um', 1],

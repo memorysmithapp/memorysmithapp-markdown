@@ -17,6 +17,7 @@ import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
 import { appendixId, planAppendices } from './appendices.js';
 import { findStyleBlocks, rangesFor, styleAt, blockAttributes, type StyleRange } from './style-block.js';
+import type { StyleNumbering } from './note-style.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
 import { planOutline } from './outline.js';
@@ -280,11 +281,29 @@ function NoteView({
     // The runs and whether a `table` block is a table are the whole input.
     [appendixRuns, blocks, runs.join('\u0000')],
   );
+  // The line of the body each segment starts on: a run keeps every line of its text, and an embed
+  // stands within one. Where that does not add up, no block is drawn rather than a wrong one.
+  const startLines: number[] = [];
+  let line = 1;
+  for (const segment of segments) {
+    startLines.push(line);
+    if ('rendered' in segment) line += segment.text.split('\n').length - 1;
+  }
+  const lined = styled.blocks.length > 0 && line === styled.text.split('\n').length;
   // The outline of the note and its `contents` blocks (§7.17, #173): the slugs of its headings
   // counted across the runs, over the text each is drawn with, and what each block draws in each
   // medium over the host's settings; with no block, what the host's draw where they say.
   const drawnRuns = runs.map((text, index) => footnotes?.runs[index]?.text ?? text);
-  const outline = useMemo(() => planOutline(drawnRuns), [drawnRuns.join('\u0000')]);
+  // How the heading at a line of a run is numbered (#174): the style block that reaches its line,
+  // else the notebook's style.
+  const runStarts = segments.flatMap((segment, index) => ('rendered' in segment ? [startLines[index]!] : []));
+  const numbering = resolved.noteStyle.numbering ?? 'none';
+  const numberingAt = (run: number, line: number): StyleNumbering =>
+    (lined && runStarts[run] !== undefined ? styleAt(styled.blocks, runStarts[run]! + line - 1).numbering : undefined) ?? numbering;
+  const outline = useMemo(
+    () => planOutline(drawnRuns, numberingAt),
+    [drawnRuns.join('\u0000'), numbering, JSON.stringify(styled.blocks)],
+  );
   const contentsScope = useMemo((): { scope: ContentsScope; placed: readonly BlockPlans[] } => {
     const blocks = outline.blocks.map((source): BlockPlans => {
       const { settings } = readContents(source);
@@ -296,15 +315,6 @@ function NoteView({
   }, [outline, resolved.contents, resolved.printing]);
   const placed = (place: 'start' | 'end') => contentsScope.placed.map((plans, index) => <ContentsAt key={`${place}-${index}`} plans={plans} place={place} />);
   let run = 0;
-  // The line of the body each segment starts on: a run keeps every line of its text, and an embed
-  // stands within one. Where that does not add up, no block is drawn rather than a wrong one.
-  const startLines: number[] = [];
-  let line = 1;
-  for (const segment of segments) {
-    startLines.push(line);
-    if ('rendered' in segment) line += segment.text.split('\n').length - 1;
-  }
-  const lined = styled.blocks.length > 0 && line === styled.text.split('\n').length;
 
   return (
     <HostProvider value={resolved}>
