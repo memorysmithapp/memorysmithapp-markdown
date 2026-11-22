@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `SDLC.md` §2 and `AGENTS.md` §4: each repository stands on its own, as `memorysmithapp-template` v0.5.4 says (#179). A problem found in another repository is registered there, as one issue, and no sub-issue is opened elsewhere; comparing with the template is this repository's own work, in its own cycle. It replaces the rule that registered a gap at its origin with a sub-issue in every repository it reached.
+- `SDLC.md` §2 and §8 and `AGENTS.md` §4 state two rules `memorysmithapp-template` v0.5.3 added (#179): a cycle is planned from every open issue, reviewed with the owner, leaving one out being the owner's decision with a reason; and a workflow that delivers to an environment is dispatched only on the owner's go-ahead, which a go-ahead to implement is not. This repository's one delivery is its release.
+
+### Fixed
+
+- `scripts/setup-repo.sh` gives the organization's team `contributors` write on the repository, as it does `maintainers`, and requires both teams to exist, as `memorysmithapp-template` v0.5.3's does (#179). A repository it set up left `contributors` at the organization's base permission, read, so its members could push no branch, create no milestone and apply no label.
+
 ## [0.12.1] - 2026-11-20
 
 ### Fixed
