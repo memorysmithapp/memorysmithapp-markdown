@@ -15,6 +15,15 @@ resumo: Registro completo da safra 2026 na Serra Gaúcha, com a curva de matura�
 
 A safra em que a chuva chegou antes do IPT. O registro existe para que a decisão tomada com pressa possa ser lida com calma no ano seguinte.
 
+```contents
+headings:
+  title: Sumário
+tables:
+  title: Tabelas
+print:
+  place: start
+```
+
 > [!tip] O registro é a medida
 > Tudo em [[Vinificação em tinto]] é intenção até uma página como esta trazer um número.
 
@@ -26,6 +35,8 @@ A safra em que a chuva chegou antes do IPT. O registro existe para que a decisã
 | 10 fev | 21,1 | 47 | Curva subindo |
 | 17 fev | 22,0 | 55 | Chuva anunciada |
 | 24 fev | 22,3 | 58 | Antecipada, contra [[Vinificação em tinto]] |
+
+Table: A curva de maturação, semana a semana
 
 A caderneta do campo, copiada como foi anotada, sem colunas, porque quem anota no vinhedo não para para alinhar nada:[^caderneta]
 
@@ -59,7 +70,7 @@ text: justify
 ---
 # O que deu errado
 
-A remontagem do dia 26 foi feita por calendário, e não pela curva,[^caderneta] como o passo 4 já mandava não fazer.[^passo4] O passo 4 do protocolo ganhou a frase que faltava por causa disso.
+A remontagem do dia 26 foi feita por calendário, e não pela curva,[^caderneta] como o passo 4 já mandava não fazer.[^passo4] O passo 4 do protocolo ganhou a frase que faltava por causa disso, e [a curva](#curva) mostra o dia em que ela já pedia outra coisa.
 
 :::
 
@@ -78,3 +89,11 @@ Relacionado: [[Cabernet Sauvignon#Na Serra Gaúcha]].
 
 [^caderneta]: A caderneta de campo da safra 2026, folhas 12 a 15, guardada com os laudos do laboratório.
 [^passo4]: O passo 4 de [[Vinificação em tinto]] dizia "quando a curva achatar" desde 2025; faltava dizer "e não quando o cronograma disser".
+
+```properties
+keys: regiao, colhida_em, autor
+title: Registro
+screen: none
+print:
+  place: end
+```

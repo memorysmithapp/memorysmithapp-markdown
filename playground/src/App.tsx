@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteButtons, type NoteHost, type NoteStyle, type SaveNotice } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type ContentsSettings, type PropertiesSettings, type NoteButtons, type NoteHost, type NoteStyle, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -63,9 +63,27 @@ interface View {
   readonly printing: boolean;
   /** The note drawn for paper with its tables as appendices at its end (`?print=appendices`, #165). */
   readonly appendices: boolean;
-  /** The notebook's style (`?font=serif&headings=center&text=justify&tables=justify`, #164), which the renderer cleans of what it cannot take. */
+  /** The notebook's style (`?font=serif&headings=center&text=justify&tables=justify&numbering=decimal`, #164, #174), which the renderer cleans of what it cannot take. */
   readonly noteStyle: NoteStyle;
+  /** The notebook's contents for a note that declares none (`?contents=start`, `end` or `print`, #173). */
+  readonly contents: ContentsSettings | undefined;
+  /** How the notebook draws a note's properties (`?properties=end`, `print` or `hidden`, #172). */
+  readonly properties: PropertiesSettings | undefined;
 }
+
+/** How the notebook the address names draws the properties (#172): at the end, at the end of the print alone, or never in print. */
+const PROPERTIES: Record<string, PropertiesSettings> = {
+  end: { place: 'end' },
+  print: { print: { place: 'end' } },
+  hidden: { print: 'none' },
+};
+
+/** The notebook's contents the address names (#173): on the screen and in print, or in print alone. */
+const CONTENTS: Record<string, ContentsSettings> = {
+  start: { headings: null, place: 'start' },
+  end: { headings: null, place: 'end' },
+  print: { print: { headings: null, place: 'start' } },
+};
 
 /** The host with each of its functions wrapped anew, the same meaning under another identity. */
 function anew(host: NoteHost): NoteHost {
@@ -141,7 +159,9 @@ function readView(): View {
     unstable: query.get('host') === 'unstable',
     printing: query.get('print') === '1' || query.get('print') === 'appendices',
     appendices: query.get('print') === 'appendices',
-    noteStyle: Object.fromEntries(['font', 'headings', 'text', 'tables'].flatMap((key) => (query.get(key) ? [[key, query.get(key)]] : []))) as NoteStyle,
+    noteStyle: Object.fromEntries(['font', 'headings', 'text', 'tables', 'numbering'].flatMap((key) => (query.get(key) ? [[key, query.get(key)]] : []))) as NoteStyle,
+    contents: CONTENTS[query.get('contents') ?? ''],
+    properties: PROPERTIES[query.get('properties') ?? ''],
   };
 }
 
@@ -299,6 +319,8 @@ export function App() {
         printing={view.printing}
         tablesAsAppendices={view.appendices}
         noteStyle={view.noteStyle}
+        {...(view.contents ? { contents: view.contents } : {})}
+        {...(view.properties ? { properties: view.properties } : {})}
         // The comparison screenshots the note alone, as MemorySmith's own component draws it.
         actions={!view.bare}
         onChange={(next) => saveEdit(key, next)}

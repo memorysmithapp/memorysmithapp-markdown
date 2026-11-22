@@ -8,7 +8,8 @@ import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
 import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './source.js';
 import { readProperties } from './properties.js';
-import { Properties } from './PropertiesBlock.js';
+import { PropertiesAt, PropertiesContext, PropertiesTop, type PropertiesPlans, type PropertiesScope } from './PropertiesBlock.js';
+import { readPropertiesBlock, resolvePropertiesBlock, resolvePropertiesHost } from './properties-block.js';
 import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
 import { justifies } from './note-style.js';
@@ -17,8 +18,13 @@ import { Transclusion } from './Transclusion.js';
 import { splitEmbeds } from './embeds.js';
 import { appendixId, planAppendices } from './appendices.js';
 import { findStyleBlocks, rangesFor, styleAt, blockAttributes, type StyleRange } from './style-block.js';
+import type { StyleNumbering } from './note-style.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
+import { planItems, planOutline, type FileKind } from './outline.js';
+import { useKeptFiles } from './kept-files.js';
+import { readContents, resolveBlock, resolveHost as resolveHostContents } from './contents.js';
+import { ContentsAt, ContentsContext, listedIn, type BlockPlans, type ContentsScope } from './ContentsBlock.js';
 
 export interface NoteBodyProps extends NoteHost {
   /**
@@ -277,7 +283,6 @@ function NoteView({
     // The runs and whether a `table` block is a table are the whole input.
     [appendixRuns, blocks, runs.join('\u0000')],
   );
-  let run = 0;
   // The line of the body each segment starts on: a run keeps every line of its text, and an embed
   // stands within one. Where that does not add up, no block is drawn rather than a wrong one.
   const startLines: number[] = [];
@@ -287,9 +292,86 @@ function NoteView({
     if ('rendered' in segment) line += segment.text.split('\n').length - 1;
   }
   const lined = styled.blocks.length > 0 && line === styled.text.split('\n').length;
+  // The outline of the note and its `contents` blocks (§7.17, #173): the slugs of its headings
+  // counted across the runs, over the text each is drawn with, and what each block draws in each
+  // medium over the host's settings; with no block, what the host's draw where they say.
+  const drawnRuns = runs.map((text, index) => footnotes?.runs[index]?.text ?? text);
+  // How the heading at a line of a run is numbered (#174): the style block that reaches its line,
+  // else the notebook's style.
+  const runStarts = segments.flatMap((segment, index) => ('rendered' in segment ? [startLines[index]!] : []));
+  const numbering = resolved.noteStyle.numbering ?? 'none';
+  const numberingAt = (run: number, line: number): StyleNumbering =>
+    (lined && runStarts[run] !== undefined ? styleAt(styled.blocks, runStarts[run]! + line - 1).numbering : undefined) ?? numbering;
+  const tableBlocks = resolved.queryTable !== null;
+  const outline = useMemo(
+    () => planOutline(drawnRuns, numberingAt, tableBlocks),
+    [drawnRuns.join('\u0000'), numbering, JSON.stringify(styled.blocks), tableBlocks],
+  );
+  // The note's figures, tables and attachments (#175): a kept file is a figure when its media type
+  // is an image's, which only the host says, so what it says of each file is asked first.
+  const keptNames = useMemo(() => [...new Set(outline.kept.map((reference) => reference.name))].filter((name) => resolved.keeps(name)), [outline, resolved.keeps]);
+  const files = useKeptFiles(resolved, keptNames);
+  const items = useMemo(() => {
+    const kindOf = (name: string, form: 'image' | 'embed'): FileKind => {
+      if (!resolved.fileOf) return form === 'image' ? 'image' : 'other';
+      const file = files.get(name);
+      if (file === undefined) return 'pending';
+      return file?.mimeType.startsWith('image/') ? 'image' : 'other';
+    };
+    return planItems(outline, kindOf, resolved.keeps);
+  }, [outline, files, resolved.fileOf, resolved.keeps]);
+  const contentsScope = useMemo((): { scope: ContentsScope; placed: readonly BlockPlans[] } => {
+    const blocks = outline.blocks.map((source): BlockPlans => {
+      const { settings } = readContents(source);
+      return { screen: resolveBlock(settings, resolved.contents, 'screen'), print: resolveBlock(settings, resolved.contents, 'print') };
+    });
+    const host: BlockPlans[] =
+      blocks.length === 0 ? [{ screen: resolveHostContents(resolved.contents, 'screen'), print: resolveHostContents(resolved.contents, 'print') }] : [];
+    const placed = [...blocks, ...host];
+    return {
+      scope: {
+        kind: 'note',
+        headings: outline.headings,
+        items,
+        files,
+        blocks,
+        listed: listedIn(placed),
+        printing: resolved.printing,
+        appendices: Boolean(appendices),
+      },
+      placed,
+    };
+  }, [outline, items, files, resolved.contents, resolved.printing, appendices]);
+  // What each `properties` block draws in each medium, over the host's settings, and with none, what
+  // the host's draw: the entries at the top, as always, unless they say otherwise (#172).
+  const propertiesScope = useMemo((): { scope: PropertiesScope; placed: readonly PropertiesPlans[] } => {
+    const blocks = outline.propertiesBlocks.map((source): PropertiesPlans => {
+      const { settings } = readPropertiesBlock(source);
+      return { screen: resolvePropertiesBlock(settings, resolved.properties, 'screen'), print: resolvePropertiesBlock(settings, resolved.properties, 'print') };
+    });
+    const host: PropertiesPlans[] =
+      blocks.length === 0 ? [{ screen: resolvePropertiesHost(resolved.properties, 'screen'), print: resolvePropertiesHost(resolved.properties, 'print') }] : [];
+    return { scope: { kind: 'note', properties, blocks, printing: resolved.printing }, placed: [...blocks, ...host] };
+  }, [outline, properties, resolved.properties, resolved.printing]);
+  // A run marks the figures, tables and attachments a list leads to, and only those: a note with no
+  // such list draws its images, tables and files exactly as before (#175).
+  const marked = contentsScope.scope.kind === 'note' ? contentsScope.scope.listed : null;
+  const any = (kind: 'figures' | 'tables' | 'attachments') => Boolean(marked && (marked[kind].screen || marked[kind].print));
+  const markedOf = (index: number) => {
+    const plan = items.runs[index];
+    return {
+      ...(plan && any('figures') ? { figures: plan.figures } : {}),
+      ...(plan && any('tables') ? { tables: plan.tables } : {}),
+      ...(plan && any('attachments') ? { attachments: plan.attachments } : {}),
+    };
+  };
+  const placed = (place: 'start' | 'end') => contentsScope.placed.map((plans, index) => <ContentsAt key={`${place}-${index}`} plans={plans} place={place} />);
+  let run = 0;
 
   return (
     <HostProvider value={resolved}>
+      <ContentsContext.Provider value={contentsScope.scope}>
+      <PropertiesContext.Provider value={propertiesScope.scope}>
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
@@ -301,7 +383,8 @@ function NoteView({
       >
         {corner}
         {/* The frontmatter is content: read here, drawn as the theme decides. */}
-        <Properties properties={properties} />
+        <PropertiesTop properties={properties} plans={propertiesScope.placed} printing={resolved.printing} />
+        {placed('start')}
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
             const embed = <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
@@ -319,8 +402,12 @@ function NoteView({
           }
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
-          const first = appendices?.first[run];
-          const planned = footnotes?.runs[run++];
+          // The run's place among the runs, counted here: `footnotes?.runs[run++]` counted nothing
+          // when the note had no footnotes, and every run then took the first one's place.
+          const current = run++;
+          const first = appendices?.first[current];
+          const runOutline = outline.runs[current];
+          const planned = footnotes?.runs[current];
           return (
             <Markdown
               key={index}
@@ -336,6 +423,7 @@ function NoteView({
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
               {...(appendices && first !== undefined ? { appendices: { first, appendices: appendices.appendices } } : {})}
               styles={lined ? rangesFor(styled.blocks, startLines[index]!, startLines[index]! + segment.text.split('\n').length - 1) : NO_STYLES}
+              {...(runOutline ? { outline: { ...runOutline, ...markedOf(current), tableBlocks } } : {})}
             >
               {planned?.text ?? segment.rendered}
             </Markdown>
@@ -343,7 +431,15 @@ function NoteView({
         })}
         {/* Its boxes, if a footnote holds any, are drawn read-only: they are
             not where the ordinals of the runs count them. */}
-        {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
+        {footnotes && (
+          <Markdown footnotes="section" outline={{ slugs: [], firstBlock: outline.blocks.length }}>
+            {footnotes.section}
+          </Markdown>
+        )}
+        {placed('end')}
+        {propertiesScope.placed.map((plans, index) => (
+          <PropertiesAt key={`properties-end-${index}`} plans={plans} place="end" />
+        ))}
         {appendices && appendices.appendices.length > 0 && (
           <div className="table-appendices">
             {appendices.appendices.map((appendix) => (
@@ -362,6 +458,8 @@ function NoteView({
           </p>
         )}
       </div>
+      </PropertiesContext.Provider>
+      </ContentsContext.Provider>
     </HostProvider>
   );
 }

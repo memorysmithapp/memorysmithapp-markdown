@@ -63,10 +63,32 @@ const EXPECTED: Record<string, (html: string) => void> = {
   // A style block (§7.16): its content in an element carrying what it sets, its fences and options gone.
   'style-block': (html) => {
     expect(html).toMatch(/<div class="style-block" style="[^"]*--ms-align-text:justify[^"]*--ms-align-headings:center|<div class="style-block" style="[^"]*--ms-align-headings:center[^"]*--ms-align-text:justify/);
-    expect(html).toContain('<h1>Ata da assembleia</h1>');
+    expect(html).toContain('<h1 data-heading="ata-da-assembleia" id="user-content-ata-da-assembleia">Ata da assembleia</h1>');
     expect(html).not.toContain(':::');
     expect(html).not.toContain('text: justify');
     expect(html).not.toContain('<hr');
+  },
+  // The note's contents (§7.17): its outline as links nested by level, the block no code block.
+  'contents-block': (html) => {
+    expect(html).toContain('<p class="contents-title">Sumário</p>');
+    expect(html).toContain('href="#user-content-abertura"');
+    expect(html).toContain('href="#user-content-orçamento-2027"');
+    // Two levels deep, so the third is not listed, and the heading is still drawn.
+    expect(html).not.toContain('href="#user-content-detalhe"');
+    expect(html).toContain('id="user-content-detalhe"');
+    expect(html).not.toContain('language-contents');
+  },
+  // The note's properties as a block says (§7.18): the keys it names, in its order, under its title.
+  'properties-block': (html) => {
+    expect(html).toContain('<summary>Registro</summary>');
+    expect([...html.matchAll(/metadata-property-key">([^<]+)</g)].map((match) => match[1])).toEqual(['responsavel', 'status']);
+    expect(html).toContain('<h1 class="note-title">Ata de novembro</h1>');
+    expect(html).not.toContain('language-properties');
+  },
+  // A table's caption (§7.17): drawn under it without its keyword, whatever lists it.
+  'table-caption': (html) => {
+    expect(html).toContain('<p class="table-caption">Previsão de despesas para 2027</p>');
+    expect(html).not.toContain('Table:');
   },
   // This specification's own delimiter cell (§4.1): a table, its column justified.
   'table-justified': (html) => {
@@ -617,7 +639,7 @@ describe('a notation the specification does not declare is rendered as what it i
   it('does not read a heading as a tag either', () => {
     const html = render('# Direct contracting\n\nThe rule.\n');
 
-    expect(html).toContain('<h1>Direct contracting</h1>');
+    expect(html).toContain('<h1 data-heading="direct-contracting" id="user-content-direct-contracting">Direct contracting</h1>');
     expect(html).not.toContain('#');
   });
 
@@ -711,7 +733,7 @@ describe('a base notation that means something different here', () => {
   it('reads three dashes under a paragraph as a heading and not as frontmatter', () => {
     const html = render('Serra Gaucha\n---\n\nThe rest.\n');
 
-    expect(html).toContain('<h2>Serra Gaucha</h2>');
+    expect(html).toContain('<h2 data-heading="serra-gaucha" id="user-content-serra-gaucha">Serra Gaucha</h2>');
     expect(html).not.toContain('<hr');
   });
 

@@ -56,6 +56,15 @@ export interface NoteStrings {
   readonly tableAppendix: (appendix: TableAppendix) => string;
   /** What stands in a printed note in place of a table printed as an appendix, linked to it (#165). */
   readonly tableAppendixReference: (appendix: TableAppendix) => string;
+  /** The title of a contents' list of headings when its block writes none (§7.17, #173). */
+  readonly contentsHeadings: string;
+  /** The titles of a contents' lists of figures, tables and attachments when its block writes none (#175). */
+  readonly contentsFigures: string;
+  readonly contentsTables: string;
+  readonly contentsAttachments: string;
+  /** What a figure and a table are called with their number, in a contents and under them (#175). */
+  readonly figureNumber: (number: number) => string;
+  readonly tableNumber: (number: number) => string;
   /** The title of an embed naming a file the notebook does not keep. */
   readonly attachmentMissing: string;
   /** A card's ways to a file: open it where a browser shows it, and save it (#77). */
@@ -154,6 +163,49 @@ export interface EditorWords {
   readonly styleJustify: string;
   readonly styleInsert: string;
   readonly styleApply: string;
+  /** The numbering of headings (#174): the field, and its two values. */
+  readonly styleNumbering: string;
+  readonly styleNumberingNone: string;
+  readonly styleNumberingDecimal: string;
+  /**
+   * A `contents` block (`SPEC.md` §7.17, #173): the control and the title of its form, its fields
+   * — the title, the levels, where it is drawn, and what the screen and print draw — the choices of
+   * each, and the button that writes it, inserting a block or changing the one the cursor is in.
+   */
+  readonly contents: string;
+  readonly contentsTitle: string;
+  readonly contentsDepth: string;
+  readonly contentsPlace: string;
+  readonly contentsScreen: string;
+  readonly contentsPrint: string;
+  /** A choice that writes nothing: what the notebook's settings say, else the default. */
+  readonly contentsNotebook: string;
+  readonly contentsHere: string;
+  readonly contentsStart: string;
+  readonly contentsEnd: string;
+  readonly contentsSame: string;
+  readonly contentsNone: string;
+  readonly contentsOwn: string;
+  readonly contentsInsert: string;
+  readonly contentsApply: string;
+  /**
+   * What a block says in edit mode where it draws nothing on the screen: where it is drawn on the
+   * screen and in print, `here`, `start` or `end`, or `null` where it draws nothing.
+   */
+  /**
+   * A `properties` block (`SPEC.md` §7.18, #172): the control and the title of its form, the keys
+   * to choose and order, the fold and its two values, the button that moves a key up, and what a
+   * block says in edit mode where it draws nothing on the screen.
+   */
+  readonly propertiesBlock: string;
+  readonly propertiesKeys: string;
+  readonly propertiesAllKeys: string;
+  readonly propertiesFold: string;
+  readonly propertiesOpen: string;
+  readonly propertiesClosed: string;
+  readonly propertiesMoveUp: (key: string) => string;
+  readonly propertiesElsewhere: (where: { readonly screen: 'here' | 'start' | 'end' | null; readonly print: 'here' | 'start' | 'end' | null }) => string;
+  readonly contentsElsewhere: (where: { readonly screen: 'here' | 'start' | 'end' | null; readonly print: 'here' | 'start' | 'end' | null }) => string;
   readonly footnote: string;
   readonly comment: string;
   /** The toolbar's button that attaches a file, and what it says while the host keeps it or failed (#75). */
@@ -245,6 +297,8 @@ export interface EditorWords {
   readonly alignRight: string;
   /** Justifies the column of the cell the author is in, `;---;` (`SPEC.md` §4.1, #166). */
   readonly alignJustify: string;
+  /** The field under a table in edit mode that writes its `Table:` caption (#175). */
+  readonly tableCaption: string;
   /** The buttons beside the switch that show the note's Markdown and copy it, and the dialog (#63, #76). */
   readonly showMarkdown: string;
   readonly copyMarkdown: string;
@@ -330,8 +384,14 @@ export const ENGLISH: NoteStrings = {
   },
   tablePrinted: ({ table, filter, count, readAt }) =>
     `Table ${table}${filter === null ? '' : `, filtered by ${filter}`}: ${count === 1 ? '1 row' : `${count.toLocaleString('en-US')} rows`}, read on ${readAt}.`,
-  tableAppendix: ({ number, table, markdownTable }) => `Appendix ${number} — ${table ?? `Table ${markdownTable}`}`,
+  tableAppendix: ({ number, table, markdownTable, title }) => `Appendix ${number} — ${title ?? table ?? `Table ${markdownTable}`}`,
   tableAppendixReference: ({ number, table, markdownTable }) => `See appendix ${number}, ${table ?? `table ${markdownTable}`}.`,
+  contentsHeadings: 'Contents',
+  contentsFigures: 'Figures',
+  contentsTables: 'Tables',
+  contentsAttachments: 'Attachments',
+  figureNumber: (number) => `Figure ${number}`,
+  tableNumber: (number) => `Table ${number}`,
   attachmentMissing: 'This notebook keeps no file under that name.',
   attachmentOpen: 'Open',
   attachmentDownload: 'Download',
@@ -419,6 +479,41 @@ export const ENGLISH: NoteStrings = {
     styleJustify: 'Justified',
     styleInsert: 'Set apart',
     styleApply: 'Apply',
+    styleNumbering: 'Numbering',
+    styleNumberingNone: 'None',
+    styleNumberingDecimal: '1, 1.1, 1.2',
+    contents: 'Contents',
+    contentsTitle: 'Title',
+    contentsDepth: 'Levels',
+    contentsPlace: 'Where',
+    contentsScreen: 'On the screen',
+    contentsPrint: 'In print',
+    contentsNotebook: "The notebook's",
+    contentsHere: 'Where it is written',
+    contentsStart: 'At the start',
+    contentsEnd: 'At the end',
+    contentsSame: 'As above',
+    contentsNone: 'Not drawn',
+    contentsOwn: 'Its own',
+    contentsInsert: 'Insert',
+    contentsApply: 'Apply',
+    propertiesBlock: 'Properties',
+    propertiesKeys: 'Keys',
+    propertiesAllKeys: 'Every key, the reserved ones first',
+    propertiesFold: 'Folded',
+    propertiesOpen: 'Open',
+    propertiesClosed: 'Closed',
+    propertiesMoveUp: (key) => `Move ${key} up`,
+    propertiesElsewhere: ({ screen, print }) => {
+      const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'here' : where === 'start' ? 'at the start' : 'at the end');
+      const parts = [screen && `${at(screen)} on the screen`, print && `${at(print)} in print`].filter(Boolean);
+      return parts.length === 0 ? 'Properties: not drawn' : `Properties: ${parts.join(', ')}`;
+    },
+    contentsElsewhere: ({ screen, print }) => {
+      const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'here' : where === 'start' ? 'at the start' : 'at the end');
+      const parts = [screen && `${at(screen)} on the screen`, print && `${at(print)} in print`].filter(Boolean);
+      return parts.length === 0 ? 'Contents: not drawn' : `Contents: ${parts.join(', ')}`;
+    },
     footnote: 'Footnote',
     comment: 'Comment',
     attach: 'Attach a file',
@@ -491,6 +586,7 @@ export const ENGLISH: NoteStrings = {
     alignCenter: 'Center',
     alignRight: 'Align right',
     alignJustify: 'Justify',
+    tableCaption: 'Caption',
     showMarkdown: 'Show Markdown',
     copyMarkdown: 'Copy Markdown',
     sourceTitle: 'The note in Markdown',

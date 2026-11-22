@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { NoteBody, type NoteHost } from '../src/index.js';
 import { planAppendices } from '../src/appendices.js';
 import { runTableQuery, type TablePage, type TableRequest, type TableRow } from '../src/table-block.js';
-import { mount, type Mounted } from './render.js';
+import { html, mount, type Mounted } from './render.js';
 
 const ROWS: TableRow[] = Array.from({ length: 30 }, (_, index) => ({ item: `Item ${index + 1}`, amount: String(index + 1) }));
 
@@ -129,6 +129,19 @@ describe('a note whose tables are not asked for as appendices', () => {
     const container = await draw(NOTE, { queryTable, printing: true });
     expect(container.querySelector('.table-reference, .table-appendices')).toBeNull();
     expect(container.querySelectorAll('table')).toHaveLength(2);
+  });
+});
+
+describe('a note an embed cuts, with no footnote', () => {
+  it('gives each run the number of its own first table', () => {
+    const page = html('| a |\n|---|\n| 1 |\n\n![[Other]]\n\n| b |\n|---|\n| 2 |\n', {
+      resolve: (name) => (name === 'Other' ? '/notes/other' : null),
+      loadNote: async () => null,
+      printing: true,
+      tablesAsAppendices: true,
+    });
+    expect(page).toContain('href="#table-appendix-1"');
+    expect(page).toContain('href="#table-appendix-2"');
   });
 });
 

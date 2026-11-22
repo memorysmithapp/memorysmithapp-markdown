@@ -1,6 +1,7 @@
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import {
   isValidElement,
+  useContext,
   useEffect,
   useMemo,
   useReducer,
@@ -35,6 +36,13 @@ import { CLOBBER_PREFIX, rehypeFootnoteRun, rehypeFootnoteSection, type Footnote
 import { drawSlot, headings, InBlock, MarkdownBlockquote, MarkdownDiv, MarkdownSection, MarkdownTable, useInBlock, useSlot } from './slots.js';
 import type { TaskSave } from './task-saves.js';
 import { ordinalAt } from './tasklist.js';
+import { InPageAnchor } from './InPageAnchor.js';
+import { Caption, ContentsBlock, ContentsContext } from './ContentsBlock.js';
+import { isPropertiesBlock } from './properties-block.js';
+import { PropertiesBlockAt } from './PropertiesBlock.js';
+import { tableId } from './outline.js';
+import { isContentsBlock } from './contents.js';
+import { remarkOutline, type OutlineRun } from './outline.js';
 
 /**
  * One run of a note, parsed and drawn: the pipeline of MemorySmith's reading page.
@@ -74,6 +82,11 @@ export interface MarkdownProps {
    * note, which is drawn on its own.
    */
   readonly styles?: readonly StyleRange[];
+  /**
+   * The slugs of this run's headings and the ordinal of its first `contents` block, counted over
+   * the whole note (`outline.ts`, #173). Left out, the run counts its own: a note drawn in one run.
+   */
+  readonly outline?: OutlineRun;
 }
 
 type LiProps = HTMLAttributes<HTMLLIElement> & { node?: unknown };
@@ -103,40 +116,6 @@ export function MarkdownImage({ alt, node: _node, ...rest }: WithNode<ImgHTMLAtt
   // The description is the hover hint too, so a person who sees the picture can read it (#109); a title written wins.
   const title = rest.title || read.description || undefined;
   return <img {...rest} alt={read.description} title={title} {...sizedAttributes(read)} />;
-}
-
-/**
- * A link to a place in the same note: a footnote and its way back (§7.12),
- * or an anchor an author wrote.
- *
- * It must not open the whole page in another tab, and a bare hash is not
- * enough either: a host may scroll the note inside a pane of its own rather
- * than the window, and an embedded note renders the same identifiers a second
- * time. So the target is looked up inside the note the link was drawn in, and
- * brought into view in whatever scrolls it; the address of the page does not
- * change, because nothing was navigated.
- */
-function InPageAnchor({ href, children, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
-  const follow = (event: MouseEvent<HTMLAnchorElement>): void => {
-    const id = decodeURIComponent(href.slice(1));
-    // The note is the root `NoteBody` draws, since a footnote's way back may
-    // cross runs; inside an embed it is the embed's own run. A match inside
-    // an embed answers only a link inside that same embed.
-    const link = event.currentTarget;
-    const embed = link.closest('.embed');
-    const note = embed ? link.closest('.markdown') : (link.closest('.markdown[data-theme]') ?? link.closest('.markdown'));
-    const target = [...(note?.querySelectorAll(`[id="${CSS.escape(id)}"]`) ?? [])].find(
-      (candidate) => candidate.closest('.embed') === embed,
-    );
-    if (!(target instanceof HTMLElement)) return;
-    event.preventDefault();
-    target.scrollIntoView({ block: 'center' });
-  };
-  return (
-    <a href={href} onClick={follow} {...rest}>
-      {children}
-    </a>
-  );
 }
 
 /**
@@ -455,9 +434,38 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
   // code block it is everywhere else (§7.15).
   const meta = (code as { data?: { meta?: unknown } } | undefined)?.data?.meta;
   if (queryTable && isTableBlock(language, typeof meta === 'string' ? meta : null)) {
-    return <DataTable source={typed} fallback={drawn} />;
+    // Numbered among the note's tables (#175): its id, which a contents leads to, and the line under it.
+    const number = code?.properties?.['dataTable'];
+    if (typeof number !== 'number') return <DataTable source={typed} fallback={drawn} />;
+    return (
+      <div id={tableId(number)} className="table-block-figure">
+        <DataTable source={typed} fallback={drawn} />
+        <Caption kind="table" number={number} />
+      </div>
+    );
+  }
+  // A `properties` block draws the note's properties where it is written, as it says (§7.18, #172).
+  if (isPropertiesBlock(language, typeof meta === 'string' ? meta : null)) {
+    const ordinal = code?.properties?.['dataProperties'];
+    return <PropertiesBlockAt ordinal={typeof ordinal === 'number' ? ordinal : null} fallback={drawn} />;
+  }
+  // A `contents` block is the note's contents where the note's outline is known (§7.17, #173).
+  if (isContentsBlock(language, typeof meta === 'string' ? meta : null)) {
+    const ordinal = code?.properties?.['dataContents'];
+    return <ContentsBlock ordinal={typeof ordinal === 'number' ? ordinal : null} fallback={drawn} />;
   }
   return drawn;
+}
+
+/** The line under a figure or a table, as `remarkOutline` marks it (#175). */
+function MarkdownCaption({ children, node: _node, ...rest }: WithNode<HTMLAttributes<HTMLElement>>) {
+  const attributes = rest as Record<string, unknown>;
+  const number = Number(attributes['data-number']);
+  return (
+    <Caption kind={attributes['data-kind'] === 'table' ? 'table' : 'figure'} number={Number.isFinite(number) ? number : null}>
+      {children}
+    </Caption>
+  );
 }
 
 /** The text of a hast element, which for a fence is the code as typed. */
@@ -581,9 +589,11 @@ function dropBox(children: ReactNode): ReactNode {
   return (children as ReactNode[]).filter((child) => !(isValidElement(child) && child.type === 'input'));
 }
 
-export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes, appendices, styles }: MarkdownProps) {
+export function Markdown({ children, source, onToggleTask, taskSave, writable = false, footnotes, appendices, styles, outline }: MarkdownProps) {
   const text = toUnixNewlines(children);
   const { strings, queryTable } = useHost();
+  // Inside an embed a heading carries its slug and no id, so it never takes one of the note's (#173).
+  const embedded = useContext(ContentsContext)?.kind === 'embedded';
   const calloutTitle = (kind: string): string | undefined =>
     Object.hasOwn(strings.callouts, kind) ? strings.callouts[kind] : undefined;
   // A style block's fences and options leave the text, every offset kept, and its lines are wrapped once parsed (§7.16).
@@ -604,6 +614,20 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           ...readingPlugins(calloutTitle, strings.parameter),
           [remarkJustifiedColumns, { columns: justified.columns }],
           [remarkStyleBlocks, { ranges: styled.ranges, locale: strings.locale }],
+          [
+            remarkOutline,
+            {
+              slugs: outline?.slugs ?? null,
+              numbers: outline?.numbers ?? null,
+              firstBlock: outline?.firstBlock ?? 0,
+              firstProperties: outline?.firstProperties ?? 0,
+              ids: !embedded,
+              figures: outline?.figures ?? null,
+              tables: outline?.tables ?? null,
+              attachments: outline?.attachments ?? null,
+              tableBlocks: outline?.tableBlocks ?? queryTable !== null,
+            },
+          ],
           ...(appendices ? [[remarkTableReferences, { ...appendices, blocks: queryTable !== null, words: strings.tableAppendixReference }] as Pluggable] : []),
         ]}
         // Raw HTML is NOT enabled, and its absence is the point: no
@@ -643,6 +667,8 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
           blockquote: MarkdownBlockquote,
           section: MarkdownSection,
           ...headings,
+          // The line under a figure or a table (#175), which `remarkOutline` puts in its place.
+          ...({ 'ms-caption': MarkdownCaption } as Record<string, unknown>),
           li: (props: LiProps) => (
             <TaskItem
               {...props}

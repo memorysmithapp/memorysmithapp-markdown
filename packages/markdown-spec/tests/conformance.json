@@ -2089,6 +2089,167 @@
       "notices": []
     },
     {
+      "id": "table-caption/a-link-in-a-caption-is-an-edge",
+      "notation": "table-caption",
+      "markdown": "| Item | Valor |\n|---|---:|\n| Obra | 120 |\n\nTable: Previsão aprovada por [[Treasurer]]\n",
+      "links": [
+        { "name": "Treasurer", "anchor": null }
+      ]
+    },
+    {
+      "id": "table/a-title-is-a-key",
+      "notation": "table-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```table\ntable: despesas\ntitle: Despesas pendentes\n```\n",
+      "notices": []
+    },
+    {
+      "id": "style/numbering-is-a-key",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nnumbering: decimal\n---\n## Presentes\n\n## Pauta\n:::\n",
+      "notices": []
+    },
+    {
+      "id": "style/a-numbering-it-cannot-take",
+      "notation": "style-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Ata\n\n:::{style}\n---\nnumbering: roman\n---\n## Presentes\n:::\n",
+      "notices": [
+        { "code": "style-value-invalid", "line": 10 }
+      ]
+    },
+    {
+      "id": "contents/a-block-is-no-edge",
+      "notation": "contents-block",
+      "markdown": "Resumo.\n\n```contents\nheadings:\n  title: [[Sumário]]\n```\n\n# Abertura\n\nSee [[Treasurer]].\n",
+      "links": [
+        {
+          "name": "Treasurer",
+          "anchor": null
+        }
+      ]
+    },
+    {
+      "id": "contents/a-block-sets-no-attribute",
+      "notation": "contents-block",
+      "markdown": "---\ntags: [condomínio]\n---\n```contents\ntags: [other]\nplace: start\n```\n",
+      "facets": {
+        "tags": {
+          "kind": "list",
+          "values": [
+            "condomínio"
+          ]
+        }
+      }
+    },
+    {
+      "id": "contents/a-block-read-whole-raises-nothing",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\nResumo.\n\n```contents\nHeadings:\n  title: Sumário\n  depth: 2\nscreen: none\nprint:\n  place: START\n  headings:\n    depth: 3\n```\n\n# Abertura\n\n## Pauta\n",
+      "notices": []
+    },
+    {
+      "id": "contents/an-unknown-key-a-repeat-and-a-line-under-no-group",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\ncolour: blue\nheadings:\n  depth: 2\n  depth: 4\n    title: Sumário\nprint:\n  print:\n```\n\n# Abertura\n",
+      "notices": [
+        {
+          "code": "contents-key-unknown",
+          "line": 7
+        },
+        {
+          "code": "contents-key-unknown",
+          "line": 10
+        },
+        {
+          "code": "contents-key-unknown",
+          "line": 11
+        },
+        {
+          "code": "contents-key-unknown",
+          "line": 13
+        }
+      ]
+    },
+    {
+      "id": "contents/a-value-its-key-cannot-take",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\nheadings: yes\nplace: middle\nscreen:\n  headings:\n    depth: 9\n```\n\n# Abertura\n",
+      "notices": [
+        {
+          "code": "contents-value-invalid",
+          "line": 7
+        },
+        {
+          "code": "contents-value-invalid",
+          "line": 8
+        },
+        {
+          "code": "contents-value-invalid",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "id": "contents/a-block-never-closed-is-an-unclosed-fence",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n# Abertura\n\n```contents\nheadings:\n",
+      "notices": [
+        {
+          "code": "fence-unclosed",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "id": "contents/the-lists-of-a-block-raise-nothing",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\nheadings:\nfigures:\n  title: Fotos\ntables:\nattachments:\nprint:\n  tables:\n```\n\n# Abertura\n",
+      "notices": []
+    },
+    {
+      "id": "contents/a-depth-outside-the-headings",
+      "notation": "contents-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\n---\n```contents\nfigures:\n  depth: 2\n```\n\n# Abertura\n",
+      "notices": [
+        { "code": "contents-key-unknown", "line": 8 }
+      ]
+    },
+    {
+      "id": "properties/a-block-read-whole-raises-nothing",
+      "notation": "properties-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\nstatus: aprovada\n---\n```properties\nkeys: status, local\nTitle: Registro\nfold: CLOSED\nscreen: none\nprint:\n  place: end\n```\n\n# Abertura\n",
+      "notices": []
+    },
+    {
+      "id": "properties/a-key-and-a-value-it-cannot-take",
+      "notation": "properties-block",
+      "markdown": "---\nname: Ata\naliases: [ata]\ntags: [condomínio]\nstatus: aprovada\n---\n```properties\ncolour: blue\nfold: half\nkeys: status\nkeys: local\nprint: maybe\n```\n\n# Abertura\n",
+      "notices": [
+        { "code": "properties-key-unknown", "line": 8 },
+        { "code": "properties-value-invalid", "line": 9 },
+        { "code": "properties-key-unknown", "line": 11 },
+        { "code": "properties-value-invalid", "line": 12 }
+      ]
+    },
+    {
+      "id": "properties/a-block-sets-no-attribute",
+      "notation": "properties-block",
+      "markdown": "---\ntags: [condomínio]\n---\n```properties\nkeys: tags\ntags: [other]\n```\n",
+      "facets": {
+        "tags": { "kind": "list", "values": ["condomínio"] }
+      }
+    },
+    {
+      "id": "heading-slug/a-link-to-a-heading-is-no-edge",
+      "notation": "heading-slug",
+      "markdown": "See [the vote](#deliberações), [[#Deliberações]] and [the act](Lei%2014.133#Article%2075).\n\n# Deliberações\n",
+      "links": [
+        {
+          "name": "Lei 14.133",
+          "anchor": "Article 75"
+        }
+      ]
+    },
+    {
       "id": "resolution/a-table-by-its-name-with-case-folded",
       "notation": "table-reference",
       "notebook": {

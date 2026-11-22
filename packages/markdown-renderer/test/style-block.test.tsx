@@ -70,7 +70,7 @@ describe('a style block, drawn', () => {
   it('draws what it holds in an element carrying what it sets, and nothing of its fences or options', () => {
     const drawn = html(`Before.\n\n${BLOCK}\nAfter.\n`);
     expect(drawn).toContain('<p>Before.</p>');
-    expect(drawn).toContain('<div class="style-block" style="--ms-align-headings:center;--ms-align-text:justify;--ms-hyphens-text:auto" data-headings="center" data-text="justify" lang="en-US"><h1>Ata</h1><p>O condomínio deliberou.</p></div>');
+    expect(drawn).toContain('<div class="style-block" style="--ms-align-headings:center;--ms-align-text:justify;--ms-hyphens-text:auto" data-headings="center" data-text="justify" lang="en-US"><h1 data-heading="ata" id="user-content-ata">Ata</h1><p>O condomínio deliberou.</p></div>');
     expect(drawn).toContain('<p>After.</p>');
     expect(drawn).not.toMatch(/:::|<hr|<h2/);
   });
