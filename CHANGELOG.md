@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-22
+
 ### Added
 
 - A `table` block's row can lead somewhere (#171, memorysmithapp/memorysmithapp#531). Beside a page's `rows`, the host may answer `links`, each row's address or `null`, and `linkColumn`. The cell of that column, when drawn, else of the first column drawn, is a link drawn as the note's links are: an address of the host's own through `renderLink`, another through the address filter. A click on it follows it and opens no dialog; a click elsewhere on the row, or Enter on it, still opens the row whole; in print the link stays. A host that answers no address draws as before, and `runTableQuery` answers none. The playground answers a `system-notes` table of the notebook's notes, each row leading to its note, which *Índice* of the Safras folder reads.
@@ -359,7 +361,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `Quality` check 4 reads a footnote definition, `[^label]: text`, as prose instead of as a link definition pointing at its first word (#14).
 
-[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.1...HEAD
+[unreleased]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/memorysmithapp/memorysmithapp-markdown/compare/v0.11.1...v0.11.2
