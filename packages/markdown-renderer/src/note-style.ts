@@ -14,6 +14,8 @@
 
 export type StyleFont = 'sans' | 'serif';
 export type StyleAlignment = 'left' | 'center' | 'right' | 'justify';
+/** How the headings are numbered (#174): not at all, or `1`, `1.1`, `1.2`. */
+export type StyleNumbering = 'none' | 'decimal';
 
 /** A style: each key left out is what the renderer draws with none. */
 export interface NoteStyle {
@@ -25,16 +27,23 @@ export interface NoteStyle {
   readonly text?: StyleAlignment;
   /** The alignment of a table's cells whose column declares none, and of a `table` block's text columns. */
   readonly tables?: StyleAlignment;
+  /**
+   * How the note's headings are numbered (#174): `decimal` numbers the outline 1, 1.1, 1.2, from its
+   * highest level; `none` numbers nothing, and a heading in a passage of `none` advances no counter.
+   */
+  readonly numbering?: StyleNumbering;
 }
 
 export const STYLE_FONTS: readonly StyleFont[] = ['sans', 'serif'];
 export const STYLE_ALIGNMENTS: readonly StyleAlignment[] = ['left', 'center', 'right', 'justify'];
-export const STYLE_KEYS = ['font', 'headings', 'text', 'tables'] as const;
+export const STYLE_NUMBERINGS: readonly StyleNumbering[] = ['none', 'decimal'];
+export const STYLE_KEYS = ['font', 'headings', 'text', 'tables', 'numbering'] as const;
 export type StyleKey = (typeof STYLE_KEYS)[number];
 
 /** Whether `value` is one `key` takes. */
 export function takes(key: StyleKey, value: string): boolean {
-  return key === 'font' ? (STYLE_FONTS as readonly string[]).includes(value) : (STYLE_ALIGNMENTS as readonly string[]).includes(value);
+  const values: readonly string[] = key === 'font' ? STYLE_FONTS : key === 'numbering' ? STYLE_NUMBERINGS : STYLE_ALIGNMENTS;
+  return values.includes(value);
 }
 
 /** A style with only the keys and values it may hold: a host's mistake is ignored, never drawn. */

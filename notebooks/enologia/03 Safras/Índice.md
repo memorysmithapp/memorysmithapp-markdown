@@ -28,6 +28,15 @@ A outra nota chamada **Índice** está em `01 Castas`, e as duas continuam de p�
 | 2026 | [[Safra 2026 · Serra Gaúcha]] | Fechada |
 | 2025 | Ainda não transcrita | — |
 
+As notas desta pasta, lidas da tabela que o caderno mantém com uma linha por nota; o nome de cada uma leva até ela:
+
+```table
+table: system-notes
+columns: name, folder
+where: folder:Safras
+sort: name
+```
+
 ## Como o índice é conferido
 
 O caderno de campo é conferido contra a planilha da colheita, que é o arquivo `colheita-2026.csv` — um anexo, endereçado pelo nome e sem virar aresta.

@@ -10,7 +10,7 @@
 
 import { ChangeSet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { useEffect, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useHost } from '../host.js';
 import { Markdown } from '../Markdown.js';
 import { hideComments, resolveWikilinks } from '../source.js';
@@ -20,6 +20,13 @@ import { splitEmbeds } from '../embeds.js';
 import { embedsFile } from '../embed-target.js';
 import { STYLE_KEYS, type NoteStyle } from '../note-style.js';
 import { wikilinkAddress } from '../wikilink-address.js';
+import { planItems, planOutline } from '../outline.js';
+import { useKeptFiles } from '../kept-files.js';
+import { readContents, resolveBlock, type ContentsPlan } from '../contents.js';
+import { ContentsAt, ContentsContext, listedIn } from '../ContentsBlock.js';
+import { Properties } from '../PropertiesBlock.js';
+import { readPropertiesBlock, resolvePropertiesBlock, type PropertiesPlan } from '../properties-block.js';
+import { bodyStart } from '../source.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
 import { describeImage, MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
@@ -77,8 +84,10 @@ function write(view: EditorView, changes: readonly TextChange[] | ChangeSet, eve
  */
 export function StyleSummary({ style }: { style: NoteStyle }) {
   const words = useHost().strings.editor;
-  const label = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables };
+  const label = { font: words.styleFont, headings: words.styleHeadings, text: words.styleText, tables: words.styleTables, numbering: words.styleNumbering };
   const value: Record<string, string> = {
+    none: words.styleNumberingNone,
+    decimal: words.styleNumberingDecimal,
     sans: words.styleSans,
     serif: words.styleSerif,
     left: words.styleLeft,
@@ -1037,7 +1046,57 @@ export function TableBlock({ view, from, to }: { view: EditorView; from: number;
           )}
         </table>
       </div>
+      <CaptionField view={view} end={table.to} />
     </div>
+  );
+}
+
+/** A Markdown table's caption (#175): the `Table:` paragraph after a blank line below its last row. */
+const CAPTION_AFTER = /^\n[ \t]*\n[ \t]*table:[ \t]*([^\n]*)/i;
+
+/** The caption of the table that ends at `end`: where it is written, from the line break after the table, and its text. */
+export function tableCaptionAt(source: string, end: number): { from: number; to: number; text: string } | null {
+  const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
+  const match = CAPTION_AFTER.exec(source.slice(at));
+  return match ? { from: at, to: at + match[0].length, text: match[1]!.trim() } : null;
+}
+
+/** The changes that set a table's caption to `text`: written, rewritten, or taken out when empty. */
+export function setTableCaption(source: string, end: number, text: string): TextChange[] {
+  const at = end > 0 && source[end - 1] === '\n' ? end - 1 : end;
+  const caption = tableCaptionAt(source, end);
+  const written = text.trim() === '' ? '' : `\n\nTable: ${text.trim()}`;
+  if (caption) return caption.text === text.trim() ? [] : [{ from: caption.from, to: caption.to, insert: written }];
+  return written ? [{ from: at, to: at, insert: written }] : [];
+}
+
+/** The field under a table that writes its caption, so the author never types `Table:` (#175). */
+function CaptionField({ view, end }: { view: EditorView; end: number }) {
+  const { strings } = useHost();
+  const source = view.state.doc.sliceString(0, view.state.doc.length, '\n');
+  const written = tableCaptionAt(source, end)?.text ?? '';
+  const [value, setValue] = useState(written);
+  useEffect(() => setValue(written), [written]);
+  const commit = (): void => {
+    const now = view.state.doc.sliceString(0, view.state.doc.length, '\n');
+    write(view, setTableCaption(now, end, value));
+  };
+  return (
+    <label className="edit-table-caption" data-ms-control="">
+      <span>{strings.editor.tableCaption}</span>
+      <input
+        className="edit-attach-input"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+          }
+        }}
+      />
+    </label>
   );
 }
 
@@ -1490,6 +1549,8 @@ export const ICONS = {
   diagram: icon('M5 3h4v4H5z', 'M15 17h4v4h-4z', 'M7 7v4a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v2'),
   rule: icon('M5 12h14'),
   style: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16'),
+  propertiesBlock: icon('M3 5h18', 'M3 12h6', 'M13 12h8', 'M3 19h6', 'M13 19h8'),
+  contents: icon('M21 12h-8', 'M21 6H8', 'M21 18h-8', 'M3 6v4c0 1.1.9 2 2 2h3', 'M3 10v6c0 1.1.9 2 2 2h3'),
   footnote: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16', 'M19 13v6', 'M17 15l2-2'),
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
   caret: icon('m6 9 6 6 6-6'),
@@ -1505,3 +1566,68 @@ export const ICONS = {
   edit: icon('M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z', 'm15 5 4 4'),
   view: icon('M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'),
 } as const;
+
+/**
+ * A `contents` block in edit mode (`SPEC.md` §7.17, #173), while the author is elsewhere: the
+ * contents it draws on the screen, over the note as it is now, or, where it draws nothing here —
+ * moved to the start or the end, or for print alone — a line saying where it is drawn.
+ */
+export function ContentsPreview({ body, ordinal }: { body: string; ordinal: number }) {
+  const host = useHost();
+  const file = embedsFile(host);
+  const drawn = resolveWikilinks(hideComments(body).text, (name) => wikilinkAddress(host, name), file);
+  const outline = useMemo(() => planOutline([drawn], undefined, host.queryTable !== null), [drawn, host.queryTable]);
+  const blocks = useMemo(
+    () =>
+      outline.blocks.map((source) => {
+        const { settings } = readContents(source);
+        return { screen: resolveBlock(settings, host.contents, 'screen'), print: resolveBlock(settings, host.contents, 'print') };
+      }),
+    [outline, host.contents],
+  );
+  const names = useMemo(() => [...new Set(outline.kept.map((reference) => reference.name))].filter((name) => host.keeps(name)), [outline, host.keeps]);
+  const files = useKeptFiles(host, names);
+  const items = useMemo(
+    () =>
+      planItems(
+        outline,
+        (name, form) => {
+          if (!host.fileOf) return form === 'image' ? 'image' : 'other';
+          const file = files.get(name);
+          return file === undefined ? 'pending' : file?.mimeType.startsWith('image/') ? 'image' : 'other';
+        },
+        host.keeps,
+      ),
+    [outline, files, host.fileOf, host.keeps],
+  );
+  const mine = blocks[ordinal];
+  if (!mine) return null;
+  if (mine.screen && mine.screen.place === null) {
+    return (
+      <ContentsContext.Provider value={{ kind: 'note', headings: outline.headings, items, files, blocks, listed: listedIn(blocks), printing: false, appendices: false }}>
+        <ContentsAt plans={{ screen: mine.screen, print: null }} place={null} />
+      </ContentsContext.Provider>
+    );
+  }
+  const where = (plan: ContentsPlan | null) => (plan === null ? null : (plan.place ?? 'here'));
+  return <p className="contents-elsewhere">{host.strings.editor.contentsElsewhere({ screen: where(mine.screen), print: where(mine.print) })}</p>;
+}
+
+/**
+ * A `properties` block in edit mode (`SPEC.md` §7.18, #172), while the author is elsewhere: the
+ * entries it draws on the screen, from the note's frontmatter as it is now, or, where it draws
+ * nothing here, a line saying where it is drawn.
+ */
+export function PropertiesPreview({ text, ordinal }: { text: string; ordinal: number }) {
+  const host = useHost();
+  const properties = useMemo(() => readProperties(text), [text]);
+  const outline = useMemo(() => planOutline([text.slice(bodyStart(text))]), [text]);
+  const source = outline.propertiesBlocks[ordinal];
+  if (source === undefined) return null;
+  const { settings } = readPropertiesBlock(source);
+  const screen = resolvePropertiesBlock(settings, host.properties, 'screen');
+  const print = resolvePropertiesBlock(settings, host.properties, 'print');
+  if (screen && screen.place === null) return <Properties properties={properties} plan={screen} withName={false} />;
+  const where = (plan: PropertiesPlan | null) => (plan === null ? null : (plan.place ?? 'here'));
+  return <p className="contents-elsewhere">{host.strings.editor.propertiesElsewhere({ screen: where(screen), print: where(print) })}</p>;
+}

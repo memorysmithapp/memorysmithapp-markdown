@@ -287,6 +287,11 @@ const DETECTS: Record<string, Detector> = {
   table: inBody(/^\|.*\[\[.*\|/m),
   'table-justified': inBody(/^\|.*;-+;/m),
   'style-block': inBody(/^:::\{style\}\n---\n(?:[a-z]+: .*\n)+---\n[\s\S]*?\n:::$/m),
+  'contents-block': inBody(/^```contents\n[\s\S]*?^```$/m),
+  // A link to a heading of the same note, by its slug: no edge, and never pending.
+  'heading-slug': inBody(/\]\(#[^)\s]+\)/),
+  'properties-block': inBody(/^```properties\n[\s\S]*?^```$/m),
+  'table-caption': inBody(/^\|.*\|\n\nTable: \S/m),
   strikethrough: inBody(/~~[^~\n]+~~/),
   // Bare, without the angle brackets. External either way, and never an edge.
   'autolink-extended': inBody(/(^|[^(<\]])https?:\/\//m),

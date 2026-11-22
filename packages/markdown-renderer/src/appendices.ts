@@ -20,6 +20,7 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import { justifyColumns } from './justified.js';
 import { isTableBlock, readTableBlock } from './table-block.js';
+import { captionAfter, captionContent, textOf, type OutlineNode } from './outline.js';
 
 /** A table printed as an appendix, as the host's words receive it. */
 export interface TableAppendix {
@@ -29,6 +30,8 @@ export interface TableAppendix {
   readonly table: string | null;
   /** Its place among the note's Markdown tables, from 1, or `null` for a `table` block. */
   readonly markdownTable: number | null;
+  /** What names it (#175): a Markdown table's `Table:` caption, as text, or a block's `title`; `null` for none. */
+  readonly title?: string | null;
 }
 
 /** An appendix and the Markdown that draws its table. */
@@ -59,7 +62,7 @@ function isAppendixTable(node: Node, blocks: boolean): boolean {
 }
 
 /** Each table of a tree, in the order they are read, never one inside another's place. */
-function tablesOf(tree: Node, blocks: boolean): { node: Node; parent: Node; index: number }[] {
+export function tablesOf(tree: Node, blocks: boolean): { node: Node; parent: Node; index: number }[] {
   const found: { node: Node; parent: Node; index: number }[] = [];
   const walk = (parent: Node): void => {
     (parent.children ?? []).forEach((node, index) => {
@@ -84,13 +87,16 @@ export function planAppendices(runs: readonly string[], blocks: boolean): Append
   for (const text of runs) {
     first.push(appendices.length + 1);
     // Read as the run reads it, a justified column among them (§4.1).
-    for (const { node } of tablesOf(parser.parse(justifyColumns(text).text) as Node, blocks)) {
+    for (const { node, parent } of tablesOf(parser.parse(justifyColumns(text).text) as Node, blocks)) {
       const number = appendices.length + 1;
       if (node.type === 'code') {
-        appendices.push({ number, table: readTableBlock(node.value ?? '').table, markdownTable: null, source: fenced(node.value ?? '') });
+        const block = readTableBlock(node.value ?? '');
+        appendices.push({ number, table: block.table, markdownTable: null, title: block.title, source: fenced(node.value ?? '') });
       } else {
         markdownTables += 1;
-        appendices.push({ number, table: null, markdownTable: markdownTables, source: sliceOf(text, node) });
+        const caption = captionAfter(node as unknown as OutlineNode, parent as unknown as OutlineNode);
+        const title = caption ? captionContent(caption).map(textOf).join('').trim() || null : null;
+        appendices.push({ number, table: null, markdownTable: markdownTables, title, source: sliceOf(text, node) });
       }
     }
   }
@@ -134,6 +140,8 @@ export function remarkTableReferences(options: {
     tablesOf(tree as Node, options.blocks).forEach(({ parent, index }, offset) => {
       const appendix = options.appendices[options.first - 1 + offset];
       if (!appendix || !parent.children) return;
+      // Its caption goes with it: it names the appendix (#175).
+      if ((parent.children[index + 1]?.data as { hName?: string } | undefined)?.hName === 'ms-caption') parent.children.splice(index + 1, 1);
       parent.children[index] = {
         type: 'paragraph',
         data: { hName: 'p', hProperties: { className: ['table-reference'] } },

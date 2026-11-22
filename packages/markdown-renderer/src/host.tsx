@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { withDefaults, type NoteStrings, type NoteStringsInput } from './strings.js';
 import type { TablePage, TableRequest, TableRowView } from './table-block.js';
 import { cleanStyle, type NoteStyle } from './note-style.js';
+import { cleanContents, type ContentsSettings } from './contents.js';
+import { cleanProperties, type PropertiesSettings } from './properties-block.js';
 import { DEFAULT_THEME, schemeOf, type Scheme, type Theme } from './theme.js';
 import { drawing, drawnNote, type DrawnNote } from './embed-target.js';
 
@@ -106,6 +108,24 @@ export interface NoteHost {
    * style; a `:::{style}` block of the note wins over it in its passage.
    */
   readonly noteStyle?: NoteStyle;
+  /**
+   * The contents of a note that declares none, as the notebook says (`SPEC.md` §7.17, #173): the
+   * structure a `contents` block takes — the lists, their options, `screen` and `print`, `none` —
+   * plus `place`, `start` or `end`, at the root or in a medium. A note with no block draws it where
+   * `place` says, at the start when it says nothing, in each medium the settings name; a note with
+   * a block draws only its own blocks, and these settings are the defaults of what the block leaves
+   * unset, `place` excepted. Read as YAML or JSON gives it; a key or value it cannot take is left out.
+   */
+  readonly contents?: ContentsSettings;
+  /**
+   * How the properties of a note are drawn as the notebook says (`SPEC.md` §7.18, #172): the
+   * structure a `properties` block takes — `keys`, `title`, `fold`, `screen` and `print`, `none` —
+   * plus `place`, `start` or `end`. A note with no block draws its properties as these say, at the
+   * start unless `place` says otherwise; a note with a block draws only its own blocks, and these
+   * are the defaults of what the block leaves unset, `place` excepted. Without it, a note with no
+   * block draws every property at the top, as before.
+   */
+  readonly properties?: PropertiesSettings;
   /**
    * Whether the reader may tick the task boxes of this note. Defaults to `false`: every box shows
    * its state and none answers a click.
@@ -326,6 +346,8 @@ export const HOST_KEYS = Object.keys({
   printing: 1,
   tablesAsAppendices: 1,
   noteStyle: 1,
+  contents: 1,
+  properties: 1,
   writable: 1,
   onToggleTask: 1,
   keeps: 1,
@@ -361,6 +383,10 @@ export interface ResolvedHost {
   readonly printing: boolean;
   readonly tablesAsAppendices: boolean;
   readonly noteStyle: NoteStyle;
+  /** The contents of a note that declares none, cleaned (#173). */
+  readonly contents: ContentsSettings | null;
+  /** How a note's properties are drawn, cleaned (#172). */
+  readonly properties: PropertiesSettings | null;
   readonly keeps: (name: string) => boolean;
   readonly suggest: ((query: string) => readonly string[] | PromiseLike<readonly string[]>) | null;
   readonly attach: ((file: File, attributes: AttachAttributes, progress: (report: AttachProgress) => void) => string | PromiseLike<string>) | null;
@@ -407,6 +433,8 @@ export function resolveHost(host: NoteHost): ResolvedHost {
     printing: host.printing ?? false,
     tablesAsAppendices: host.tablesAsAppendices ?? false,
     noteStyle: cleanStyle(host.noteStyle),
+    contents: cleanContents(host.contents),
+    properties: cleanProperties(host.properties),
     keeps: host.keeps ?? never,
     suggest: host.suggest ?? null,
     attach: host.attach ?? null,

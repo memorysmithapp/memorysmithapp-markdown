@@ -21,6 +21,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useHost } from './host.js';
+import { followable } from './address.js';
 import {
   checkTableBlock,
   fold,
@@ -125,6 +126,15 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
   const layout = printing ? null : layoutOf(columns, answer, totalAt, strings, widths.current);
   // A shorter last page keeps the height of a full one, so the footer stays where it was (#163).
   const fillers = printing || pages < 2 ? 0 : Math.max(0, block.page - answer.rows.length);
+  // The column whose cell leads where the host says its row leads (#171): the one it names, when
+  // drawn, else the first.
+  const named = answer.linkColumn ? columns.findIndex((column) => fold(column.name) === fold(answer.linkColumn!)) : -1;
+  const linkAt = answer.links ? (named === -1 ? 0 : named) : -1;
+  const cellOf = (row: TableRow, index: number, column: TableColumn, at: number): ReactNode => {
+    const value = formatValue(row[column.name] ?? null, column, strings);
+    const address = at === linkAt ? (answer.links?.[index] ?? null) : null;
+    return address === null || value === '' ? value : <RowLink href={address}>{value}</RowLink>;
+  };
   const open = (row: TableRow): void => {
     const view: TableRowView = { table: block.table ?? '', columns, row, values: columns.map((column) => formatValue(row[column.name] ?? null, column, strings)) };
     if (openRow.current) openRow.current(view);
@@ -173,9 +183,9 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
               answer.rows.map((row, index) =>
                 printing ? (
                   <tr key={index}>
-                    {columns.map((column) => (
+                    {columns.map((column, at) => (
                       <td key={column.name} className={alignOf(column)}>
-                        {formatValue(row[column.name] ?? null, column, strings)}
+                        {cellOf(row, index, column, at)}
                       </td>
                     ))}
                   </tr>
@@ -184,9 +194,11 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
                     key={index}
                     className="data-table-row"
                     tabIndex={0}
-                    onClick={() => {
+                    onClick={(event) => {
                       // Text the reader selected in a cell is theirs to copy, and opens nothing.
                       if (!window.getSelection?.()?.isCollapsed && window.getSelection()?.toString()) return;
+                      // A link in a cell is followed, and opens no dialog (#171).
+                      if ((event.target as Element).closest?.('a')) return;
                       open(row);
                     }}
                     onKeyDown={(event) => {
@@ -195,11 +207,11 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
                       open(row);
                     }}
                   >
-                    {columns.map((column) => {
+                    {columns.map((column, at) => {
                       const value = formatValue(row[column.name] ?? null, column, strings);
                       return (
                         <td key={column.name} className={alignOf(column)} title={value || undefined}>
-                          {value}
+                          {cellOf(row, index, column, at)}
                         </td>
                       );
                     })}
@@ -263,6 +275,23 @@ export function DataTable({ source, fallback }: { readonly source: string; reado
  * column's name and its value as the table draws it, wrapping as long as it needs. Escape, the
  * button and a click outside it close it.
  */
+/**
+ * A cell that leads where the host says its row leads (#171), drawn as a link of the note is: an
+ * address of the host's own through its `renderLink`, another one, the address filter letting it
+ * through, as a link to the web, and one it refuses as text.
+ */
+function RowLink({ href, children }: { href: string; children: ReactNode }) {
+  const host = useHost();
+  const address = followable(href);
+  if (!address) return <>{children}</>;
+  if (address.startsWith('/')) return <>{host.renderLink({ href: address, className: 'data-table-link', children })}</>;
+  return (
+    <a className="data-table-link" href={address} target="_blank" rel="noreferrer">
+      {children}
+    </a>
+  );
+}
+
 function RowDialog({ view, onClose }: { readonly view: TableRowView; readonly onClose: () => void }) {
   const { strings } = useHost();
   const dialog = useRef<HTMLDialogElement>(null);

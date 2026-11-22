@@ -291,6 +291,34 @@
   height: auto;
   max-height: calc(100vh - 4rem);
 }
+/* The form of a contents block (#173): what the screen and print draw, each
+   in a group of its own, its fields shown when it has its own. */
+.markdown .edit-contents-medium {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* A choice a form makes with a box (#172, #175): the box beside its word, and
+   the keys of a properties block one to a line, each with its button up. */
+.markdown .edit-attach-form label.edit-contents-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown .edit-properties-keys {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.markdown .edit-properties-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .markdown .edit-attach-ways {
   display: flex;
   flex: none;
@@ -602,6 +630,32 @@
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+/* A note's contents (#173): a list of the note's headings, nested by level.
+   A contents, or the line under a figure or a table (#175), drawn for one
+   medium is marked with it and shown only there, so a print the browser makes
+   on its own is the print the settings declared. */
+@media print {
+  .markdown [data-media='screen'] {
+    display: none;
+  }
+}
+@media not print {
+  .markdown [data-media='print'] {
+    display: none;
+  }
+}
+/* The line under a figure stands on a line of its own, below the picture. */
+.markdown .figure-caption {
+  display: block;
+}
+.markdown .contents-entries {
+  margin: 0;
+  padding-inline-start: 0;
+  list-style: none;
+}
+.markdown .contents-entries .contents-entries {
+  padding-inline-start: 1.25em;
 }
 /* A table printed as an appendix opens a page of its own (#165); a host lays
    `.table-appendix` on a named page of its own to choose its orientation. */

@@ -31,6 +31,8 @@ The frontmatter of this page states `author: Continuity Engineering` and `co-aut
 | Region | Every zone of one region | RTO of 4 h |
 | Account | Every region we hold | Not agreed |
 
+Table: The three domains and the objective each one is held to
+
 The last row is the one worth reading twice: an account-wide failure has no objective because nobody has agreed one, and writing `4 h` there because the row above says so would be inventing a capability.
 
 # The diagram of the region case

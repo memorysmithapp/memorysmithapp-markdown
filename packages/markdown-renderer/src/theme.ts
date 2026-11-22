@@ -236,6 +236,15 @@ export interface InlineCodeSlotProps {
 export interface HeadingSlotProps {
   readonly level: 1 | 2 | 3 | 4 | 5 | 6;
   readonly children: ReactNode;
+  /**
+   * The id a contents entry and a link to `#section` land on (#173), to put on the element the
+   * slot draws: the heading's slug, prefixed. Absent inside an embed, whose headings carry none.
+   */
+  readonly id?: string;
+  /** The heading's slug, which a link written as `#slug` names; put it on the element as `data-heading`. */
+  readonly slug?: string;
+  /** Its number, `1.2`, where the style numbers the headings (#174), to draw before its text. */
+  readonly number?: string;
 }
 
 /** A quotation that is not a callout. */
@@ -319,6 +328,16 @@ export interface PropertiesSlotProps {
    * links: a slot decides how a value looks, never where its links go.
    */
   readonly value: (text: string) => ReactNode;
+  /**
+   * What this call draws (#172): `whole`, the name and the entries at the top, as before; `name`,
+   * the name alone, where a `properties` block draws the entries elsewhere; `entries`, the entries
+   * alone, where a block or the notebook's settings put them, `name` then `null`. Absent is `whole`.
+   */
+  readonly part?: 'whole' | 'name' | 'entries';
+  /** The title a `properties` block or the notebook's settings give the entries (#172). */
+  readonly title?: string;
+  /** Whether they start folded, as a block or the notebook's settings say (#172). */
+  readonly fold?: 'open' | 'closed';
 }
 
 /**
