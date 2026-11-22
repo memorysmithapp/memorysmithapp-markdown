@@ -202,7 +202,12 @@ function Attachments({ attachments }: { attachments: readonly AttachmentItem[] }
   );
 }
 
-/** One drawn contents: each of its lists under its title. */
+/**
+ * One drawn contents: each of its lists that has an entry, under its title (#181). A list with no
+ * entry is not drawn, title included, and a contents none of whose lists has one draws nothing, as
+ * `none` does; while a figure's file is not known yet it is an empty `nav`, hidden and busy, so a host
+ * that prints waits for the figures that may still come.
+ */
 function ContentsNav({ plan, medium }: { plan: ContentsPlan; medium: ContentsMedium | null }) {
   const { strings } = useHost();
   const scope = useContext(ContentsContext);
@@ -213,19 +218,27 @@ function ContentsNav({ plan, medium }: { plan: ContentsPlan; medium: ContentsMed
     tables: strings.contentsTables,
     attachments: strings.contentsAttachments,
   };
+  const entries: Record<ContentsList, number> = {
+    headings: scope.headings.length,
+    figures: scope.items.figures.length,
+    tables: scope.items.tables.length,
+    attachments: scope.items.attachments.length,
+  };
+  const lists = plan.lists.filter((list) => entries[list.kind] > 0);
   // A figure is known once its file is: until then the contents is busy, and a host that prints waits.
   const busy = scope.items.pending && plan.lists.some((list) => list.kind === 'figures');
+  if (lists.length === 0 && !busy) return null;
   return (
-    <nav className="contents" data-media={medium ?? undefined} aria-busy={busy || undefined}>
-      {plan.lists.map((list) => {
+    <nav className="contents" data-media={medium ?? undefined} aria-busy={busy || undefined} hidden={lists.length === 0 || undefined}>
+      {lists.map((list) => {
         const title = list.title ?? titles[list.kind];
         return (
           <section key={list.kind} className="contents-list" data-list={list.kind} aria-label={title}>
             <p className="contents-title">{title}</p>
-            {list.kind === 'headings' && scope.headings.length > 0 && <Headings branches={branches(scope.headings, list.depth)} />}
-            {list.kind === 'figures' && scope.items.figures.length > 0 && <Figures figures={scope.items.figures} />}
-            {list.kind === 'tables' && scope.items.tables.length > 0 && <Tables tables={scope.items.tables} appendices={scope.appendices} />}
-            {list.kind === 'attachments' && scope.items.attachments.length > 0 && <Attachments attachments={scope.items.attachments} />}
+            {list.kind === 'headings' && <Headings branches={branches(scope.headings, list.depth)} />}
+            {list.kind === 'figures' && <Figures figures={scope.items.figures} />}
+            {list.kind === 'tables' && <Tables tables={scope.items.tables} appendices={scope.appendices} />}
+            {list.kind === 'attachments' && <Attachments attachments={scope.items.attachments} />}
           </section>
         );
       })}

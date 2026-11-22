@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A `contents` block draws no list that has nothing to list, its title included, and draws nothing in a medium where none of its lists has an entry, as `none` does (#181). `figures:`, `tables:` and `attachments:` drew their title over an empty list in a note with none of them, and a note with no heading drew *Contents* over nothing, on the screen and in print. While a kept file that may be a figure is not known yet, an otherwise empty contents is a hidden `nav` that stays `aria-busy`, so a host that prints still waits. `SPEC.md` §7.17 says so.
+
 ## [0.13.1] - 2026-11-22
 
 ### Changed
