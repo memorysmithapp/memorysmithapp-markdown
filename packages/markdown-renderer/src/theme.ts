@@ -236,6 +236,13 @@ export interface InlineCodeSlotProps {
 export interface HeadingSlotProps {
   readonly level: 1 | 2 | 3 | 4 | 5 | 6;
   readonly children: ReactNode;
+  /**
+   * The id a contents entry and a link to `#section` land on (#173), to put on the element the
+   * slot draws: the heading's slug, prefixed. Absent inside an embed, whose headings carry none.
+   */
+  readonly id?: string;
+  /** The heading's slug, which a link written as `#slug` names; put it on the element as `data-heading`. */
+  readonly slug?: string;
 }
 
 /** A quotation that is not a callout. */

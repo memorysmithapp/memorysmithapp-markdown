@@ -19,6 +19,11 @@ The **Recovery Time Objective** is how long a service may stay down before the l
 > [!warning] An RTO nobody has exercised is a wish
 > Until the failover in [[Failing over the payments database]] has been run against it, the number is a target and not a capability.
 
+```contents
+headings:
+  depth: 1
+```
+
 # How it is stated
 
 The definition is the one the contract quotes, so it is set the way the contract sets it:
@@ -36,7 +41,7 @@ The paired figure is [[Recovery Point Objective|the RPO]], and the two are set t
 
 # What it costs
 
-Availability is what the objective buys, and it is arithmetic before it is engineering. For a service of $n$ independent components each with availability $a$, the whole is $a^n$, which is why halving the number of things that must be up beats improving any of them.
+Availability is what the objective buys, and it is arithmetic before it is engineering, done in the same minutes [the objective is stated in](#how-it-is-stated). For a service of $n$ independent components each with availability $a$, the whole is $a^n$, which is why halving the number of things that must be up beats improving any of them.
 
 The budget for a month is $$B = (1 - A) \times 43200$$ minutes, and an RTO
 larger than $B$ means the objective is unreachable in a single incident.[^budget]

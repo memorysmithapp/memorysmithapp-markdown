@@ -15,6 +15,13 @@ resumo: Registro completo da safra 2026 na Serra Gaúcha, com a curva de matura�
 
 A safra em que a chuva chegou antes do IPT. O registro existe para que a decisão tomada com pressa possa ser lida com calma no ano seguinte.
 
+```contents
+headings:
+  title: Sumário
+print:
+  place: start
+```
+
 > [!tip] O registro é a medida
 > Tudo em [[Vinificação em tinto]] é intenção até uma página como esta trazer um número.
 
@@ -59,7 +66,7 @@ text: justify
 ---
 # O que deu errado
 
-A remontagem do dia 26 foi feita por calendário, e não pela curva,[^caderneta] como o passo 4 já mandava não fazer.[^passo4] O passo 4 do protocolo ganhou a frase que faltava por causa disso.
+A remontagem do dia 26 foi feita por calendário, e não pela curva,[^caderneta] como o passo 4 já mandava não fazer.[^passo4] O passo 4 do protocolo ganhou a frase que faltava por causa disso, e [a curva](#curva) mostra o dia em que ela já pedia outra coisa.
 
 :::
 

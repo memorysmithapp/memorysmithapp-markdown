@@ -1,4 +1,4 @@
-import { NoteBody, toggleTaskAt, type AttachRefusal, type NoteButtons, type NoteHost, type NoteStyle, type SaveNotice } from '@memorysmithapp/markdown-renderer';
+import { NoteBody, toggleTaskAt, type AttachRefusal, type ContentsSettings, type NoteButtons, type NoteHost, type NoteStyle, type SaveNotice } from '@memorysmithapp/markdown-renderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SAMPLE_ATTRIBUTES from '../fixtures/files.json';
 import { readAsDataUrl, startingFiles, type StoredFile } from './files.js';
@@ -65,7 +65,16 @@ interface View {
   readonly appendices: boolean;
   /** The notebook's style (`?font=serif&headings=center&text=justify&tables=justify`, #164), which the renderer cleans of what it cannot take. */
   readonly noteStyle: NoteStyle;
+  /** The notebook's contents for a note that declares none (`?contents=start`, `end` or `print`, #173). */
+  readonly contents: ContentsSettings | undefined;
 }
+
+/** The notebook's contents the address names (#173): on the screen and in print, or in print alone. */
+const CONTENTS: Record<string, ContentsSettings> = {
+  start: { headings: null, place: 'start' },
+  end: { headings: null, place: 'end' },
+  print: { print: { headings: null, place: 'start' } },
+};
 
 /** The host with each of its functions wrapped anew, the same meaning under another identity. */
 function anew(host: NoteHost): NoteHost {
@@ -142,6 +151,7 @@ function readView(): View {
     printing: query.get('print') === '1' || query.get('print') === 'appendices',
     appendices: query.get('print') === 'appendices',
     noteStyle: Object.fromEntries(['font', 'headings', 'text', 'tables'].flatMap((key) => (query.get(key) ? [[key, query.get(key)]] : []))) as NoteStyle,
+    contents: CONTENTS[query.get('contents') ?? ''],
   };
 }
 
@@ -299,6 +309,7 @@ export function App() {
         printing={view.printing}
         tablesAsAppendices={view.appendices}
         noteStyle={view.noteStyle}
+        {...(view.contents ? { contents: view.contents } : {})}
         // The comparison screenshots the note alone, as MemorySmith's own component draws it.
         actions={!view.bare}
         onChange={(next) => saveEdit(key, next)}

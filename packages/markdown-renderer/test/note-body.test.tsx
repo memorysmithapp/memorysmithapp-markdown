@@ -14,7 +14,7 @@ describe('a host with nothing but the package', () => {
     expect(out).toMatch(
       /^<div class="markdown markdown-theme-default" data-theme="light"><h1 class="note-title note-unnamed">Unnamed note<\/h1><div class="markdown">/,
     );
-    expect(out).toContain('<h1>Título</h1>');
+    expect(out).toContain('<h1 data-heading="título" id="user-content-título">Título</h1>');
     expect(out).toContain('<em>ênfase</em>');
   });
 

@@ -197,7 +197,12 @@ function Heading({
 }: WithNode<HTMLAttributes<HTMLHeadingElement>> & { level: 1 | 2 | 3 | 4 | 5 | 6 }) {
   const slot = useSlot('heading');
   // The heading of the footnotes is the footnotes slot's, not a heading of the note.
-  if (slot && !className?.split(/\s+/).includes('footnotes-label')) return drawSlot(slot, { level, children });
+  if (slot && !className?.split(/\s+/).includes('footnotes-label')) {
+    // Where a contents entry and a link to `#section` land (#173), for the slot to put on its element.
+    const id = typeof rest.id === 'string' ? rest.id : undefined;
+    const slug = (rest as Record<string, unknown>)['data-heading'];
+    return drawSlot(slot, { level, children, ...(id ? { id } : {}), ...(typeof slug === 'string' ? { slug } : {}) });
+  }
   return createElement(`h${level}` as HeadingTag, { className, ...rest }, children);
 }
 

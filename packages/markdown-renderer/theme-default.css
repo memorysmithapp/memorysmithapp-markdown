@@ -531,6 +531,29 @@
   margin-block: 0 var(--ms-p-spacing);
   font-size: var(--ms-h3-size);
 }
+/* A note's contents (#173): each list under its title, its entries the
+   note's links in the colour of the text, so the list reads as a list. */
+.markdown .contents {
+  margin-block: var(--ms-p-spacing);
+}
+.markdown .contents-list + .contents-list {
+  margin-block-start: var(--ms-p-spacing);
+}
+.markdown .contents-title {
+  margin-block: 0 0.35rem;
+  font-weight: var(--ms-heading-weight);
+  color: var(--ms-heading-color);
+}
+.markdown .contents-item {
+  margin-block: 0.15rem;
+}
+.markdown .contents-entry {
+  color: inherit;
+  text-decoration: none;
+}
+.markdown .contents-entry:hover {
+  text-decoration: underline;
+}
 /* A block that cannot be answered says why, in place of its table. */
 .markdown .data-table-problems {
   margin-block: var(--ms-p-spacing);
@@ -2006,6 +2029,20 @@
 .markdown .markdown-editor .cm-line.cm-ms-styled:not(.cm-ms-heading, .cm-ms-code-line),
 .markdown .markdown-editor .cm-ms-block {
   font-family: var(--ms-face, var(--ms-font-sans));
+}
+/* A contents block in edit mode that draws nothing here: where it is drawn,
+   small and soft, as a style block's opening says what it sets (#173). */
+.markdown .contents-elsewhere {
+  margin-block: var(--ms-p-spacing);
+  font-family: var(--ms-font-display);
+  font-size: 0.8rem;
+  color: var(--ms-text-soft);
+  cursor: pointer;
+}
+.markdown .edit-contents-medium {
+  gap: 0.5rem;
+  padding-block-start: 0.5rem;
+  border-top: 1px solid var(--ms-border);
 }
 /* A style block's opening while the author is elsewhere: what it sets, small
    and soft, over a rule that its closing fence draws again at its end. */

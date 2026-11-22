@@ -202,6 +202,9 @@ importers:
       hast-util-to-jsx-runtime:
         specifier: 2.3.6
         version: 2.3.6
+      mdast-util-to-hast:
+        specifier: 13.2.1
+        version: 13.2.1
       mermaid:
         specifier: 11.17.0
         version: 11.17.0
@@ -236,6 +239,9 @@ importers:
       '@types/hast':
         specifier: 3.0.5
         version: 3.0.5
+      '@types/mdast':
+        specifier: 4.0.4
+        version: 4.0.4
       '@types/react':
         specifier: 19.2.18
         version: 19.2.18

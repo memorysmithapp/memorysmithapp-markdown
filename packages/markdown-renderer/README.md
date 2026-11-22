@@ -27,6 +27,7 @@ import 'katex/dist/katex.min.css';
   queryTable={(request) => queryYourTable(request)} // the rows a ```table block asks for: one page, the count, the total
   openTableRow={(view) => showInYourDialog(view)}  // a row clicked, whole: its columns and each value as drawn
   noteStyle={{ font: 'serif', text: 'justify' }}   // the notebook's style: face, and alignment of headings, text and tables
+  contents={{ print: { place: 'start', headings: null } }} // the notebook's contents, for a note with no ```contents block
   writable
   onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"
@@ -70,6 +71,8 @@ const acme = defineTheme({
 - **Properties** name every value the stylesheet reads — colours, faces, sizes, spacing, headings, quotations, tables, callout hues and icons — and are written on the root as `--markdown-*`, so your CSS may set them too.
 - **Your CSS** is scoped by `.markdown-theme-<name>`, and reaches the note and nothing else.
 - **Slots** — `callout`, `calloutIcon`, `table`, `codeBlock`, `inlineCode`, `heading`, `blockquote`, `embed`, `footnotes`, `taskBox`, `wikilink`, `diagram`, `properties`, `modeSwitch` — are called with the notation already read. A slot decides how a block looks, never what it means: the links it draws go where the host resolved them, a task box reports through the `toggle` it is given, and no raw HTML ever reaches it.
+
+A ` ```contents ` block is the note's table of contents (§7.17): its headings at the top level, nested, each a link to the heading, which carries its slug as its id, prefixed `user-content-`, and as `data-heading`, so a link written as `#deliberações` lands on it too. The block's lines set the title and the depth, `screen` and `print` groups for each medium, or `none`, and `place: start` or `end` to draw it there instead of where it is written. `contents` gives the same settings for a note with no block, and the defaults of one that has a block; with `printing` only `print` is drawn, and otherwise a drawing for one medium is marked `data-media`, which the stylesheet shows only there. Printed, each entry is a link a paginator numbers with `target-counter()`. Inside an embed a block draws nothing.
 
 The frontmatter is the note's too. The default theme draws it as MemorySmith does: `name` as the title, and the other entries in a block that folds, each key with the icon of its value's shape, lists as chips and dates in `strings.locale`, with a `[[wikilink]]`, a Markdown link or a web address in a value drawn as a link. A theme decides otherwise through the `properties` slot, which may draw nothing, as a host that shows properties elsewhere does:
 

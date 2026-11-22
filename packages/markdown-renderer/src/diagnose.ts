@@ -24,6 +24,7 @@ import { hasParameterReference } from './parameters.js';
 import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
 import { checkTableBlock, isTableBlock, readTableBlock, type TableNoticeCode, type TableSchema } from './table-block.js';
+import { isContentsBlock, readContents, type ContentsNoticeCode } from './contents.js';
 
 /** The codes of §7.13, which `spec.json` declares as `notices`. */
 export type NoticeCode =
@@ -46,7 +47,8 @@ export type NoticeCode =
   | 'link-pending'
   | 'embed-pending'
   | TableNoticeCode
-  | StyleNoticeCode;
+  | StyleNoticeCode
+  | ContentsNoticeCode;
 
 /** `notice`: the page will differ from what was typed. `hint`: nothing is drawn wrong. */
 export type NoticeSeverity = 'notice' | 'hint';
@@ -109,6 +111,8 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'style-key-unknown': { severity: 'notice', section: '7.16', message: 'This line of a style block is not one of its keys, or one written twice, so it sets nothing.' },
   'style-value-invalid': { severity: 'notice', section: '7.16', message: 'This value is not one its key takes, so it sets nothing.' },
   'style-unclosed': { severity: 'notice', section: '7.16', message: 'This style block is never closed by a :::, so it runs to the end of the note.' },
+  'contents-key-unknown': { severity: 'notice', section: '7.17', message: 'This line of a contents block is not a key its place takes, sits under no group, or repeats a key, so it sets nothing.' },
+  'contents-value-invalid': { severity: 'notice', section: '7.17', message: 'This value is not one its key takes, or a group is written with a value, so it sets nothing.' },
 };
 
 interface Point {
@@ -204,6 +208,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const definitions: Node[] = [];
   const images: { name: string; at: [number, number] }[] = [];
   const tables: { value: string; at: [number, number] }[] = [];
+  const contents: { value: string; at: [number, number] }[] = [];
   walk(tree, (node) => {
     const at = span(node);
     if (!at) return;
@@ -212,6 +217,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
       if (!closes(source, /^(`{3,}|~{3,})/)) report('fence-unclosed', at[0], at[1]);
       else if (node.lang === 'mermaid') diagrams.push({ source: node.value ?? '', at });
       if (isTableBlock(node.lang, node.meta)) tables.push({ value: node.value ?? '', at });
+      if (isContentsBlock(node.lang, node.meta)) contents.push({ value: node.value ?? '', at });
     } else if (node.type === 'math') {
       if (!closes(source, /^(\${2,})/)) report('math-unclosed', at[0], at[1]);
       else if (!typesets(node.value ?? '', true)) report('formula-invalid', at[0], at[1]);
@@ -271,6 +277,16 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
       const start = lineStarts[first + problem.line] ?? table.at[0];
       const next = lineStarts[first + problem.line + 1];
       report(problem.code, start, next === undefined ? text.length : next - 1, problem.detail);
+    }
+  }
+
+  // A `contents` block raises its own notices, each on its line (§7.13, §7.17).
+  for (const block of contents) {
+    const first = pointOf(block.at[0]).line - 1;
+    for (const problem of readContents(block.value).problems) {
+      const start = lineStarts[first + problem.line] ?? block.at[0];
+      const next = lineStarts[first + problem.line + 1];
+      report(problem.code, start, next === undefined ? text.length : next - 1);
     }
   }
 

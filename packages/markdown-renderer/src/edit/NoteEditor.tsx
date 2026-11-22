@@ -38,6 +38,9 @@ import { measureMetrics } from './heights.js';
 import { NoteActions, type NoteButtons } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { StyleDialog } from './StyleDialog.js';
+import { ContentsDialog } from './ContentsDialog.js';
+import { contentsBlockAt, newContentsBlock, setContents } from './contents.js';
+import type { ContentsSettings } from '../contents.js';
 import { setStyleOptions, styleBlockAt, wrapInStyle } from './style.js';
 import type { NoteStyle } from '../note-style.js';
 import { ContextMenu, type MenuGroup, type MenuItem } from './ContextMenu.js';
@@ -205,6 +208,7 @@ function Toolbar({
   opened,
   onAttach,
   onStyle,
+  onContents,
   attaching,
   attachButton,
 }: {
@@ -218,6 +222,8 @@ function Toolbar({
   onAttach: () => void;
   /** Opens the form of a style block: a new one, or the one the cursor is in (#166). */
   onStyle: () => void;
+  /** Opens the form of a contents block: a new one, or the one the cursor is in (#173). */
+  onContents: () => void;
   attaching: Attaching;
   attachButton: RefObject<HTMLButtonElement | null>;
 }) {
@@ -343,6 +349,18 @@ function Toolbar({
             onClick={onStyle}
           >
             {ICONS.style}
+          </button>
+          <button
+            type="button"
+            className="edit-control"
+            title={words.contents}
+            aria-label={words.contents}
+            aria-haspopup="dialog"
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onContents}
+          >
+            {ICONS.contents}
           </button>
         </span>
       </div>
@@ -548,6 +566,26 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     const wrapped = wrapInStyle(text, selection.from, selection.to, style);
     current.dispatch({ changes: wrapped.changes, selection: { anchor: wrapped.cursor }, userEvent: 'input.style', scrollIntoView: true });
   };
+  /** The form of a contents block, open over what it sets now and whether it changes a block (#173). */
+  const [contentsForm, setContentsForm] = useState<{ initial: ContentsSettings; editing: boolean } | null>(null);
+  const openContents = (): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const block = contentsBlockAt(current.state.doc.toString(), current.state.selection.main.head);
+    setContentsForm({ initial: block?.settings ?? {}, editing: block !== null && block.content !== null });
+  };
+  /** Writes the form's settings: the lines of the block the cursor is in, or a new block at the cursor. */
+  const applyContents = (settings: ContentsSettings): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const block = contentsBlockAt(current.state.doc.toString(), current.state.selection.main.head);
+    if (block && block.content) {
+      current.dispatch({ changes: setContents(block, settings), userEvent: 'input.contents', scrollIntoView: true });
+      return;
+    }
+    const written = newContentsBlock(settings);
+    command((state) => insertBlock(state, written, written.length + 1))(current);
+  };
   /** Where the editing menu is open, in the window's coordinates (#81). */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const openMenu = useRef((x: number, y: number) => setMenu({ x, y }));
@@ -594,6 +632,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         block('diagram'),
         block('rule'),
         { name: 'style', label: words.style, icon: ICONS.style, run: openStyle },
+        { name: 'contents', label: words.contents, icon: ICONS.contents, run: openContents },
         item('footnote', command(insertFootnote)),
         item('comment', command(toggleComment), 'Mod-/'),
         { name: 'attach', label: words.attach, icon: ICONS.attach, run: () => setAttachOpen(true) },
@@ -835,6 +874,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
               setAttachOpen(true);
             }}
             onStyle={openStyle}
+            onContents={openContents}
             attaching={attaching}
             attachButton={attachButton}
             end={
@@ -888,6 +928,15 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             editing={styling.editing}
             onApply={applyStyle}
             onClose={() => setStyling(null)}
+            onClosed={() => editorView.current?.focus()}
+          />
+        )}
+        {contentsForm && (
+          <ContentsDialog
+            initial={contentsForm.initial}
+            editing={contentsForm.editing}
+            onApply={applyContents}
+            onClose={() => setContentsForm(null)}
             onClosed={() => editorView.current?.focus()}
           />
         )}

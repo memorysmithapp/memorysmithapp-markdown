@@ -10,7 +10,7 @@
 
 import { ChangeSet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { useEffect, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useHost } from '../host.js';
 import { Markdown } from '../Markdown.js';
 import { hideComments, resolveWikilinks } from '../source.js';
@@ -20,6 +20,9 @@ import { splitEmbeds } from '../embeds.js';
 import { embedsFile } from '../embed-target.js';
 import { STYLE_KEYS, type NoteStyle } from '../note-style.js';
 import { wikilinkAddress } from '../wikilink-address.js';
+import { planOutline } from '../outline.js';
+import { readContents, resolveBlock, type ContentsPlan } from '../contents.js';
+import { ContentsAt, ContentsContext } from '../ContentsBlock.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
 import { describeImage, MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
@@ -1490,6 +1493,7 @@ export const ICONS = {
   diagram: icon('M5 3h4v4H5z', 'M15 17h4v4h-4z', 'M7 7v4a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v2'),
   rule: icon('M5 12h14'),
   style: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16'),
+  contents: icon('M21 12h-8', 'M21 6H8', 'M21 18h-8', 'M3 6v4c0 1.1.9 2 2 2h3', 'M3 10v6c0 1.1.9 2 2 2h3'),
   footnote: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16', 'M19 13v6', 'M17 15l2-2'),
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
   caret: icon('m6 9 6 6 6-6'),
@@ -1505,3 +1509,34 @@ export const ICONS = {
   edit: icon('M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z', 'm15 5 4 4'),
   view: icon('M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'),
 } as const;
+
+/**
+ * A `contents` block in edit mode (`SPEC.md` §7.17, #173), while the author is elsewhere: the
+ * contents it draws on the screen, over the note as it is now, or, where it draws nothing here —
+ * moved to the start or the end, or for print alone — a line saying where it is drawn.
+ */
+export function ContentsPreview({ body, ordinal }: { body: string; ordinal: number }) {
+  const host = useHost();
+  const file = embedsFile(host);
+  const drawn = resolveWikilinks(hideComments(body).text, (name) => wikilinkAddress(host, name), file);
+  const outline = useMemo(() => planOutline([drawn]), [drawn]);
+  const blocks = useMemo(
+    () =>
+      outline.blocks.map((source) => {
+        const { settings } = readContents(source);
+        return { screen: resolveBlock(settings, host.contents, 'screen'), print: resolveBlock(settings, host.contents, 'print') };
+      }),
+    [outline, host.contents],
+  );
+  const mine = blocks[ordinal];
+  if (!mine) return null;
+  if (mine.screen && mine.screen.place === null) {
+    return (
+      <ContentsContext.Provider value={{ kind: 'note', headings: outline.headings, blocks, printing: false }}>
+        <ContentsAt plans={{ screen: mine.screen, print: null }} place={null} />
+      </ContentsContext.Provider>
+    );
+  }
+  const where = (plan: ContentsPlan | null) => (plan === null ? null : (plan.place ?? 'here'));
+  return <p className="contents-elsewhere">{host.strings.editor.contentsElsewhere({ screen: where(mine.screen), print: where(mine.print) })}</p>;
+}

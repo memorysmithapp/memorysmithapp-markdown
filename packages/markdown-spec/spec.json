@@ -32,6 +32,11 @@
       "url": "https://mystmd.org/guide/syntax-overview#directives"
     },
     {
+      "id": "docutils",
+      "name": "Docutils",
+      "url": "https://docutils.sourceforge.io/docs/ref/rst/directives.html#table-of-contents"
+    },
+    {
       "id": "memorysmith-markdown",
       "name": "The MemorySmith Markdown Specification",
       "url": "https://github.com/memorysmithapp/memorysmithapp-markdown/blob/main/packages/markdown-spec/SPEC.md"
@@ -517,6 +522,22 @@
       "example": ":::{style}\n---\ntext: justify\nheadings: center\n---\n# Ata da assembleia\n\nO condomínio deliberou, por maioria, que a obra começa em março, e [[Síndico]] a acompanha.\n:::\n",
       "effect": "A passage drawn in its own face and alignment, over the notebook's style: `font` (`sans`, `serif`), and `headings`, `text` and `tables` (`left`, `center`, `right`, `justify`). MyST's directive: a colon fence with its options in a `---` block, read as frontmatter is. A column's own delimiter wins over `tables`, and an inner block over an outer one. A key or value it cannot take sets nothing and is a notice, and so is a block never closed, which runs to the end of the note. It changes nothing an Indexer reads: a link inside is an edge, an option is no attribute, and the headings it holds are the note's own.",
       "spec": "7.16"
+    },
+    {
+      "id": "contents-block",
+      "reader": "reading-surface",
+      "syntax": "```contents\nheadings:\n  title: text\n  depth: 3\nplace: start\nscreen: none\nprint:\n  headings:\n```",
+      "example": "Resumo da reunião de novembro.\n\n```contents\nheadings:\n  title: Sumário\n  depth: 2\nprint:\n  place: start\n```\n\n# Abertura\n\nO síndico abriu a sessão.\n\n# Deliberações\n\n## Orçamento 2027\n\n### Detalhe\n",
+      "effect": "The note's table of contents: its outline — the headings at the top level, a style block's included — as links nested by level, each its heading as drawn, leading to the heading's slug. An empty block lists the headings three levels deep. Settings in YAML's shape: `headings` with `title` and `depth` (1 to 6), `place` (`start`, `end`), and `screen` and `print` groups that override the root for their medium, or draw nothing there with `none`. Drawn where it is written unless `place` moves it; it always lists the whole note. A Reader's own settings in the same structure are the defaults of a block, `place` excepted, and give a contents to a note with no block. Printed, each entry carries its page. Inside an embed it draws nothing. A key or value it cannot take sets nothing and is a notice. It changes nothing an Indexer reads.",
+      "spec": "7.17, 3.3"
+    },
+    {
+      "id": "heading-slug",
+      "reader": "links",
+      "syntax": "[text](#slug)",
+      "example": "See [the vote](#deliberações) below.\n\n# Deliberações\n",
+      "effect": "A heading's slug is its text in lower case, letters with their marks, digits, `-` and `_` kept, each space a `-`, anything else dropped, a repeat taking `-1`, `-2`. A link whose target is only an anchor — `[text](#slug)`, `[[#Heading]]` — leads within the note it is written in: no edge and no pending link.",
+      "spec": "3.3, 5.2"
     }
   ],
   "notices": [
@@ -681,6 +702,18 @@
       "severity": "notice",
       "spec": "7.16",
       "effect": "A style block never closed runs to the end of the note."
+    },
+    {
+      "code": "contents-key-unknown",
+      "severity": "notice",
+      "spec": "7.17",
+      "effect": "A line of a contents block that is not `key: value` with a key its place takes, a line indented under no group or at another indent than its siblings, a key written twice, or `screen` or `print` anywhere but the root, sets nothing."
+    },
+    {
+      "code": "contents-value-invalid",
+      "severity": "notice",
+      "spec": "7.17",
+      "effect": "A value of a contents block that its key does not take, or a group written with a value, sets nothing."
     }
   ]
 }

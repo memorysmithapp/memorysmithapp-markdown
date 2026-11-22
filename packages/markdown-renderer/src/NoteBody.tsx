@@ -19,6 +19,9 @@ import { appendixId, planAppendices } from './appendices.js';
 import { findStyleBlocks, rangesFor, styleAt, blockAttributes, type StyleRange } from './style-block.js';
 import { embedsFile } from './embed-target.js';
 import { wikilinkAddress } from './wikilink-address.js';
+import { planOutline } from './outline.js';
+import { readContents, resolveBlock, resolveHost as resolveHostContents } from './contents.js';
+import { ContentsAt, ContentsContext, type BlockPlans, type ContentsScope } from './ContentsBlock.js';
 
 export interface NoteBodyProps extends NoteHost {
   /**
@@ -277,6 +280,21 @@ function NoteView({
     // The runs and whether a `table` block is a table are the whole input.
     [appendixRuns, blocks, runs.join('\u0000')],
   );
+  // The outline of the note and its `contents` blocks (§7.17, #173): the slugs of its headings
+  // counted across the runs, over the text each is drawn with, and what each block draws in each
+  // medium over the host's settings; with no block, what the host's draw where they say.
+  const drawnRuns = runs.map((text, index) => footnotes?.runs[index]?.text ?? text);
+  const outline = useMemo(() => planOutline(drawnRuns), [drawnRuns.join('\u0000')]);
+  const contentsScope = useMemo((): { scope: ContentsScope; placed: readonly BlockPlans[] } => {
+    const blocks = outline.blocks.map((source): BlockPlans => {
+      const { settings } = readContents(source);
+      return { screen: resolveBlock(settings, resolved.contents, 'screen'), print: resolveBlock(settings, resolved.contents, 'print') };
+    });
+    const host: BlockPlans[] =
+      blocks.length === 0 ? [{ screen: resolveHostContents(resolved.contents, 'screen'), print: resolveHostContents(resolved.contents, 'print') }] : [];
+    return { scope: { kind: 'note', headings: outline.headings, blocks, printing: resolved.printing }, placed: [...blocks, ...host] };
+  }, [outline, resolved.contents, resolved.printing]);
+  const placed = (place: 'start' | 'end') => contentsScope.placed.map((plans, index) => <ContentsAt key={`${place}-${index}`} plans={plans} place={place} />);
   let run = 0;
   // The line of the body each segment starts on: a run keeps every line of its text, and an embed
   // stands within one. Where that does not add up, no block is drawn rather than a wrong one.
@@ -290,6 +308,7 @@ function NoteView({
 
   return (
     <HostProvider value={resolved}>
+      <ContentsContext.Provider value={contentsScope.scope}>
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
@@ -302,6 +321,7 @@ function NoteView({
         {corner}
         {/* The frontmatter is content: read here, drawn as the theme decides. */}
         <Properties properties={properties} />
+        {placed('start')}
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
             const embed = <Transclusion key={index} target={segment.target} anchor={segment.anchor} source={segment.source} />;
@@ -320,6 +340,7 @@ function NoteView({
           const base = seen;
           seen += taskBoxes(segment.rendered).length;
           const first = appendices?.first[run];
+          const runOutline = outline.runs[run];
           const planned = footnotes?.runs[run++];
           return (
             <Markdown
@@ -336,6 +357,7 @@ function NoteView({
               {...(planned ? { footnotes: { refs: planned.refs } } : {})}
               {...(appendices && first !== undefined ? { appendices: { first, appendices: appendices.appendices } } : {})}
               styles={lined ? rangesFor(styled.blocks, startLines[index]!, startLines[index]! + segment.text.split('\n').length - 1) : NO_STYLES}
+              {...(runOutline ? { outline: runOutline } : {})}
             >
               {planned?.text ?? segment.rendered}
             </Markdown>
@@ -343,7 +365,12 @@ function NoteView({
         })}
         {/* Its boxes, if a footnote holds any, are drawn read-only: they are
             not where the ordinals of the runs count them. */}
-        {footnotes && <Markdown footnotes="section">{footnotes.section}</Markdown>}
+        {footnotes && (
+          <Markdown footnotes="section" outline={{ slugs: [], firstBlock: outline.blocks.length }}>
+            {footnotes.section}
+          </Markdown>
+        )}
+        {placed('end')}
         {appendices && appendices.appendices.length > 0 && (
           <div className="table-appendices">
             {appendices.appendices.map((appendix) => (
@@ -362,6 +389,7 @@ function NoteView({
           </p>
         )}
       </div>
+      </ContentsContext.Provider>
     </HostProvider>
   );
 }

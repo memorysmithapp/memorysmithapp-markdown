@@ -50,6 +50,18 @@ export { DELEGATED_TO_THE_BASE_PARSER, unclassified } from './delegated.js';
 export type { TableAppendix } from './appendices.js';
 export type { NoteStyle, StyleAlignment, StyleFont } from './note-style.js';
 export {
+  readContents,
+  type ContentsLayer,
+  type ContentsList,
+  type ContentsListOptions,
+  type ContentsMedium,
+  type ContentsNoticeCode,
+  type ContentsPlace,
+  type ContentsProblem,
+  type ContentsSettings,
+} from './contents.js';
+export { slugOf } from './outline.js';
+export {
   runTableQuery,
   type TableColumn,
   type TableColumnKind,

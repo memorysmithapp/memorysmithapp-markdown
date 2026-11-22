@@ -20,7 +20,7 @@ import { MarkdownImage } from '../Markdown.js';
 import { highlightLanguage } from '../highlight.js';
 import { analyze, type Analysis, type Construct } from './analyze.js';
 import { DEFAULT_METRICS, estimateHeight, lineHeightOf, measureLines, measuredHeight, rememberHeight, withinReason, type BlockKind, type BlockMetrics } from './heights.js';
-import { AddProperties, CalloutBlock, ImageBlock, PropertiesBlock, reveal, Snippet, StyleSummary, TableBlock } from './blocks.js';
+import { AddProperties, CalloutBlock, ContentsPreview, ImageBlock, PropertiesBlock, reveal, Snippet, StyleSummary, TableBlock } from './blocks.js';
 import { justifies, styleProperties, type NoteStyle } from '../note-style.js';
 import { caretAt, sourceOffsetOf } from './click-source.js';
 import { LanguageControl } from './LanguageControl.js';
@@ -561,6 +561,12 @@ function build(state: EditorState): DecorationSet {
       styleOfLine.set(at, { properties, lang: justifies(style) ? host.strings.locale : null, css: Object.entries(properties).map(([name, value]) => `${name}:${value}`).join(';') });
     }
   }
+  // The `contents` blocks met so far, and what their drawing depends on besides their lines: the
+  // note's headings (#173).
+  let contentsSeen = 0;
+  let signature: string | null = null;
+  const headingsSignature = (): string =>
+    (signature ??= constructs.flatMap((construct) => (construct.kind === 'heading' ? [text.slice(construct.from, construct.to)] : [])).join('\n'));
   const block = (from: number, to: number, kind: BlockKind, key: string, draw: (view: EditorView) => ReactNode, revealsOnClick = true) => {
     const lines = linesOf(from, to);
     const source = text.slice(lines.from, lines.to);
@@ -665,6 +671,16 @@ function build(state: EditorState): DecorationSet {
         if (host.queryTable && !open && alone(from, to) && /^\s*(`{3,}|~{3,})\s*table\s*$/.test(fence)) {
           block(from, to, 'diagram', `table-block:${source}`, () => createElement(Snippet, { text: source }));
           break;
+        }
+        // A `contents` block is drawn as the contents it draws on the screen, over the note as it is
+        // now, while the author is elsewhere, and edited as its lines (§7.17, #173).
+        if (/^\s*(`{3,}|~{3,})\s*contents\s*$/.test(fence)) {
+          const ordinal = contentsSeen++;
+          if (!open && alone(from, to)) {
+            const body = text.slice(bodyFrom);
+            block(from, to, 'diagram', `contents:${ordinal}:${source}:${headingsSignature()}`, () => createElement(ContentsPreview, { body, ordinal }));
+            break;
+          }
         }
         codeLines(construct, out, doc, text);
         // The language, chosen at the block's top right from every grammar Prism carries (#84).
