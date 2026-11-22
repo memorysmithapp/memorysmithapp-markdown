@@ -70,7 +70,7 @@ export const DELIBERATE = {
   'enologia/03 Safras/Safra 2026 · Serra Gaúcha.md':
     'It writes a `table` block: MemorySmith at this commit draws it as a code block, the renderer as the table it asks for, from the sample tables (#138). A style block centres a heading and justifies a paragraph, which MemorySmith at this commit draws as its fences and options, the last option as a heading (#164). Its `contents` block is a code block there and the list of its headings and tables in the renderer (#173, #175), and so is its `properties` block, which the renderer draws as the keys it names (#172). Its first table carries a `Table:` caption, drawn there with its keyword and here without it (#175).',
   'enologia/03 Safras/Índice.md':
-    'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104). Its table justifies a column with `;---;`, which MemorySmith at this commit reads as text, so the whole table is lines of pipes there (#164).',
+    'Its picture is written `![…](../assets/curva-2026.png)`: MemorySmith asks the path of the page for it, the renderer draws the kept file it names as its embed draws it, a block with its margins, which moves the text under it (#104). Its table justifies a column with `;---;`, which MemorySmith at this commit reads as text, so the whole table is lines of pipes there (#164). It writes a `table` block over `system-notes`, which MemorySmith at this commit draws as a code block and the renderer as the notes of the folder, each name a link to its note (#171).',
 };
 
 const REFERENCE_PORT = 5301;

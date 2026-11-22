@@ -104,6 +104,20 @@ function tablesOf(slug: string): Map<string, SampleTable> {
   return new Map(tables.map((table) => [table.name.normalize('NFC').toLowerCase(), table]));
 }
 
+/**
+ * The notebook's table of its own notes, one row a note, as MemorySmith keeps `system-notes`
+ * (memorysmithapp/memorysmithapp#517): its name and its folder, and where each row leads (#171).
+ */
+function notesTable(notebook: Notebook): { table: SampleTable; addresses: Map<TableRow, string> } {
+  const named = notebook.notes.filter((note): note is Note & { name: string } => note.name !== null);
+  const rows = named.map((note): TableRow => ({ name: note.name, folder: note.folders.join(' / ') || null }));
+  const addresses = new Map(rows.map((row, index) => [row, addressOf(named[index]!)]));
+  return {
+    table: { name: 'system-notes', columns: [{ name: 'name', kind: 'text' }, { name: 'folder', kind: 'text' }], rows },
+    addresses,
+  };
+}
+
 /** The host contract over one notebook, which is what MemorySmith gives the reading page. */
 export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | null, go: (address: string) => void = () => undefined): NoteHost {
   const one = (name: string): Note | null => {
@@ -137,7 +151,14 @@ export function hostOf(notebook: Notebook, fileOf: (name: string) => KeptFile | 
     keeps: (name) => notebook.files.includes(name.normalize('NFC')),
     // The rows a `table` block asks for, answered from the sample tables as MemorySmith answers from its own (#138).
     queryTable: async (request) => {
-      const table = tables.get(request.table.normalize('NFC').toLowerCase());
+      const wanted = request.table.normalize('NFC').toLowerCase();
+      // The notes themselves, each row leading to its note (#171).
+      if (wanted === 'system-notes') {
+        const { table, addresses } = notesTable(notebook);
+        const page = runTableQuery({ schema: table, rows: table.rows }, request);
+        return { ...page, links: page.rows.map((row) => addresses.get(row) ?? null) };
+      }
+      const table = tables.get(wanted);
       return table ? runTableQuery({ schema: table, rows: table.rows }, request) : null;
     },
     // What the editor suggests after `[[`: names that start with what was typed, then the rest that hold it.

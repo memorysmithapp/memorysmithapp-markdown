@@ -526,6 +526,16 @@ export interface TablePage {
   readonly total: string | null;
   /** When the rows were read, in ISO 8601. */
   readonly readAt: string;
+  /**
+   * Where each row leads, in the order of `rows` (#171): an address the note's links are drawn to,
+   * or `null` for a row that leads nowhere. Left out, no row leads anywhere, as before.
+   */
+  readonly links?: readonly (string | null)[];
+  /**
+   * The column whose cell carries the link (#171), when it is among the columns drawn; else the
+   * first column drawn.
+   */
+  readonly linkColumn?: string | null;
 }
 
 /**
