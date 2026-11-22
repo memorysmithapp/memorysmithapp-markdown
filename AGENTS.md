@@ -51,7 +51,7 @@ One line each; the reason lives where the link points.
 - A cycle is planned from every open issue: review them with the owner before the work starts, say which ones touch it and recommend including them; leaving one out, or moving it to a later version, is the owner's decision with a reason ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - Each repository stands on its own: a problem found in another repository is registered there, as one issue, with no sub-issues elsewhere; comparing with the template is this repository's own decision ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - Anything the packages publish, and every script and workflow, lands on the `release/vX.Y.Z` of its issue's milestone, never on `main` from a `feat/` or `fix/` branch ([SDLC §3](docs/SDLC.md#3-branches)).
-- A workflow that delivers to staging or another environment is dispatched only on the owner's go-ahead in the session; a go-ahead to implement is not one to deliver, and pushing a branch needs none ([SDLC §8](docs/SDLC.md#8-tests-and-review)).
+- A workflow that delivers to staging or another environment — here, a pre-release of the packages on npm — is dispatched only on the owner's go-ahead in the session; a go-ahead to implement is not one to deliver, and pushing a branch needs none ([SDLC §8](docs/SDLC.md#8-tests-and-review)).
 - Nobody tags by hand: tags and Releases are written by the release workflow ([SDLC §10](docs/SDLC.md#10-release)).
 - A document never describes the future: if it is in a document, it is true now ([SDLC §2](docs/SDLC.md#2-issues-and-milestones)).
 - No version notes, revision dates or "internal document" footers inside documents; history lives in `CHANGELOG.md` and git ([SDLC §4](docs/SDLC.md#4-commits)).
