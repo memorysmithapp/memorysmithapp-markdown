@@ -192,6 +192,19 @@ export interface EditorWords {
    * What a block says in edit mode where it draws nothing on the screen: where it is drawn on the
    * screen and in print, `here`, `start` or `end`, or `null` where it draws nothing.
    */
+  /**
+   * A `properties` block (`SPEC.md` §7.18, #172): the control and the title of its form, the keys
+   * to choose and order, the fold and its two values, the button that moves a key up, and what a
+   * block says in edit mode where it draws nothing on the screen.
+   */
+  readonly propertiesBlock: string;
+  readonly propertiesKeys: string;
+  readonly propertiesAllKeys: string;
+  readonly propertiesFold: string;
+  readonly propertiesOpen: string;
+  readonly propertiesClosed: string;
+  readonly propertiesMoveUp: (key: string) => string;
+  readonly propertiesElsewhere: (where: { readonly screen: 'here' | 'start' | 'end' | null; readonly print: 'here' | 'start' | 'end' | null }) => string;
   readonly contentsElsewhere: (where: { readonly screen: 'here' | 'start' | 'end' | null; readonly print: 'here' | 'start' | 'end' | null }) => string;
   readonly footnote: string;
   readonly comment: string;
@@ -484,6 +497,18 @@ export const ENGLISH: NoteStrings = {
     contentsOwn: 'Its own',
     contentsInsert: 'Insert',
     contentsApply: 'Apply',
+    propertiesBlock: 'Properties',
+    propertiesKeys: 'Keys',
+    propertiesAllKeys: 'Every key, the reserved ones first',
+    propertiesFold: 'Folded',
+    propertiesOpen: 'Open',
+    propertiesClosed: 'Closed',
+    propertiesMoveUp: (key) => `Move ${key} up`,
+    propertiesElsewhere: ({ screen, print }) => {
+      const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'here' : where === 'start' ? 'at the start' : 'at the end');
+      const parts = [screen && `${at(screen)} on the screen`, print && `${at(print)} in print`].filter(Boolean);
+      return parts.length === 0 ? 'Properties: not drawn' : `Properties: ${parts.join(', ')}`;
+    },
     contentsElsewhere: ({ screen, print }) => {
       const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'here' : where === 'start' ? 'at the start' : 'at the end');
       const parts = [screen && `${at(screen)} on the screen`, print && `${at(print)} in print`].filter(Boolean);

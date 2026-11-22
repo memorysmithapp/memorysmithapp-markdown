@@ -89,3 +89,11 @@ Relacionado: [[Cabernet Sauvignon#Na Serra Gaúcha]].
 
 [^caderneta]: A caderneta de campo da safra 2026, folhas 12 a 15, guardada com os laudos do laboratório.
 [^passo4]: O passo 4 de [[Vinificação em tinto]] dizia "quando a curva achatar" desde 2025; faltava dizer "e não quando o cronograma disser".
+
+```properties
+keys: regiao, colhida_em, autor
+title: Registro
+screen: none
+print:
+  place: end
+```

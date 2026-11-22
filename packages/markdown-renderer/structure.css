@@ -300,6 +300,25 @@
   padding: 0;
   border: 0;
 }
+/* A choice a form makes with a box (#172, #175): the box beside its word, and
+   the keys of a properties block one to a line, each with its button up. */
+.markdown .edit-attach-form label.edit-contents-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+.markdown .edit-properties-keys {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.markdown .edit-properties-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .markdown .edit-attach-ways {
   display: flex;
   flex: none;

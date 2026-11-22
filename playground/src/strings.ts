@@ -175,6 +175,18 @@ export const PORTUGUESE: Partial<NoteStrings> = {
     contentsOwn: 'Próprio',
     contentsInsert: 'Inserir',
     contentsApply: 'Aplicar',
+    propertiesBlock: 'Propriedades',
+    propertiesKeys: 'Chaves',
+    propertiesAllKeys: 'Todas as chaves, as reservadas primeiro',
+    propertiesFold: 'Dobradas',
+    propertiesOpen: 'Abertas',
+    propertiesClosed: 'Fechadas',
+    propertiesMoveUp: (key) => `Subir ${key}`,
+    propertiesElsewhere: ({ screen, print }) => {
+      const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'aqui' : where === 'start' ? 'no início' : 'no fim');
+      const parts = [screen && `${at(screen)} na tela`, print && `${at(print)} na impressão`].filter(Boolean);
+      return parts.length === 0 ? 'Propriedades: não desenhadas' : `Propriedades: ${parts.join(', ')}`;
+    },
     contentsElsewhere: ({ screen, print }) => {
       const at = (where: 'here' | 'start' | 'end') => (where === 'here' ? 'aqui' : where === 'start' ? 'no início' : 'no fim');
       const parts = [screen && `${at(screen)} na tela`, print && `${at(print)} na impressão`].filter(Boolean);

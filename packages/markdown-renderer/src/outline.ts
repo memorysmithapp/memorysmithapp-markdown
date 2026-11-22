@@ -18,6 +18,7 @@ import { unified } from 'unified';
 import { CLOBBER_PREFIX } from './footnotes.js';
 import { readingPlugins } from './reading.js';
 import { isContentsBlock } from './contents.js';
+import { isPropertiesBlock } from './properties-block.js';
 import type { StyleNumbering } from './note-style.js';
 import { keptImageName } from './kept-image.js';
 import { isTableBlock, readTableBlock } from './table-block.js';
@@ -58,6 +59,10 @@ export interface NoteOutline {
   readonly headings: readonly OutlineHeading[];
   /** The source of each `contents` block of the note, in order. */
   readonly blocks: readonly string[];
+  /** The source of each `properties` block of the note, in order (#172). */
+  readonly propertiesBlocks: readonly string[];
+  /** Every block of either kind, in the order they are written, by kind and ordinal. */
+  readonly sequence: readonly { readonly kind: 'contents' | 'properties'; readonly ordinal: number }[];
   /** Each image alone in its paragraph, in order: what may be a figure once its file is known (#175). */
   readonly figureCandidates: readonly FigureCandidate[];
   /** Each table of the note, in order (#175). */
@@ -73,6 +78,8 @@ export interface OutlineRun {
   readonly numbers?: readonly (string | null)[];
   /** The ordinal of its first `contents` block among the note's. */
   readonly firstBlock: number;
+  /** The ordinal of its first `properties` block among the note's (#172). */
+  readonly firstProperties?: number;
   /** What each image alone in its paragraph is (#175): a figure's number, or `null`. */
   readonly figures?: readonly (number | null)[];
   /** The number of each table of the run, in the order of the walk (#175). */
@@ -273,6 +280,8 @@ export function planOutline(
   const found: Omit<OutlineHeading, 'number'>[] = [];
   const at: { run: number; index: number }[] = [];
   const blocks: string[] = [];
+  const propertiesBlocks: string[] = [];
+  const sequence: { kind: 'contents' | 'properties'; ordinal: number }[] = [];
   const figureCandidates: FigureCandidate[] = [];
   const tables: TableItem[] = [];
   const kept: KeptReference[] = [];
@@ -280,8 +289,16 @@ export function planOutline(
     const tree = parseRun(text);
     const slugs: string[] = [];
     const firstBlock = blocks.length;
+    const firstProperties = propertiesBlocks.length;
     walkTree(tree, (node, parent) => {
-      if (node.type === 'code' && isContentsBlock(node.lang, node.meta)) blocks.push(node.value ?? '');
+      if (node.type === 'code' && isContentsBlock(node.lang, node.meta)) {
+        sequence.push({ kind: 'contents', ordinal: blocks.length });
+        blocks.push(node.value ?? '');
+      }
+      if (node.type === 'code' && isPropertiesBlock(node.lang, node.meta)) {
+        sequence.push({ kind: 'properties', ordinal: propertiesBlocks.length });
+        propertiesBlocks.push(node.value ?? '');
+      }
       const alone = aloneIn(node);
       if (alone) figureCandidates.push({ run, ...referenceOf(alone)! });
       if (isTableNode(node, tableBlocks)) {
@@ -303,7 +320,7 @@ export function planOutline(
         at.push({ run, index: slugs.length - 1 });
       }
     });
-    return { slugs, firstBlock };
+    return { slugs, firstBlock, firstProperties };
   });
   const numbers = numberHeadings(found.map((heading) => ({ level: heading.level, numbering: numberingAt(heading.run, heading.line) })));
   const perRun = planned.map((run) => run.slugs.map((): string | null => null));
@@ -314,6 +331,8 @@ export function planOutline(
     runs: planned.map((run, index) => ({ ...run, numbers: perRun[index]! })),
     headings: found.map((heading, index) => ({ ...heading, number: numbers[index] ?? null })),
     blocks,
+    propertiesBlocks,
+    sequence,
     figureCandidates,
     tables,
     kept,
@@ -409,6 +428,8 @@ export function remarkOutline(
     numbers?: readonly (string | null)[] | null;
     ids?: boolean;
     firstBlock?: number;
+    /** The ordinal of the run's first `properties` block (#172). */
+    firstProperties?: number;
     /** Each image alone in its paragraph: its figure's number, or `null` (#175). */
     figures?: readonly (number | null)[] | null;
     /** Each table's number (#175). */
@@ -423,6 +444,7 @@ export function remarkOutline(
     const own = options.slugs ? null : new Slugger();
     let heading = 0;
     let block = options.firstBlock ?? 0;
+    let propertiesBlock = options.firstProperties ?? 0;
     let figure = 0;
     let table = 0;
     let reference = 0;
@@ -432,6 +454,10 @@ export function remarkOutline(
     walkTree(tree, (node, parent) => {
       if (node.type === 'code' && isContentsBlock(node.lang, node.meta)) {
         mark(node, { dataContents: block++ });
+        return;
+      }
+      if (node.type === 'code' && isPropertiesBlock(node.lang, node.meta)) {
+        mark(node, { dataProperties: propertiesBlock++ });
         return;
       }
       // An image alone in its paragraph that is a figure carries its id, and its caption's place (#175).

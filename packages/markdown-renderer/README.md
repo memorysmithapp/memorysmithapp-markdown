@@ -28,6 +28,7 @@ import 'katex/dist/katex.min.css';
   openTableRow={(view) => showInYourDialog(view)}  // a row clicked, whole: its columns and each value as drawn
   noteStyle={{ font: 'serif', text: 'justify', numbering: 'decimal' }} // the notebook's style: face, alignment of headings, text and tables, and the headings numbered
   contents={{ print: { place: 'start', headings: null } }} // the notebook's contents, for a note with no ```contents block
+  properties={{ print: { place: 'end' } }}         // how the notebook draws a note's properties, for a note with no ```properties block
   writable
   onToggleTask={(ordinal) => save(toggleTaskAt(latest(), ordinal))} // a promise locks the item under "Updating…" until it settles
   theme="dark"
@@ -79,6 +80,8 @@ The frontmatter is the note's too. The default theme draws it as MemorySmith doe
 ```tsx
 const mine = defineTheme({ name: 'mine', components: { properties: () => null } });
 ```
+
+A ` ```properties ` block says how they are drawn (§7.18): `keys:` the keys and their order, the rest left out; `title:`; `fold: open` or `closed`; `place: start` or `end` to draw them there rather than where the block is written; and `screen` and `print` groups, or `none`. The name stays the title, at the top. `properties` gives the same settings for a note with no block, and the defaults of one that has a block. The slot is handed the chosen entries with `part` — `whole`, `name` or `entries` — `title` and `fold`, and a slot that draws nothing still draws nothing.
 
 Import `structure.css` instead of `styles.css` for a theme that draws everything itself. A theme names faces; your page loads them.
 

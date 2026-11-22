@@ -24,6 +24,9 @@ import { planItems, planOutline } from '../outline.js';
 import { useKeptFiles } from '../kept-files.js';
 import { readContents, resolveBlock, type ContentsPlan } from '../contents.js';
 import { ContentsAt, ContentsContext, listedIn } from '../ContentsBlock.js';
+import { Properties } from '../PropertiesBlock.js';
+import { readPropertiesBlock, resolvePropertiesBlock, type PropertiesPlan } from '../properties-block.js';
+import { bodyStart } from '../source.js';
 import type { Dimensions } from '../image-dimensions.js';
 import { ICON_OWN_SIZE, ICON_RATIO_FREE, ICON_RATIO_LOCKED, ICON_RESIZE } from '../mode-icons.js';
 import { describeImage, MAX_IMAGE_WIDTH, readImageSize, resizeImage } from './image-size.js';
@@ -1546,6 +1549,7 @@ export const ICONS = {
   diagram: icon('M5 3h4v4H5z', 'M15 17h4v4h-4z', 'M7 7v4a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v2'),
   rule: icon('M5 12h14'),
   style: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16'),
+  propertiesBlock: icon('M3 5h18', 'M3 12h6', 'M13 12h8', 'M3 19h6', 'M13 19h8'),
   contents: icon('M21 12h-8', 'M21 6H8', 'M21 18h-8', 'M3 6v4c0 1.1.9 2 2 2h3', 'M3 10v6c0 1.1.9 2 2 2h3'),
   footnote: icon('M4 7V4h16v3', 'M9 20h6', 'M12 4v16', 'M19 13v6', 'M17 15l2-2'),
   comment: icon('M7.9 20A9 9 0 1 0 4 16.1L2 22Z'),
@@ -1607,4 +1611,23 @@ export function ContentsPreview({ body, ordinal }: { body: string; ordinal: numb
   }
   const where = (plan: ContentsPlan | null) => (plan === null ? null : (plan.place ?? 'here'));
   return <p className="contents-elsewhere">{host.strings.editor.contentsElsewhere({ screen: where(mine.screen), print: where(mine.print) })}</p>;
+}
+
+/**
+ * A `properties` block in edit mode (`SPEC.md` §7.18, #172), while the author is elsewhere: the
+ * entries it draws on the screen, from the note's frontmatter as it is now, or, where it draws
+ * nothing here, a line saying where it is drawn.
+ */
+export function PropertiesPreview({ text, ordinal }: { text: string; ordinal: number }) {
+  const host = useHost();
+  const properties = useMemo(() => readProperties(text), [text]);
+  const outline = useMemo(() => planOutline([text.slice(bodyStart(text))]), [text]);
+  const source = outline.propertiesBlocks[ordinal];
+  if (source === undefined) return null;
+  const { settings } = readPropertiesBlock(source);
+  const screen = resolvePropertiesBlock(settings, host.properties, 'screen');
+  const print = resolvePropertiesBlock(settings, host.properties, 'print');
+  if (screen && screen.place === null) return <Properties properties={properties} plan={screen} withName={false} />;
+  const where = (plan: PropertiesPlan | null) => (plan === null ? null : (plan.place ?? 'here'));
+  return <p className="contents-elsewhere">{host.strings.editor.propertiesElsewhere({ screen: where(screen), print: where(print) })}</p>;
 }

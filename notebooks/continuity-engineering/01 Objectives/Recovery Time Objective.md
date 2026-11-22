@@ -86,3 +86,10 @@ until it is signed. %%
 Related: [[Recovery Point Objective]], [[Blast radius]].
 
 [^budget]: 43,200 is the minutes of a thirty-day month, which is how the contract counts one. A footnote is the place for a source and an aside like this: it is drawn at the end of the note, and it is never an edge, so a citation here connects this note to nothing.
+
+```properties
+keys: scope, agreed_at, source, author
+title: Record
+print:
+  place: end
+```

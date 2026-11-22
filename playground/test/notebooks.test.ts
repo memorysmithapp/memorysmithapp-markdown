@@ -290,6 +290,7 @@ const DETECTS: Record<string, Detector> = {
   'contents-block': inBody(/^```contents\n[\s\S]*?^```$/m),
   // A link to a heading of the same note, by its slug: no edge, and never pending.
   'heading-slug': inBody(/\]\(#[^)\s]+\)/),
+  'properties-block': inBody(/^```properties\n[\s\S]*?^```$/m),
   'table-caption': inBody(/^\|.*\|\n\nTable: \S/m),
   strikethrough: inBody(/~~[^~\n]+~~/),
   // Bare, without the angle brackets. External either way, and never an edge.

@@ -7,6 +7,7 @@ import { blockOf, demoteEmbeds, isBlockAnchor, sectionOf } from './embeds.js';
 import { wikilinkAddress } from './wikilink-address.js';
 import { drawing, drawnNote, embedsFile, embedTarget, type EmbedTarget } from './embed-target.js';
 import { ContentsContext, EMBEDDED } from './ContentsBlock.js';
+import { PropertiesContext } from './PropertiesBlock.js';
 
 /** The shape of what is coming, in the position it will occupy, while the host answers. */
 function TransclusionSkeleton({ loading }: { loading: string }) {
@@ -140,6 +141,7 @@ export function Transclusion({ target, anchor, source }: { target: string; ancho
        */
       // An embed draws another note's content; the apparatus of navigation is the open note's (#173).
       <ContentsContext.Provider value={EMBEDDED}>
+        <PropertiesContext.Provider value={{ kind: 'embedded' }}>
         <Markdown>
           {resolveWikilinks(
             demoteEmbeds(cut, embedsFile(inner)),
@@ -147,6 +149,7 @@ export function Transclusion({ target, anchor, source }: { target: string; ancho
             embedsFile(inner),
           )}
         </Markdown>
+        </PropertiesContext.Provider>
       </ContentsContext.Provider>
     );
 

@@ -62,6 +62,13 @@ export {
 } from './contents.js';
 export { slugOf } from './outline.js';
 export {
+  readPropertiesBlock,
+  type PropertiesLayer,
+  type PropertiesNoticeCode,
+  type PropertiesProblem,
+  type PropertiesSettings,
+} from './properties-block.js';
+export {
   runTableQuery,
   type TableColumn,
   type TableColumnKind,

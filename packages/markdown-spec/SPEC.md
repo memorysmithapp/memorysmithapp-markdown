@@ -216,7 +216,7 @@ select 1;
 ```
 ````
 
-The word after the opening fence is the **info string**, and by convention it names the language. `mermaid`, `table` and `contents` are the info strings this specification attaches a rule to (§7.2, §7.15, §7.17). A tilde fence may carry backticks in its info string; a backtick fence may not.
+The word after the opening fence is the **info string**, and by convention it names the language. `mermaid`, `table`, `contents` and `properties` are the info strings this specification attaches a rule to (§7.2, §7.15, §7.17, §7.18). A tilde fence may carry backticks in its info string; a backtick fence may not.
 
 Because a fence closes only on the same character at the same length or longer, **a fence nests**: an outer fence uses more characters than any fence inside it, or a different character. That is the only way to write a code block holding a code block, which is what documenting this specification requires — and it is how the examples in this document are written.
 
@@ -737,7 +737,7 @@ A query of nothing but whitespace asks nothing. A search refuses it; a table blo
 
 A **Reader** renders a note for a person. Everything in this section is display: none of it produces an edge, an attribute or an index entry, and none of it changes the bytes of the note.
 
-Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram, a table block and a contents block are fenced blocks, an embed is an image whose target happens to be a note, and a style block is its content between two lines of colons. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
+Every form here is built out of the blocks and inlines of §3 and §4, and stays legible as ordinary Markdown in an editor that does not know the convention: a callout is a block quote, a diagram, a table block, a contents block and a properties block are fenced blocks, an embed is an image whose target happens to be a note, and a style block is its content between two lines of colons. That is deliberate. A note is a plain file first, and a specification that made its files unreadable elsewhere would have taken more than it gave.
 
 Callouts, marked text, comments, block identifiers, footnotes and a block that draws what a query returns were established by Obsidian, math and diagrams by the wider convention both it and GitHub follow, the directive a style block is written as by MyST, the contents a note declares by Docutils, and the caption of a table by Pandoc (§2). None of them is invented here; what is specified is the effect each one has. §7.9 is the one place the specification narrows a source rather than following it, and it says why.
 
@@ -947,6 +947,8 @@ A notice is placed by the line and column where it starts and ends, counted from
 | `style-unclosed` | notice | §7.16 | A style block never closed runs to the end of the note |
 | `contents-key-unknown` | notice | §7.17 | A line of a contents block that is not `key: value` with a key its place takes, a line indented under no group, or a key written twice, sets nothing |
 | `contents-value-invalid` | notice | §7.17 | A value its key does not take, or a group written with a value, sets nothing |
+| `properties-key-unknown` | notice | §7.18 | A line of a properties block that is not `key: value` with a key its place takes, a line at another indent than its siblings, or a key written twice, sets nothing |
+| `properties-value-invalid` | notice | §7.18 | A value its key does not take, or a medium written with a value other than `none`, sets nothing |
 
 The pending codes need the notebook: an implementation reports `link-pending` and `embed-pending` only when it knows which notes and files exist, and `table-pending` only when it knows which tables do; a pending link is a note still to write, and a pending table a table still to create, which is why they are hints. What depends on a table's columns — `table-column-unknown`, a `total` over a column that is not a number, and the errors of `where` that §6.9 leaves to the kind of a field — is reported only when the implementation knows them. An absent `aliases` or `tags` is a hint for the same reason: a reserved key is a guarantee, not a prohibition (§6.4). An empty value counts as absent. Text inside code, inside a comment (§7.6) or inside the frontmatter raises no notice of the body; the lines of a `table` block raise only its own. A notice of a `table` block is placed on the line of the key it is about, and `table-unnamed` on the line that opens the block; a line raises one notice at most, for the first of its mistakes in the order §7.15 lists them, and the columns of a key are checked only once its value can be read.
 
@@ -1121,6 +1123,42 @@ print:
 
 **Where no outline is known**, a Reader that draws the block alone, apart from its note, shows it as the code block it is in any other reader. Elsewhere it is a code block, its settings legible.
 
+### 7.18 Properties blocks
+
+A note can say how its properties — the entries of its frontmatter (§6) — are drawn: which of them, under which title, folded or open, where, and on the screen or in print.
+
+````markdown
+```properties
+keys: status, responsavel
+fold: closed
+print:
+  place: end
+  keys: status, data, responsavel
+  title: Registro
+```
+````
+
+**The form is a fenced block whose info string is `properties`** and nothing else, with the grammar of a contents block (§7.17): `key: value` lines, and a `screen` or `print` group at the root whose lines, indented below it, set that medium alone, or `none` to draw nothing there. Keys and values are compared with case folded; a key with an empty value is absent.
+
+| Key | Value | When absent |
+|---|---|---|
+| `keys` | The keys drawn, in this order, separated by commas | Every key, the reserved ones first |
+| `title` | Text: the title of the drawing | The Reader's |
+| `fold` | `open`, `closed`: whether it starts folded | The Reader's |
+| `place` | `start`, `end` | Where the block is written |
+
+**`keys` chooses.** The keys it leaves out are not drawn; they stay in the note, and an Indexer reads them as ever. A key it names that the note does not have is drawn as nothing and raises nothing, so one set of settings fits every note of a notebook. **`name` stays the note's title**, drawn at the top whatever the block says: the block decides about the other entries.
+
+**Where it is drawn.** Where the block is written, unless `place` sends it to the start of the body — below the title — or to its end. A note with no block draws its properties at the top, as a Reader always has. A Reader MAY take settings of its own in this same structure, which are then the defaults of whatever a note's block leaves unset, `place` excepted, and say how a note with no block draws its properties; a note that holds a block draws only its own blocks, so `print: none` is how a note keeps its properties off paper. It may stand anywhere below the frontmatter a fenced block can, and a note may hold more than one. Several things drawn at the start or the end follow the order their blocks are written in.
+
+**What a Reader decides.** The block decides which entries are drawn, where, in which medium, under which title and whether they start folded; how they look is the Reader's. A Reader that shows the properties elsewhere than in the note MAY draw none of them in the note whatever a block says.
+
+**Inside an embed** (§7.3) a properties block draws nothing, as an embed draws no properties of the note it embeds.
+
+**A key or a value the block cannot take sets nothing**, and the rest is read: a line that is not `key: value`, a key its place does not take, a line at another indent than its siblings, a key written twice — the first counts — and `screen` or `print` inside a medium are `properties-key-unknown`; a value its key cannot read, and a medium written with a value other than `none`, are `properties-value-invalid` (§7.13). A block never closed is the fence of §3.7, `fence-unclosed`.
+
+**A properties block changes nothing an Indexer reads.** The frontmatter is read as §6 reads it, whatever the block draws of it: a key such as `properties-print: none` in the frontmatter would itself be an attribute of the note (§6.3), which is why the drawing is said in a block and not there.
+
 ## 8. Notation not described here
 
 §3 to §7 are the whole of the notation this specification accepts. **Anything not described
@@ -1243,6 +1281,7 @@ Every form this document declares, in one table. The last column is the section 
 | Style block | `:::{style}` over a `---` block of options, closed by `:::` | Draws a passage in its own face and alignment; changes nothing an Indexer reads | 7.16 |
 | Contents block | ` ```contents ` | Draws the note's outline as a list of links, on the screen and with page numbers in print; nothing inside an embed; changes nothing an Indexer reads | 7.17, 3.3 |
 | Heading slug | `[text](#section)` | Leads to the heading of that slug in the same note; never an edge | 3.3 |
+| Properties block | ` ```properties ` | Draws the note's properties as it says: which keys, its title, folded or open, where, per medium; nothing inside an embed; changes nothing an Indexer reads | 7.18 |
 | Table caption | `Table: …` in the paragraph after a table | The table's caption, drawn without its keyword; names the table in a contents and on its appendix | 7.17 |
 | Query | `status:pending -draft amount:>=100` | One language for a search and for the filter of a table block | 6.9 |
 | Parameter reference | `{{name}}` | Drawn as a parameter until a notebook is created from the model; a wikilink to one is no edge and not pending; a value writing one is not indexed | 7.14, 5.2, 6.3 |

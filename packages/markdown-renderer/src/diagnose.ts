@@ -25,6 +25,7 @@ import { readProperties } from './properties.js';
 import { readingPlugins } from './reading.js';
 import { checkTableBlock, isTableBlock, readTableBlock, type TableNoticeCode, type TableSchema } from './table-block.js';
 import { isContentsBlock, readContents, type ContentsNoticeCode } from './contents.js';
+import { isPropertiesBlock, readPropertiesBlock, type PropertiesNoticeCode } from './properties-block.js';
 
 /** The codes of §7.13, which `spec.json` declares as `notices`. */
 export type NoticeCode =
@@ -48,7 +49,8 @@ export type NoticeCode =
   | 'embed-pending'
   | TableNoticeCode
   | StyleNoticeCode
-  | ContentsNoticeCode;
+  | ContentsNoticeCode
+  | PropertiesNoticeCode;
 
 /** `notice`: the page will differ from what was typed. `hint`: nothing is drawn wrong. */
 export type NoticeSeverity = 'notice' | 'hint';
@@ -112,6 +114,8 @@ export const NOTICES: Readonly<Record<NoticeCode, { readonly severity: NoticeSev
   'style-value-invalid': { severity: 'notice', section: '7.16', message: 'This value is not one its key takes, so it sets nothing.' },
   'style-unclosed': { severity: 'notice', section: '7.16', message: 'This style block is never closed by a :::, so it runs to the end of the note.' },
   'contents-key-unknown': { severity: 'notice', section: '7.17', message: 'This line of a contents block is not a key its place takes, sits under no group, or repeats a key, so it sets nothing.' },
+  'properties-key-unknown': { severity: 'notice', section: '7.18', message: 'This line of a properties block is not a key its place takes, sits under no group, or repeats a key, so it sets nothing.' },
+  'properties-value-invalid': { severity: 'notice', section: '7.18', message: 'This value is not one its key takes, or a group is written with a value, so it sets nothing.' },
   'contents-value-invalid': { severity: 'notice', section: '7.17', message: 'This value is not one its key takes, or a group is written with a value, so it sets nothing.' },
 };
 
@@ -209,6 +213,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
   const images: { name: string; at: [number, number] }[] = [];
   const tables: { value: string; at: [number, number] }[] = [];
   const contents: { value: string; at: [number, number] }[] = [];
+  const propertyBlocks: { value: string; at: [number, number] }[] = [];
   walk(tree, (node) => {
     const at = span(node);
     if (!at) return;
@@ -218,6 +223,7 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
       else if (node.lang === 'mermaid') diagrams.push({ source: node.value ?? '', at });
       if (isTableBlock(node.lang, node.meta)) tables.push({ value: node.value ?? '', at });
       if (isContentsBlock(node.lang, node.meta)) contents.push({ value: node.value ?? '', at });
+      if (isPropertiesBlock(node.lang, node.meta)) propertyBlocks.push({ value: node.value ?? '', at });
     } else if (node.type === 'math') {
       if (!closes(source, /^(\${2,})/)) report('math-unclosed', at[0], at[1]);
       else if (!typesets(node.value ?? '', true)) report('formula-invalid', at[0], at[1]);
@@ -280,10 +286,14 @@ export async function diagnose(markdown: string, options: DiagnoseOptions = {}):
     }
   }
 
-  // A `contents` block raises its own notices, each on its line (§7.13, §7.17).
-  for (const block of contents) {
+  // A `contents` and a `properties` block raise their own notices, each on its line (§7.13, §7.17, §7.18).
+  const blockProblems = [
+    ...contents.map((block) => ({ block, problems: readContents(block.value).problems as readonly { code: NoticeCode; line: number }[] })),
+    ...propertyBlocks.map((block) => ({ block, problems: readPropertiesBlock(block.value).problems as readonly { code: NoticeCode; line: number }[] })),
+  ];
+  for (const { block, problems } of blockProblems) {
     const first = pointOf(block.at[0]).line - 1;
-    for (const problem of readContents(block.value).problems) {
+    for (const problem of problems) {
       const start = lineStarts[first + problem.line] ?? block.at[0];
       const next = lineStarts[first + problem.line + 1];
       report(problem.code, start, next === undefined ? text.length : next - 1);

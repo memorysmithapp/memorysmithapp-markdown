@@ -537,6 +537,14 @@
       "spec": "7.17, 3.3"
     },
     {
+      "id": "properties-block",
+      "reader": "reading-surface",
+      "syntax": "```properties\nkeys: a, b\ntitle: text\nfold: closed\nplace: end\nscreen: none\nprint:\n  keys: a\n```",
+      "example": "---\nname: Ata de novembro\nstatus: aprovada\ndata: 2026-11-20\nresponsavel: Síndico\n---\nResumo da reunião.\n\n```properties\nkeys: responsavel, status, local\ntitle: Registro\n```\n",
+      "effect": "How the note's properties are drawn: `keys` the keys drawn, in that order, the rest not drawn and a key the note lacks drawn as nothing; `title`; `fold` (`open`, `closed`); `place` (`start`, `end`); and `screen` and `print` groups for one medium, or `none` there. `name` stays the note's title, at the top. Drawn where it is written unless `place` moves it; a note with no block draws every property at the top. A Reader's own settings in the same structure are the defaults of a block, `place` excepted, and say how a note with no block draws its properties. Inside an embed it draws nothing. A key or value it cannot take sets nothing and is a notice. It changes nothing an Indexer reads.",
+      "spec": "7.18"
+    },
+    {
       "id": "heading-slug",
       "reader": "links",
       "syntax": "[text](#slug)",
@@ -727,6 +735,18 @@
       "severity": "notice",
       "spec": "7.17",
       "effect": "A value of a contents block that its key does not take, or a group written with a value, sets nothing."
+    },
+    {
+      "code": "properties-key-unknown",
+      "severity": "notice",
+      "spec": "7.18",
+      "effect": "A line of a properties block that is not `key: value` with a key its place takes, a line at another indent than its siblings, a key written twice, or `screen` or `print` inside a medium, sets nothing."
+    },
+    {
+      "code": "properties-value-invalid",
+      "severity": "notice",
+      "spec": "7.18",
+      "effect": "A value of a properties block that its key does not take, or a medium written with a value other than `none`, sets nothing."
     }
   ]
 }

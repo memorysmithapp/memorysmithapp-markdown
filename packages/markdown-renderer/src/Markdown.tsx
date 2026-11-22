@@ -38,6 +38,8 @@ import type { TaskSave } from './task-saves.js';
 import { ordinalAt } from './tasklist.js';
 import { InPageAnchor } from './InPageAnchor.js';
 import { Caption, ContentsBlock, ContentsContext } from './ContentsBlock.js';
+import { isPropertiesBlock } from './properties-block.js';
+import { PropertiesBlockAt } from './PropertiesBlock.js';
 import { tableId } from './outline.js';
 import { isContentsBlock } from './contents.js';
 import { remarkOutline, type OutlineRun } from './outline.js';
@@ -442,6 +444,11 @@ function MarkdownPre({ children, node, ...rest }: WithNode<HTMLAttributes<HTMLPr
       </div>
     );
   }
+  // A `properties` block draws the note's properties where it is written, as it says (§7.18, #172).
+  if (isPropertiesBlock(language, typeof meta === 'string' ? meta : null)) {
+    const ordinal = code?.properties?.['dataProperties'];
+    return <PropertiesBlockAt ordinal={typeof ordinal === 'number' ? ordinal : null} fallback={drawn} />;
+  }
   // A `contents` block is the note's contents where the note's outline is known (§7.17, #173).
   if (isContentsBlock(language, typeof meta === 'string' ? meta : null)) {
     const ordinal = code?.properties?.['dataContents'];
@@ -613,6 +620,7 @@ export function Markdown({ children, source, onToggleTask, taskSave, writable = 
               slugs: outline?.slugs ?? null,
               numbers: outline?.numbers ?? null,
               firstBlock: outline?.firstBlock ?? 0,
+              firstProperties: outline?.firstProperties ?? 0,
               ids: !embedded,
               figures: outline?.figures ?? null,
               tables: outline?.tables ?? null,

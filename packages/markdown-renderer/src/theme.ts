@@ -328,6 +328,16 @@ export interface PropertiesSlotProps {
    * links: a slot decides how a value looks, never where its links go.
    */
   readonly value: (text: string) => ReactNode;
+  /**
+   * What this call draws (#172): `whole`, the name and the entries at the top, as before; `name`,
+   * the name alone, where a `properties` block draws the entries elsewhere; `entries`, the entries
+   * alone, where a block or the notebook's settings put them, `name` then `null`. Absent is `whole`.
+   */
+  readonly part?: 'whole' | 'name' | 'entries';
+  /** The title a `properties` block or the notebook's settings give the entries (#172). */
+  readonly title?: string;
+  /** Whether they start folded, as a block or the notebook's settings say (#172). */
+  readonly fold?: 'open' | 'closed';
 }
 
 /**

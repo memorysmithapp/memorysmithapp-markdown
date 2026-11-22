@@ -12,7 +12,7 @@
  * and what was typed stays in the title of each.
  */
 
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { useHost } from './host.js';
 import { MarkdownAnchor } from './Markdown.js';
 import { hasParameterReference, splitParameters } from './parameters.js';
@@ -23,6 +23,8 @@ import {
   type NoteProperties,
   type PropertyEntry,
 } from './properties.js';
+import type { PropertiesPlan } from './properties-block.js';
+import type { ContentsMedium } from './contents.js';
 import { drawSlot, useSlot } from './slots.js';
 import { wikilinkAddress } from './wikilink-address.js';
 
@@ -156,34 +158,147 @@ function ordered(entries: readonly PropertyEntry[]): PropertyEntry[] {
     .map(({ entry }) => entry);
 }
 
-export function Properties({ properties }: { properties: NoteProperties }) {
+/** The entries a plan draws: the keys it names, in its order, else every entry, the reserved first. */
+export function chosenEntries(entries: readonly PropertyEntry[], keys: readonly string[] | null): PropertyEntry[] {
+  if (keys === null) return ordered(entries);
+  // A key the note does not have is drawn as nothing and raises nothing (#172).
+  return keys.flatMap((key) => entries.filter((entry) => entry.key === key && entry.shape !== 'empty'));
+}
+
+/**
+ * The note's properties as the default theme draws them, or through the theme's `properties` slot:
+ * the name as the title, where `withName` says, and the chosen entries in a block that folds (#172).
+ */
+export function Properties({
+  properties,
+  plan = null,
+  withName = true,
+  medium = null,
+}: {
+  properties: NoteProperties;
+  /** Which keys, under which title, folded or open; `null` draws every key, as before. */
+  plan?: PropertiesPlan | null;
+  /** Whether the name is drawn too: only at the top. */
+  withName?: boolean;
+  /** The one medium this drawing is for, marked so the stylesheet shows it only there. */
+  medium?: ContentsMedium | null;
+}) {
   const { strings } = useHost();
   const slot = useSlot('properties');
   const value = useValue();
   const drawn = useParameters();
-  if (slot) return drawSlot(slot, { name: properties.name, entries: properties.entries, value });
-  const shown = ordered(properties.entries);
+  const shown = plan === null ? ordered(properties.entries) : chosenEntries(properties.entries, plan.keys);
+  if (slot) {
+    // A theme that draws nothing still wins: a host that shows the properties elsewhere is never made to draw them twice.
+    const slotted = drawSlot(slot, {
+      name: withName ? properties.name : null,
+      entries: plan === null || plan.keys === null ? properties.entries : shown,
+      value,
+      part: withName ? (plan === null || shown.length > 0 ? 'whole' : 'name') : 'entries',
+      ...(plan?.title ? { title: plan.title } : {}),
+      ...(plan?.fold ? { fold: plan.fold } : {}),
+    });
+    return medium ? <div data-media={medium}>{slotted}</div> : slotted;
+  }
+  const entries = shown.length > 0 && (
+    <details className="properties-box" open={plan?.fold !== 'closed'} data-media={medium ?? undefined}>
+      <summary>{plan?.title ?? strings.properties}</summary>
+      <div className="metadata-container">
+        {shown.map((entry, index) => (
+          <div key={index} className="metadata-property" data-property-type={iconType(entry)}>
+            <span className="metadata-property-key">{entry.key}</span>
+            <span className="metadata-property-value">
+              <PropertyValue entry={entry} value={value} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
   return (
     <>
       {/* The name, always: a note with none says so where its name would be. */}
-      <h1 className={properties.name === null ? 'note-title note-unnamed' : 'note-title'}>
-        {properties.name === null ? strings.unnamedNote : drawn(properties.name)}
-      </h1>
-      {shown.length > 0 && (
-        <details className="properties-box" open>
-          <summary>{strings.properties}</summary>
-          <div className="metadata-container">
-            {shown.map((entry, index) => (
-              <div key={index} className="metadata-property" data-property-type={iconType(entry)}>
-                <span className="metadata-property-key">{entry.key}</span>
-                <span className="metadata-property-value">
-                  <PropertyValue entry={entry} value={value} />
-                </span>
-              </div>
-            ))}
-          </div>
-        </details>
+      {withName && (
+        <h1 className={properties.name === null ? 'note-title note-unnamed' : 'note-title'}>
+          {properties.name === null ? strings.unnamedNote : drawn(properties.name)}
+        </h1>
       )}
+      {entries}
     </>
   );
+}
+
+/** What each `properties` block of a note draws, by medium, or the host's for a note with none. */
+export interface PropertiesPlans {
+  readonly screen: PropertiesPlan | null;
+  readonly print: PropertiesPlan | null;
+}
+
+/** The note whose properties are drawn (#172): its properties and what each block draws. */
+export type PropertiesScope =
+  | { readonly kind: 'note'; readonly properties: NoteProperties; readonly blocks: readonly PropertiesPlans[]; readonly printing: boolean }
+  | { readonly kind: 'embedded' };
+
+export const PropertiesContext = createContext<PropertiesScope | null>(null);
+
+const samePlan = (a: PropertiesPlan | null, b: PropertiesPlan | null): boolean => JSON.stringify(a) === JSON.stringify(b);
+
+/** The draws of plans that resolve to `place`: one for both media where they agree, else one for each. */
+function drawsAt(plans: PropertiesPlans, place: PropertiesPlan['place'], printing: boolean): { plan: PropertiesPlan; medium: ContentsMedium | null }[] {
+  const at = (plan: PropertiesPlan | null): PropertiesPlan | null => (plan && plan.place === place ? plan : null);
+  if (printing) {
+    const print = at(plans.print);
+    return print ? [{ plan: print, medium: null }] : [];
+  }
+  const screen = at(plans.screen);
+  const print = at(plans.print);
+  if (screen && print && samePlan(screen, print)) return [{ plan: screen, medium: null }];
+  return [...(screen ? [{ plan: screen, medium: 'screen' as const }] : []), ...(print ? [{ plan: print, medium: 'print' as const }] : [])];
+}
+
+/** The plan that draws the name and nothing else, where the entries are drawn elsewhere. */
+const NAME_ONLY: PropertiesPlan = { keys: [], title: null, fold: null, place: 'start' };
+
+/**
+ * The top of a note (#172): its name, always, and the entries the plans place at the start, in
+ * one drawing with the name where a single one serves both media, as a note was always drawn.
+ */
+export function PropertiesTop({ properties, plans, printing }: { properties: NoteProperties; plans: readonly PropertiesPlans[]; printing: boolean }) {
+  const draws = plans.flatMap((each) => drawsAt(each, 'start', printing));
+  const first = draws[0];
+  if (draws.length === 1 && first && first.medium === null) return <Properties properties={properties} plan={first.plan} />;
+  return (
+    <>
+      <Properties properties={properties} plan={NAME_ONLY} />
+      {draws.map((draw, index) => (
+        <Properties key={index} properties={properties} plan={draw.plan} withName={false} medium={draw.medium} />
+      ))}
+    </>
+  );
+}
+
+/** The entries the plans place at the end of the note, or where a block is written (`null`). */
+export function PropertiesAt({ plans, place }: { plans: PropertiesPlans; place: 'end' | null }) {
+  const scope = useContext(PropertiesContext);
+  if (scope === null || scope.kind !== 'note') return null;
+  return (
+    <>
+      {drawsAt(plans, place, scope.printing).map((draw, index) => (
+        <Properties key={index} properties={scope.properties} plan={draw.plan} withName={false} medium={draw.medium} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * A `properties` block where it is written (`SPEC.md` §7.18, #172): the entries it draws here in
+ * each medium, nothing inside an embed, and its code block where no note is known.
+ */
+export function PropertiesBlockAt({ ordinal, fallback }: { ordinal: number | null; fallback: ReactNode }) {
+  const scope = useContext(PropertiesContext);
+  if (scope === null) return <>{fallback}</>;
+  if (scope.kind === 'embedded') return null;
+  const plans = ordinal === null ? undefined : scope.blocks[ordinal];
+  if (!plans) return <>{fallback}</>;
+  return <PropertiesAt plans={plans} place={null} />;
 }

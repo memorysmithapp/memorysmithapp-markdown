@@ -78,6 +78,13 @@ const EXPECTED: Record<string, (html: string) => void> = {
     expect(html).toContain('id="user-content-detalhe"');
     expect(html).not.toContain('language-contents');
   },
+  // The note's properties as a block says (§7.18): the keys it names, in its order, under its title.
+  'properties-block': (html) => {
+    expect(html).toContain('<summary>Registro</summary>');
+    expect([...html.matchAll(/metadata-property-key">([^<]+)</g)].map((match) => match[1])).toEqual(['responsavel', 'status']);
+    expect(html).toContain('<h1 class="note-title">Ata de novembro</h1>');
+    expect(html).not.toContain('language-properties');
+  },
   // A table's caption (§7.17): drawn under it without its keyword, whatever lists it.
   'table-caption': (html) => {
     expect(html).toContain('<p class="table-caption">Previsão de despesas para 2027</p>');

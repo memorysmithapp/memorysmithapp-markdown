@@ -8,7 +8,8 @@ import { Markdown } from './Markdown.js';
 import { readingPlugins } from './reading.js';
 import { bodyStart, hideComments, remoteImageHosts, resolveWikilinks } from './source.js';
 import { readProperties } from './properties.js';
-import { Properties } from './PropertiesBlock.js';
+import { PropertiesAt, PropertiesContext, PropertiesTop, type PropertiesPlans, type PropertiesScope } from './PropertiesBlock.js';
+import { readPropertiesBlock, resolvePropertiesBlock, resolvePropertiesHost } from './properties-block.js';
 import { useTaskSaves } from './task-saves.js';
 import { taskBoxes } from './tasklist.js';
 import { justifies } from './note-style.js';
@@ -341,6 +342,17 @@ function NoteView({
       placed,
     };
   }, [outline, items, files, resolved.contents, resolved.printing, appendices]);
+  // What each `properties` block draws in each medium, over the host's settings, and with none, what
+  // the host's draw: the entries at the top, as always, unless they say otherwise (#172).
+  const propertiesScope = useMemo((): { scope: PropertiesScope; placed: readonly PropertiesPlans[] } => {
+    const blocks = outline.propertiesBlocks.map((source): PropertiesPlans => {
+      const { settings } = readPropertiesBlock(source);
+      return { screen: resolvePropertiesBlock(settings, resolved.properties, 'screen'), print: resolvePropertiesBlock(settings, resolved.properties, 'print') };
+    });
+    const host: PropertiesPlans[] =
+      blocks.length === 0 ? [{ screen: resolvePropertiesHost(resolved.properties, 'screen'), print: resolvePropertiesHost(resolved.properties, 'print') }] : [];
+    return { scope: { kind: 'note', properties, blocks, printing: resolved.printing }, placed: [...blocks, ...host] };
+  }, [outline, properties, resolved.properties, resolved.printing]);
   // A run marks the figures, tables and attachments a list leads to, and only those: a note with no
   // such list draws its images, tables and files exactly as before (#175).
   const marked = contentsScope.scope.kind === 'note' ? contentsScope.scope.listed : null;
@@ -359,6 +371,7 @@ function NoteView({
   return (
     <HostProvider value={resolved}>
       <ContentsContext.Provider value={contentsScope.scope}>
+      <PropertiesContext.Provider value={propertiesScope.scope}>
       {/* The root of the note carries the theme, which is where the stylesheet
           sets its values from the host's custom properties. */}
       <div
@@ -370,7 +383,7 @@ function NoteView({
       >
         {corner}
         {/* The frontmatter is content: read here, drawn as the theme decides. */}
-        <Properties properties={properties} />
+        <PropertiesTop properties={properties} plans={propertiesScope.placed} printing={resolved.printing} />
         {placed('start')}
         {segments.map((segment, index) => {
           if (!('rendered' in segment)) {
@@ -424,6 +437,9 @@ function NoteView({
           </Markdown>
         )}
         {placed('end')}
+        {propertiesScope.placed.map((plans, index) => (
+          <PropertiesAt key={`properties-end-${index}`} plans={plans} place="end" />
+        ))}
         {appendices && appendices.appendices.length > 0 && (
           <div className="table-appendices">
             {appendices.appendices.map((appendix) => (
@@ -442,6 +458,7 @@ function NoteView({
           </p>
         )}
       </div>
+      </PropertiesContext.Provider>
       </ContentsContext.Provider>
     </HostProvider>
   );

@@ -39,6 +39,10 @@ import { NoteActions, type NoteButtons } from '../NoteActions.js';
 import { AttachDialog, webImage, type ChosenFile } from './AttachDialog.js';
 import { StyleDialog } from './StyleDialog.js';
 import { ContentsDialog } from './ContentsDialog.js';
+import { PropertiesDialog } from './PropertiesDialog.js';
+import { newPropertiesBlock, propertiesBlockAt, setProperties } from './properties.js';
+import type { PropertiesSettings } from '../properties-block.js';
+import { readProperties } from '../properties.js';
 import { contentsBlockAt, newContentsBlock, setContents } from './contents.js';
 import type { ContentsSettings } from '../contents.js';
 import { setStyleOptions, styleBlockAt, wrapInStyle } from './style.js';
@@ -209,6 +213,7 @@ function Toolbar({
   onAttach,
   onStyle,
   onContents,
+  onProperties,
   attaching,
   attachButton,
 }: {
@@ -224,6 +229,8 @@ function Toolbar({
   onStyle: () => void;
   /** Opens the form of a contents block: a new one, or the one the cursor is in (#173). */
   onContents: () => void;
+  /** Opens the form of a properties block: a new one, or the one the cursor is in (#172). */
+  onProperties: () => void;
   attaching: Attaching;
   attachButton: RefObject<HTMLButtonElement | null>;
 }) {
@@ -361,6 +368,18 @@ function Toolbar({
             onClick={onContents}
           >
             {ICONS.contents}
+          </button>
+          <button
+            type="button"
+            className="edit-control"
+            title={words.propertiesBlock}
+            aria-label={words.propertiesBlock}
+            aria-haspopup="dialog"
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onProperties}
+          >
+            {ICONS.propertiesBlock}
           </button>
         </span>
       </div>
@@ -586,6 +605,27 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
     const written = newContentsBlock(settings);
     command((state) => insertBlock(state, written, written.length + 1))(current);
   };
+  /** The form of a properties block, open over what it sets now and the note's keys (#172). */
+  const [propertiesForm, setPropertiesForm] = useState<{ initial: PropertiesSettings; editing: boolean; keys: string[] } | null>(null);
+  const openProperties = (): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const text = current.state.doc.toString();
+    const block = propertiesBlockAt(text, current.state.selection.main.head);
+    const keys = readProperties(text).entries.map((entry) => entry.key);
+    setPropertiesForm({ initial: block?.settings ?? {}, editing: block !== null && block.content !== null, keys });
+  };
+  const applyProperties = (settings: PropertiesSettings): void => {
+    const current = editorView.current;
+    if (!current) return;
+    const block = propertiesBlockAt(current.state.doc.toString(), current.state.selection.main.head);
+    if (block && block.content) {
+      current.dispatch({ changes: setProperties(block, settings), userEvent: 'input.properties', scrollIntoView: true });
+      return;
+    }
+    const written = newPropertiesBlock(settings);
+    command((state) => insertBlock(state, written, written.length + 1))(current);
+  };
   /** Where the editing menu is open, in the window's coordinates (#81). */
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const openMenu = useRef((x: number, y: number) => setMenu({ x, y }));
@@ -633,6 +673,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
         block('rule'),
         { name: 'style', label: words.style, icon: ICONS.style, run: openStyle },
         { name: 'contents', label: words.contents, icon: ICONS.contents, run: openContents },
+        { name: 'propertiesBlock', label: words.propertiesBlock, icon: ICONS.propertiesBlock, run: openProperties },
         item('footnote', command(insertFootnote)),
         item('comment', command(toggleComment), 'Mod-/'),
         { name: 'attach', label: words.attach, icon: ICONS.attach, run: () => setAttachOpen(true) },
@@ -875,6 +916,7 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             }}
             onStyle={openStyle}
             onContents={openContents}
+            onProperties={openProperties}
             attaching={attaching}
             attachButton={attachButton}
             end={
@@ -937,6 +979,16 @@ export function NoteEditor({ markdown: given, onChange, editable = true, corner,
             editing={contentsForm.editing}
             onApply={applyContents}
             onClose={() => setContentsForm(null)}
+            onClosed={() => editorView.current?.focus()}
+          />
+        )}
+        {propertiesForm && (
+          <PropertiesDialog
+            initial={propertiesForm.initial}
+            noteKeys={propertiesForm.keys}
+            editing={propertiesForm.editing}
+            onApply={applyProperties}
+            onClose={() => setPropertiesForm(null)}
             onClosed={() => editorView.current?.focus()}
           />
         )}
